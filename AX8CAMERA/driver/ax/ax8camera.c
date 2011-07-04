@@ -27,11 +27,17 @@
 #include <mach/gpio.h>
 #include <mach/camera.h>
 #include <mach/board.h>
+#include <linux/device.h>
+#include <linux/module.h>
+
 
 #include <mach/vreg.h>
 
 #define AX_MODULE_VER			"v001"
 #define AX_MODULE_NAME			"ax8camera"
+
+#define DEVICE_NAME				"X8"
+#define OFS_KALLSYMS_LOOKUP_NAME	0xC00B0654			// kallsyms_lookup_name
 
 #include "dlt002_cam_devdrv.h"
 #include "dlt002_cam_devdrv_table.c"
@@ -47,6 +53,34 @@
 #endif
 
 #define DDBG(fmt, args...) printk(KERN_INFO "msm_camdrv: " fmt, ##args)
+
+// for get proc address
+/*
+typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
+static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
+*/
+typedef int  (*msm_camio_clk_enable_type) (enum msm_camio_clk_type clk);
+static msm_camio_clk_enable_type msm_camio_clk_enable_ax;
+typedef int  (*msm_camio_clk_disable_type) (enum msm_camio_clk_type clk);
+static msm_camio_clk_disable_type msm_camio_clk_disable_ax;
+typedef void (*msm_camio_clk_rate_set_type) (int rate);
+static msm_camio_clk_rate_set_type msm_camio_clk_rate_set_ax;
+
+/*
+static void patch(unsigned int addr, unsigned int value) {
+	*(unsigned int*)addr = value;
+}*/
+/*
+// patch to an jump obcode
+static void patch_to_jmp(unsigned int addr, void * func) {
+	int write_value;
+	// calculate the offset
+	write_value = ((((unsigned int)func - 8 - addr) >> 2) & 0x00FFFFFF);
+	// add the unconditional jump opcode
+	write_value |= 0xEA000000;
+	// and patch it
+	patch(addr, write_value);
+}*/
 
 /* ******** Local functions ************* */
 static int32_t dlt002_gpio_access(int gpio_pin, int dir);
@@ -225,6 +259,7 @@ void dlt002_exit(void)
 	DDBG("dlt002_exit [E]\n");
 }
 
+
 /**
  * Probe
  *
@@ -258,10 +293,10 @@ static int dlt002_camera_probe(const struct msm_camera_sensor_info *info, struct
 		goto probe_done;
 	}
 
-	msm_camio_clk_enable(CAMIO_VFE_CLK);
+	msm_camio_clk_enable_ax(CAMIO_VFE_CLK);
 
 	/* Output CAM_MCLK(19.2MHz) */
-	msm_camio_clk_rate_set(DLT002_DEFAULT_CLOCK_RATE);
+	msm_camio_clk_rate_set_ax(DLT002_DEFAULT_CLOCK_RATE);
 
 	msleep(40);
 
@@ -881,8 +916,8 @@ static void dlt002_sensor_off(void)
 	msleep(20);
 
 	/* Output CAM_MCLK(0MHz) */
-	msm_camio_clk_rate_set(0);
-	msm_camio_clk_disable(CAMIO_VFE_CLK);
+	msm_camio_clk_rate_set_ax(0);
+	msm_camio_clk_disable_ax(CAMIO_VFE_CLK);
 
 	mdelay(5);
 
@@ -1310,7 +1345,7 @@ static int __init dlt002_init(void)
 
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
 	
-	other = driver_find("dlt002_camera", &i2c_bus_type);
+	other = driver_find("msm_camera_dlt002", &platform_bus_type);
 
 
 	if (other)
@@ -1373,3 +1408,5 @@ static int init_thread(void *data)
 	return ret;
 
 }
+
+MODULE_LICENSE("GPL");
