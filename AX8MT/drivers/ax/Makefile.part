@@ -1,0 +1,1 @@
+obj-$(CONFIG_AX8_MT)+= ax8mt.o
