@@ -1,0 +1,4 @@
+
+config AX8_NOALS
+tristate "X8 LM3530 with no als support"
+

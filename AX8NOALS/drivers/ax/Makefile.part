@@ -1,0 +1,2 @@
+obj-$(CONFIG_AX8_NOALS)+= ax8noals.o
+
