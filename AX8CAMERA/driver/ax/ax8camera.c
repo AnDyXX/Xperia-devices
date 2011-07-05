@@ -23,7 +23,7 @@
 #include <linux/uaccess.h>
 #include <linux/miscdevice.h>
 #include <linux/kthread.h>
-#include <media/msm_camera.h>
+//#include <media/msm_camera.h>
 #include <mach/gpio.h>
 #include <mach/camera.h>
 #include <mach/board.h>
@@ -55,16 +55,18 @@
 #define DDBG(fmt, args...) printk(KERN_INFO "msm_camdrv: " fmt, ##args)
 
 // for get proc address
-/*
+
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
 static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
-*/
+
 typedef int  (*msm_camio_clk_enable_type) (enum msm_camio_clk_type clk);
 static msm_camio_clk_enable_type msm_camio_clk_enable_ax;
 typedef int  (*msm_camio_clk_disable_type) (enum msm_camio_clk_type clk);
 static msm_camio_clk_disable_type msm_camio_clk_disable_ax;
 typedef void (*msm_camio_clk_rate_set_type) (int rate);
 static msm_camio_clk_rate_set_type msm_camio_clk_rate_set_ax;
+typedef void (*msm_camio_camif_pad_reg_reset_type)(void);
+static msm_camio_camif_pad_reg_reset_type msm_camio_camif_pad_reg_reset_ax;
 
 /*
 static void patch(unsigned int addr, unsigned int value) {
@@ -971,12 +973,12 @@ static int dlt002_sensor_open(const struct msm_camera_sensor_info
 		goto open_done;
 	}
 
-	msm_camio_clk_enable(CAMIO_VFE_CLK);
+	msm_camio_clk_enable_ax(CAMIO_VFE_CLK);
 
 	/* Output CAM_MCLK(19.2MHz) */
-	msm_camio_clk_rate_set(DLT002_DEFAULT_CLOCK_RATE);
+	msm_camio_clk_rate_set_ax(DLT002_DEFAULT_CLOCK_RATE);
 
-	msm_camio_camif_pad_reg_reset();	/* Moved from vfe_7x_init(...)*/
+	msm_camio_camif_pad_reg_reset_ax();	/* Moved from vfe_7x_init(...)*/
 
 	msleep(40);
 
@@ -1342,23 +1344,50 @@ static struct platform_driver msm_camera_driver = {
 static int __init dlt002_init(void)
 {
 	struct device_driver * other;
+	struct i2c_driver * otherDriver;
 
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
 	
-	other = driver_find("msm_camera_dlt002", &platform_bus_type);
+	// our 'GetProcAddress' :D
+	kallsyms_lookup_name_ax = (void*) OFS_KALLSYMS_LOOKUP_NAME;
 
+	msm_camio_clk_enable_ax = (void*)kallsyms_lookup_name_ax("msm_camio_clk_enable");
+	msm_camio_clk_disable_ax = (void*)kallsyms_lookup_name_ax("msm_camio_clk_disable");
+	msm_camio_clk_rate_set_ax = (void*)kallsyms_lookup_name_ax("msm_camio_clk_rate_set");
+	msm_camio_camif_pad_reg_reset_ax = (void*)kallsyms_lookup_name_ax("msm_camio_camif_pad_reg_reset");
 
-	if (other)
+	printk(KERN_ERR AX_MODULE_NAME ": msm_camio_clk_enable: 0x%x, msm_camio_clk_disable: 0x%x, msm_camio_clk_rate_set: 0x%x,msm_camio_camif_pad_reg_reset: 0x%x,\n", 
+			(int)msm_camio_clk_enable_ax, (int)msm_camio_clk_disable_ax, (int)msm_camio_clk_rate_set_ax,
+			(int)msm_camio_camif_pad_reg_reset_ax);
+	
+	if(msm_camio_clk_enable_ax && msm_camio_clk_disable_ax && 
+		msm_camio_clk_rate_set_ax && msm_camio_camif_pad_reg_reset_ax)
 	{
-		//put_driver(other);
-		printk(KERN_ERR AX_MODULE_NAME ": Stock driver found: %s, addr 0x%x, owner %x\n", other->name, (int)other, (int)other->owner);
-	}
+		other = driver_find("msm_camera_dlt002", &platform_bus_type);
 
-	if(1 == 0)
+		if (other)
+		{
+			put_driver(other);
+			printk(KERN_ERR AX_MODULE_NAME ": Stock driver found: %s, addr 0x%x, owner %x\n", 
+				other->name, (int)other, (int)other->owner);
+
+			driver_unregister(other);
+		}
+
+		other = driver_find("dlt002_camera", &i2c_bus_type);
+
+		if (other)
+		{
+			put_driver(other);
+			otherDriver = to_i2c_driver(other);
+			printk(KERN_ERR AX_MODULE_NAME ": Stock driver found: %s, addr 0x%x, owner %x\n", other->name, (int)otherDriver, (int)other->owner);
+			i2c_del_driver(otherDriver);
+			printk(KERN_ERR AX_MODULE_NAME ": Stock driver removed\n");
+		}
+		
 		return platform_driver_register(&msm_camera_driver);
-
+	}
 	return -1;
-	//
 }
 
 module_init(dlt002_init);
