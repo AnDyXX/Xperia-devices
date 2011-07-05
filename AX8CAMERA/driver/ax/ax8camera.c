@@ -23,7 +23,7 @@
 #include <linux/uaccess.h>
 #include <linux/miscdevice.h>
 #include <linux/kthread.h>
-//#include <media/msm_camera.h>
+#include "msm_camera.c"
 #include <mach/gpio.h>
 #include <mach/camera.h>
 #include <mach/board.h>
@@ -68,11 +68,11 @@ static msm_camio_clk_rate_set_type msm_camio_clk_rate_set_ax;
 typedef void (*msm_camio_camif_pad_reg_reset_type)(void);
 static msm_camio_camif_pad_reg_reset_type msm_camio_camif_pad_reg_reset_ax;
 
-/*
+
 static void patch(unsigned int addr, unsigned int value) {
 	*(unsigned int*)addr = value;
-}*/
-/*
+}
+
 // patch to an jump obcode
 static void patch_to_jmp(unsigned int addr, void * func) {
 	int write_value;
@@ -82,7 +82,7 @@ static void patch_to_jmp(unsigned int addr, void * func) {
 	write_value |= 0xEA000000;
 	// and patch it
 	patch(addr, write_value);
-}*/
+}
 
 /* ******** Local functions ************* */
 static int32_t dlt002_gpio_access(int gpio_pin, int dir);
@@ -121,6 +121,36 @@ static int init_thread(void *data);
 static struct dlt002_ctrl *dlt002_ctrl = NULL;
 static DECLARE_WAIT_QUEUE_HEAD(dlt002_wait_queue);
 DECLARE_MUTEX(dlt002_sem);
+
+struct cfg_value_map {
+	const char* name;
+	void * new_func;
+};
+
+static const struct cfg_value_map func_mapping_table[] = {
+	{"msm_vfe_sync", &ax8camera_msm_vfe_sync},
+	{"msm_ioctl_control", &ax8camera_msm_ioctl_control },
+	{"__msm_get_frame", &ax8camera___msm_get_frame},
+	{"__msm_get_pic", &ax8camera___msm_get_pic },
+	{"msm_ioctl_frame", &ax8camera_msm_ioctl_frame },
+	{NULL, 0},
+};
+
+static void hijack_functions(void)
+{	
+	const struct cfg_value_map * t = func_mapping_table;
+	int func;
+
+	while (t->name) {
+		func = kallsyms_lookup_name_ax(t->name);
+		if(func)
+		{
+			patch_to_jmp(func, t->new_func);
+			printk(KERN_ERR AX_MODULE_NAME ": %s hijacked\n", t->name);	
+		}
+		t++;
+	}
+}
 
 /**
  * I2C Device ID Structure Body.
@@ -1326,6 +1356,10 @@ static int32_t dlt002_check_bsts(uint8_t value, uint32_t timeout_msec)
 	return 1;
 }
 
+int msm_camera_drv_start(struct platform_device *dev,
+		int (*sensor_probe)(const struct msm_camera_sensor_info *,
+			struct msm_sensor_ctrl *));
+
 static int __dlt002_probe(struct platform_device *pdev)
 {
 	return msm_camera_drv_start(pdev, dlt002_camera_probe);
@@ -1360,9 +1394,24 @@ static int __init dlt002_init(void)
 			(int)msm_camio_clk_enable_ax, (int)msm_camio_clk_disable_ax, (int)msm_camio_clk_rate_set_ax,
 			(int)msm_camio_camif_pad_reg_reset_ax);
 	
-	if(msm_camio_clk_enable_ax && msm_camio_clk_disable_ax && 
-		msm_camio_clk_rate_set_ax && msm_camio_camif_pad_reg_reset_ax)
+	msm_camio_probe_on_ax = (void*)kallsyms_lookup_name_ax("msm_camio_probe_on");
+	msm_camio_probe_off_ax = (void*)kallsyms_lookup_name_ax("msm_camio_probe_off");
+	msm_camio_vfe_blk_reset_ax = (void*)kallsyms_lookup_name_ax("msm_camio_vfe_blk_reset");
+	msm_camvfe_fn_init_ax = (void*)kallsyms_lookup_name_ax("msm_camvfe_fn_init");
+
+	if(	msm_camio_clk_enable_ax && 
+		msm_camio_clk_disable_ax && 
+		msm_camio_clk_rate_set_ax && 
+		msm_camio_camif_pad_reg_reset_ax &&
+		msm_camio_probe_on_ax &&
+		msm_camio_probe_off_ax &&
+		msm_camio_vfe_blk_reset_ax &&
+		msm_camvfe_fn_init_ax 		
+		)
 	{
+
+		hijack_functions();
+
 		other = driver_find("msm_camera_dlt002", &platform_bus_type);
 
 		if (other)
@@ -1372,6 +1421,7 @@ static int __init dlt002_init(void)
 				other->name, (int)other, (int)other->owner);
 
 			driver_unregister(other);
+			printk(KERN_ERR AX_MODULE_NAME ": Stock driver removed\n");
 		}
 
 		other = driver_find("dlt002_camera", &i2c_bus_type);
@@ -1380,7 +1430,8 @@ static int __init dlt002_init(void)
 		{
 			put_driver(other);
 			otherDriver = to_i2c_driver(other);
-			printk(KERN_ERR AX_MODULE_NAME ": Stock driver found: %s, addr 0x%x, owner %x\n", other->name, (int)otherDriver, (int)other->owner);
+			printk(KERN_ERR AX_MODULE_NAME ": Stock driver found: %s, addr 0x%x, owner %x\n", 
+				other->name, (int)otherDriver, (int)other->owner);
 			i2c_del_driver(otherDriver);
 			printk(KERN_ERR AX_MODULE_NAME ": Stock driver removed\n");
 		}
