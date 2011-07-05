@@ -27,6 +27,8 @@
 #include <mach/gpio.h>
 #include <mach/camera.h>
 #include <mach/board.h>
+#include <linux/device.h>
+#include <linux/module.h>
 
 #include <mach/vreg.h>
 
@@ -2271,3 +2273,4 @@ static int init_thread(void *data)
 	return ret;
 
 }
+MODULE_LICENSE("GPL");
