@@ -34,6 +34,19 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
+#define DEVICE_NAME				"X8"
+#define OFS_KALLSYMS_LOOKUP_NAME	0xC00B0654			// kallsyms_lookup_name
+
+// for get proc address
+typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
+static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
+
+typedef long  (*nr_running_type) (void);
+static nr_running_type nr_running_ax;
+
+typedef void  (*default_idle_type) (void);
+static default_idle_type default_idle_ax;
+
 static void (*pm_idle_old)(void);
 static atomic_t active_count = ATOMIC_INIT(0);
 
@@ -95,7 +108,7 @@ static unsigned int up_min_freq;
  * to minimize wakeup issues.
  * Set sleep_max_freq=0 to disable this behavior.
  */
-#define DEFAULT_SLEEP_MAX_FREQ 352000
+#define DEFAULT_SLEEP_MAX_FREQ 300000
 static unsigned int sleep_max_freq;
 
 /*
@@ -110,7 +123,7 @@ static unsigned int sleep_wakeup_freq;
  * go below this frequency.
  * Set awake_min_freq=0 to disable this behavior.
  */
-#define DEFAULT_AWAKE_MIN_FREQ 518400
+#define DEFAULT_AWAKE_MIN_FREQ 0
 static unsigned int awake_min_freq;
 
 /*
@@ -234,7 +247,7 @@ static void cpufreq_smartass_timer(unsigned long data)
                 if (policy->cur == policy->max)
                         return;
 
-                if (nr_running() < 1)
+                if (nr_running_ax() < 1)
                         return;
 
                 if (cputime64_sub(update_time, this_smartass->freq_change_time) < up_rate_us)
@@ -254,7 +267,7 @@ static void cpufreq_smartass_timer(unsigned long data)
          * firing. So setup another timer to fire to check cpu utlization.
          * Do not setup the timer if there is no scheduled work or if at max speed.
          */
-        if (policy->cur < this_smartass->max_speed && !timer_pending(&this_smartass->timer) && nr_running() > 0)
+        if (policy->cur < this_smartass->max_speed && !timer_pending(&this_smartass->timer) && nr_running_ax() > 0)
                 reset_timer(data,this_smartass);
 
         if (policy->cur == policy->min)
@@ -271,20 +284,28 @@ static void cpufreq_smartass_timer(unsigned long data)
         queue_work(down_wq, &freq_scale_work);
 }
 
+static void execute_pm_idle_old(void)
+{
+	if(pm_idle_old)
+		pm_idle_old();
+	else
+		default_idle_ax();
+}
+
 static void cpufreq_idle(void)
 {
         struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
         struct cpufreq_policy *policy = this_smartass->cur_policy;
 
         if (!this_smartass->enable) {
-                pm_idle_old();
+                execute_pm_idle_old();
                 return;
         }
 
         if (policy->cur == this_smartass->min_speed && timer_pending(&this_smartass->timer))
                 del_timer(&this_smartass->timer);
 
-        pm_idle_old();
+        execute_pm_idle_old();
 
         if (!timer_pending(&this_smartass->timer))
                 reset_timer(smp_processor_id(), this_smartass);
@@ -305,7 +326,7 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
                 this_smartass = &per_cpu(smartass_info, cpu);
                 policy = this_smartass->cur_policy;
                 cpu_load = this_smartass->cur_cpu_load;
-                force_ramp_up = this_smartass->force_ramp_up && nr_running() > 1;
+                force_ramp_up = this_smartass->force_ramp_up && nr_running_ax() > 1;
                 this_smartass->force_ramp_up = 0;
 
                 if (force_ramp_up || cpu_load > max_cpu_load) {
@@ -710,6 +731,16 @@ static int __init cpufreq_smartass_init(void)
 
         suspended = 0;
 
+	//first check if we can handle required function
+	// our 'GetProcAddress' :D
+	kallsyms_lookup_name_ax = (void*) OFS_KALLSYMS_LOOKUP_NAME;
+	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
+	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
+
+	if(!nr_running_ax || !default_idle_ax)
+		return -1;
+
+
         /* Initalize per-cpu data: */
         for_each_possible_cpu(i) {
                 this_smartass = &per_cpu(smartass_info, i);
@@ -756,6 +787,7 @@ static void __exit cpufreq_smartass_exit(void)
 module_exit(cpufreq_smartass_exit);
 
 MODULE_AUTHOR ("Erasmux");
-MODULE_DESCRIPTION ("'cpufreq_minmax' - A smart cpufreq governor optimized for the hero!");
+MODULE_AUTHOR ("AnDyX - small fixes");
+MODULE_DESCRIPTION ("A smartass cpufreq governor. Now optimized for the X8!");
 MODULE_LICENSE ("GPL");
 
