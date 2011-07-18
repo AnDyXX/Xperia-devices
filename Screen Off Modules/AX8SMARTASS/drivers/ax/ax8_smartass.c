@@ -35,7 +35,7 @@
 #include <linux/earlysuspend.h>
 
 #define AX_MODULE_NAME 			"ax8_smartass"
-#define AX_MODULE_VER			"v001"
+#define AX_MODULE_VER			"v002"
 
 #define DEVICE_NAME				"X8"
 #define OFS_KALLSYMS_LOOKUP_NAME	0xC00B0654			// kallsyms_lookup_name
@@ -115,14 +115,14 @@ static unsigned int up_min_freq;
  * to minimize wakeup issues.
  * Set sleep_max_freq=0 to disable this behavior.
  */
-#define DEFAULT_SLEEP_MAX_FREQ 245760
+#define DEFAULT_SLEEP_MAX_FREQ 122880
 static unsigned int sleep_max_freq;
 
 /*
  * The frequency to set when waking up from sleep.
  * When sleep_max_freq=0 this will have no effect.
  */
-#define DEFAULT_SLEEP_WAKEUP_FREQ 320000
+#define DEFAULT_SLEEP_WAKEUP_FREQ 600000
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -150,7 +150,7 @@ static unsigned int ramp_up_step;
  * Freqeuncy delta when ramping down.
  * zero disables and will calculate ramp down according to load heuristic.
  */
-#define DEFAULT_RAMP_DOWN_STEP 0
+#define DEFAULT_RAMP_DOWN_STEP 160000
 static unsigned int ramp_down_step;
 
 /*
@@ -164,6 +164,8 @@ static unsigned long max_cpu_load;
  */
 #define DEFAULT_MIN_CPU_LOAD 25
 static unsigned long min_cpu_load;
+
+#define DEFAULT_SLEEP_RATE_MULTIPLIER (usecs_to_jiffies(500000) / DEFAULT_SAMPLE_RATE_JIFFIES)
 
 
 static int cpufreq_governor_smartass(struct cpufreq_policy *policy,
@@ -227,7 +229,7 @@ static void cpufreq_smartass_timer(unsigned long data)
 
 	//be more relaxed when screen if off
 	if(this_smartass->suspended && policy->cur == policy->min)
-		multipier = 5;
+		multipier = DEFAULT_SLEEP_RATE_MULTIPLIER;
 
         delta_idle = cputime64_sub(now_idle, this_smartass->time_in_idle);
         delta_time = cputime64_sub(update_time, this_smartass->idle_exit_time);
@@ -341,10 +343,10 @@ static void cpufreq_idle(void)
 
 	//be more relaxed when screen if off
 	if(this_smartass->suspended && policy->cur == policy->min)
-		multipier = 5;
+		multipier = DEFAULT_SLEEP_RATE_MULTIPLIER;
 	
 	//make additional calc
-        if (policy->cur == this_smartass->min_speed && timer_pending(&this_smartass->timer))
+        if (!this_smartass->suspended && policy->cur == this_smartass->min_speed && timer_pending(&this_smartass->timer))
                 del_timer(&this_smartass->timer);
 
         execute_pm_idle_old();
