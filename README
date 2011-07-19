@@ -1,0 +1,6 @@
+Git contains following active projects:
+
+- AX8MT - dual touch enabler for Cypress digitizer,
+- AX8NOALS - driver for backlight that allows to disable ALS,
+- AX8CAMERA - camera driver with debug informations enabled,
+- Screen Off Modules/AX8SMARTASS - modified 'smartass' governor that works on X8.
