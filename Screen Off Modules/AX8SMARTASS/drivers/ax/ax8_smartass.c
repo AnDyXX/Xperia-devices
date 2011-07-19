@@ -37,7 +37,7 @@
 #define AX_MODULE_NAME 			"ax8_smartass"
 #define AX_MODULE_VER			"v002"
 
-#define DEVICE_NAME				"X8"
+#define DEVICE_NAME			"X8"
 #define OFS_KALLSYMS_LOOKUP_NAME	0xC00B0654			// kallsyms_lookup_name
 
 // for get proc address
@@ -165,8 +165,11 @@ static unsigned long max_cpu_load;
 #define DEFAULT_MIN_CPU_LOAD 25
 static unsigned long min_cpu_load;
 
-#define DEFAULT_SLEEP_RATE_MULTIPLIER (usecs_to_jiffies(500000) / DEFAULT_SAMPLE_RATE_JIFFIES)
-
+/*
+ * When screen if off behave like conservative governor;
+ */
+#define DEFAULT_SLEEP_RATE_US (usecs_to_jiffies(500000))
+static unsigned long sleep_rate_jiffies;
 
 static int cpufreq_governor_smartass(struct cpufreq_policy *policy,
                 unsigned int event);
@@ -201,14 +204,9 @@ inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, 
         return freq;
 }
 
-static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass, int multipier) {
-/*	if (debug_mask & SMARTASS_DEBUG_IDLE)
-	        printk(KERN_INFO "smartassRT: oi=%llu\n",
-				this_smartass->idled_time);
-  this_smartass->idled_time = 0;
-*/
+static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass, unsigned int timer_rate_jiffies) {
   this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
-  mod_timer(&this_smartass->timer, jiffies + multipier * sample_rate_jiffies);
+  mod_timer(&this_smartass->timer, jiffies + timer_rate_jiffies);
 }
 
 static void cpufreq_smartass_timer(unsigned long data)
@@ -218,7 +216,8 @@ static void cpufreq_smartass_timer(unsigned long data)
         int cpu_load;
         u64 update_time;
         u64 now_idle;
-	int multipier = 1;
+	unsigned int timer_rate_jiffies = sample_rate_jiffies;
+
         struct smartass_info_s *this_smartass = &per_cpu(smartass_info, data);
         struct cpufreq_policy *policy = this_smartass->cur_policy;
 
@@ -229,7 +228,7 @@ static void cpufreq_smartass_timer(unsigned long data)
 
 	//be more relaxed when screen if off
 	if(this_smartass->suspended && policy->cur == policy->min)
-		multipier = DEFAULT_SLEEP_RATE_MULTIPLIER;
+		timer_rate_jiffies = sleep_rate_jiffies;
 
         delta_idle = cputime64_sub(now_idle, this_smartass->time_in_idle);
         delta_time = cputime64_sub(update_time, this_smartass->idle_exit_time);
@@ -241,7 +240,7 @@ static void cpufreq_smartass_timer(unsigned long data)
         // If timer ran less than 1ms after short-term sample started, retry.
         if (delta_time < 1000) {
                 if (!timer_pending(&this_smartass->timer))
-                        reset_timer(data,this_smartass, multipier);
+                        reset_timer(data,this_smartass, timer_rate_jiffies);
                 return;
         }
 
@@ -263,7 +262,7 @@ static void cpufreq_smartass_timer(unsigned long data)
               cputime64_sub(update_time, this_smartass->freq_change_time) > 100*down_rate_us)) {
 
                 if (policy->cur > this_smartass->max_speed) {
-                        reset_timer(data,this_smartass, multipier);
+                        reset_timer(data,this_smartass, timer_rate_jiffies);
                 }
 
                 if (policy->cur == policy->max)
@@ -303,7 +302,7 @@ static void cpufreq_smartass_timer(unsigned long data)
 			}
 		}
 
-                reset_timer(data,this_smartass, multipier);
+                reset_timer(data,this_smartass, timer_rate_jiffies);
 	}
 
         if (policy->cur == policy->min)
@@ -316,8 +315,14 @@ static void cpufreq_smartass_timer(unsigned long data)
         if (cputime64_sub(update_time, this_smartass->freq_change_time) < down_rate_us)
                 return;
 
-        cpumask_set_cpu(data, &work_cpumask);
-        queue_work(down_wq, &freq_scale_work);
+	/*
+	 * Scale down only when there is something to scale down.
+	 */
+	if (cpu_load < min_cpu_load)
+	{
+        	cpumask_set_cpu(data, &work_cpumask);
+	        queue_work(down_wq, &freq_scale_work);
+	}
 }
 
 static void execute_pm_idle_old(void)
@@ -332,7 +337,7 @@ static void cpufreq_idle(void)
 {
         struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
         struct cpufreq_policy *policy = this_smartass->cur_policy;
-	int multipier = 1;
+	unsigned int timer_rate_jiffies = sample_rate_jiffies;
 
         if (!this_smartass->enable) {
                 execute_pm_idle_old();
@@ -341,10 +346,6 @@ static void cpufreq_idle(void)
 
 	this_smartass->idling = 1;
 
-	//be more relaxed when screen if off
-	if(this_smartass->suspended && policy->cur == policy->min)
-		multipier = DEFAULT_SLEEP_RATE_MULTIPLIER;
-	
 	//make additional calc
         if (!this_smartass->suspended && policy->cur == this_smartass->min_speed && timer_pending(&this_smartass->timer))
                 del_timer(&this_smartass->timer);
@@ -355,7 +356,11 @@ static void cpufreq_idle(void)
         
 	if (!timer_pending(&this_smartass->timer))
 	{
-                reset_timer(smp_processor_id(), this_smartass, multipier );
+	//be more relaxed when screen if off
+		if(this_smartass->suspended && policy->cur == policy->min)
+			timer_rate_jiffies = sleep_rate_jiffies;
+
+                reset_timer(smp_processor_id(), this_smartass, timer_rate_jiffies );
 	}
 }
 
@@ -632,6 +637,24 @@ static ssize_t store_min_cpu_load(struct cpufreq_policy *policy, const char *buf
 static struct freq_attr min_cpu_load_attr = __ATTR(min_cpu_load, 0644,
                 show_min_cpu_load, store_min_cpu_load);
 
+static ssize_t show_sleep_rate_us(struct cpufreq_policy *policy, char *buf)
+{
+        return sprintf(buf, "%lu\n", (long)jiffies_to_usecs(sleep_rate_jiffies));
+}
+
+static ssize_t store_sleep_rate_us(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+        ssize_t res;
+        unsigned long input;
+        res = strict_strtoul(buf, 0, &input);
+        if (res >= 0 && input >= 50000 && input <= 1000000)
+          sleep_rate_jiffies = usecs_to_jiffies(input);
+        return res;
+}
+
+static struct freq_attr sleep_rate_us_attr = __ATTR(sleep_rate_us, 0644,
+                show_sleep_rate_us, store_sleep_rate_us);
+
 static struct attribute * smartass_attributes[] = {
         &debug_mask_attr.attr,
         &up_rate_us_attr.attr,
@@ -645,6 +668,7 @@ static struct attribute * smartass_attributes[] = {
         &ramp_down_step_attr.attr,
         &max_cpu_load_attr.attr,
         &min_cpu_load_attr.attr,
+	&sleep_rate_us_attr.attr,
         NULL,
 };
 
@@ -697,6 +721,7 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 
                 if (atomic_dec_return(&active_count) > 1)
                         return 0;
+
                 sysfs_remove_group(&new_policy->kobj,
                                 &smartass_attr_group);
 
@@ -730,12 +755,12 @@ static void smartass_suspend(int cpu, int suspend)
                                         CPUFREQ_RELATION_L);
 
                 if (policy->cur < this_smartass->max_speed && !timer_pending(&this_smartass->timer))
-                        reset_timer(smp_processor_id(),this_smartass, 1);
+                        reset_timer(smp_processor_id(),this_smartass, sample_rate_jiffies);
         } else {
                 // to avoid wakeup issues with quick sleep/wakeup don't change actual frequency when entering sleep
                 // to allow some time to settle down.
                 // we reset the timer, if eventually, even at full load the timer will lower the freqeuncy.
-                reset_timer(smp_processor_id(),this_smartass, 1);
+                reset_timer(smp_processor_id(),this_smartass, sample_rate_jiffies);
 
                 this_smartass->freq_change_time_in_idle =
                         get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
@@ -779,6 +804,7 @@ static int __init cpufreq_smartass_init(void)
         ramp_down_step = DEFAULT_RAMP_DOWN_STEP;
         max_cpu_load = DEFAULT_MAX_CPU_LOAD;
         min_cpu_load = DEFAULT_MIN_CPU_LOAD;
+	sleep_rate_jiffies = DEFAULT_SLEEP_RATE_US;
 
         suspended = 0;
 
@@ -807,7 +833,6 @@ static int __init cpufreq_smartass_init(void)
                 this_smartass->cur_cpu_load = 0;
 		this_smartass->idling = 0;
 		this_smartass->suspended = 0;
-		//this_smartass->idled_time = 0;
 
                 // intialize timer:
                 init_timer_deferrable(&this_smartass->timer);
@@ -836,8 +861,11 @@ module_init(cpufreq_smartass_init);
 
 static void __exit cpufreq_smartass_exit(void)
 {
-	unregister_early_suspend(&smartass_power_suspend);
+	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, 0);
+	this_smartass->enable = 0;
+
         cpufreq_unregister_governor(&cpufreq_gov_smartass);
+	unregister_early_suspend(&smartass_power_suspend);
         destroy_workqueue(up_wq);
         destroy_workqueue(down_wq);
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " unloaded\n");
