@@ -1,0 +1,11 @@
+<4>[11507.413994] ax8swap: Unknown symbol page_cluster
+<4>[11507.417241] ax8swap: Unknown symbol __lru_cache_add
+<4>[11507.420279] ax8swap: Unknown symbol release_pages
+<4>[11507.424801] ax8swap: Unknown symbol page_add_anon_rmap
+<4>[11507.429474] ax8swap: Unknown symbol shmem_unuse
+<4>[11507.433571] ax8swap: Unknown symbol lru_add_drain
+<4>[11507.439007] ax8swap: Unknown symbol page_address_in_vma
+<4>[11507.443219] ax8swap: Unknown symbol pmd_clear_bad
+<4>[11507.448310] ax8swap: Unknown symbol cap_vm_enough_memory
+<4>[11507.454014] ax8swap: Unknown symbol activate_page
+<4>[11507.458211] ax8swap: Unknown symbol vm_committed_space
