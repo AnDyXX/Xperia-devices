@@ -783,7 +783,7 @@ static inline int unuse_pmd_range(struct vm_area_struct *vma, pud_t *pud,
 	pmd = pmd_offset(pud, addr);
 	do {
 		next = pmd_addr_end(addr, end);
-		if (pmd_none_or_clear_bad(pmd))
+		if (ax8swap_pmd_none_or_clear_bad(pmd))
 			continue;
 		ret = unuse_pte_range(vma, pmd, addr, next, entry, page);
 		if (ret)
@@ -1428,8 +1428,8 @@ SYSCALL_DEFINE1(swapoff, const char __user *, specialfile)
 		spin_unlock(&swap_lock);
 		goto out_dput;
 	}
-	if (!security_vm_enough_memory(p->pages))
-		vm_unacct_memory(p->pages);
+	if (!ax8swap_security_vm_enough_memory(p->pages))
+		ax8swap_vm_unacct_memory(p->pages);
 	else {
 		err = -ENOMEM;
 		spin_unlock(&swap_lock);

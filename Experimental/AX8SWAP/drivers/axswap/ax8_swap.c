@@ -14,11 +14,6 @@
 
 #include "hijacked_types.h"
 
-static inline void __put_page(struct page *page)
-{
-	atomic_dec(&page->_count);
-}
-
 
 /************* hijacked function pointers **************/
 int * ax8swap_page_cluster;
@@ -31,11 +26,10 @@ page_address_in_vma_type ax8swap_page_address_in_vma;
 pmd_clear_bad_type ax8swap_pmd_clear_bad;
 cap_vm_enough_memory_type ax8swap_cap_vm_enough_memory;
 activate_page_type ax8swap_activate_page;
-
+atomic_long_t *ax8swap_vm_committed_space;
 
 /************* hijacked functions **************/
 #include "ax8__swap.c"
-#include "ax8__migrate.c"
 
 
 #define AX_MODULE_VER			"v001"
@@ -55,23 +49,23 @@ struct cfg_value_map {
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
-	{"migrate_page_move_mapping", 	&ax8swap_migrate_page_move_mapping },
-	{"pagevec_swap_free", 		&ax8swap_pagevec_swap_free },
-	{"__lru_cache_add", 		&ax8swap___lru_cache_add },
-	{"release_pages", 		&ax8swap_release_pages },
-	{"page_add_anon_rmap", 		&ax8swap_page_add_anon_rmap },
-	{"shmem_unuse", 		&ax8swap_shmem_unuse },
-	{"lru_add_drain", 		&ax8swap_lru_add_drain },
-	{"page_address_in_vma", 	&ax8swap_page_address_in_vma },
-	{"pmd_clear_bad", 		&ax8swap_pmd_clear_bad },
-	{"cap_vm_enough_memory", 	&ax8swap_cap_vm_enough_memory },
-	{"activate_page", 		&ax8swap_activate_page },
+	{"pagevec_swap_free", 	&ax8swap_pagevec_swap_free },
 	{NULL, 0},
 };
 
 static struct cfg_value_map struct_mapping_table[] = {
 	{"swapper_space", 	&ax8swap_swapper_space },
 	{"page_cluster",  	&ax8swap_page_cluster },
+	{"vm_committed_space",  &ax8swap_vm_committed_space },
+	{"__lru_cache_add", 	&ax8swap___lru_cache_add },
+	{"release_pages", 	&ax8swap_release_pages },
+	{"page_add_anon_rmap", 	&ax8swap_page_add_anon_rmap },
+	{"shmem_unuse", 	&ax8swap_shmem_unuse },
+	{"lru_add_drain", 	&ax8swap_lru_add_drain },
+	{"page_address_in_vma", &ax8swap_page_address_in_vma },
+	{"pmd_clear_bad", 	&ax8swap_pmd_clear_bad },
+	{"cap_vm_enough_memory",&ax8swap_cap_vm_enough_memory },
+	{"activate_page", 	&ax8swap_activate_page },
 	{NULL, 0},
 };
 
@@ -106,10 +100,10 @@ static int hijack_functions(int check_only)
 		if(check_only)
 		{
 			if(func)
-				printk(KERN_ERR AX_MODULE_NAME ": %s found\n", t->name);	
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s found\n", t->name);	
 			else
 			{
-				printk(KERN_ERR AX_MODULE_NAME ": %s not found!!!\n", t->name);	
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s not found!!!\n", t->name);	
 				ret = 0;
 			}
 		}
@@ -117,7 +111,7 @@ static int hijack_functions(int check_only)
 			if(func)
 			{
 				patch_to_jmp(func, t->new_func);
-				printk(KERN_ERR AX_MODULE_NAME ": %s hijacked\n", t->name);	
+				printk(KERN_ERR AX_MODULE_NAME ": Function %s hijacked\n", t->name);	
 			}
 			else
 				ret = 0;
@@ -139,20 +133,19 @@ static int hijack_structs(int check_only)
 		if(check_only)
 		{
 			if(func)
-				printk(KERN_ERR AX_MODULE_NAME ": %s found\n", t->name);	
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s found\n", t->name);	
 			else
 			{
-				printk(KERN_ERR AX_MODULE_NAME ": %s not found!!!\n", t->name);	
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s not found!!!\n", t->name);	
 				ret = 0;
 			}
 		}
 		else
 			if(func)
-			{
-				//&(t->new_func) = func;
+			{				
 				address = t->new_func;
 				address =  func;
-				printk(KERN_ERR AX_MODULE_NAME ": %s hijacked\n", t->name);	
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s stored\n", t->name);	
 			}
 			else
 				ret = 0;
@@ -172,7 +165,7 @@ static int __init ax8swap_init(void)
 	if(hijack_functions(1) && hijack_structs(1))
 	{
 
-		ax8swap_swap_setup();
+		//ax8swap_swap_setup();
 #ifdef CONFIG_PROC_FS__
 		proc_create("swaps", 0, NULL, &proc_swaps_operations);
 #endif
