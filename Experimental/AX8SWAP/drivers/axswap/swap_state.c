@@ -26,6 +26,8 @@
 
 #include <asm/pgtable.h>
 
+#include "hijacked_types.h"
+
 /*
  * swapper_space is a fiction, retained to simplify the path through
  * vmscan's shrink_page_list, to make sync_page look nicer, and to allow
@@ -234,14 +236,14 @@ void free_pages_and_swap_cache(struct page **pages, int nr)
 {
 	struct page **pagep = pages;
 
-	lru_add_drain();
+	ax8swap_lru_add_drain();
 	while (nr) {
 		int todo = min(nr, PAGEVEC_SIZE);
 		int i;
 
 		for (i = 0; i < todo; i++)
 			free_swap_cache(pagep[i]);
-		release_pages(pagep, todo, 0);
+		ax8swap_release_pages(pagep, todo, 0);
 		pagep += todo;
 		nr -= todo;
 	}
@@ -375,6 +377,6 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 			break;
 		page_cache_release(page);
 	}
-	lru_add_drain();	/* Push any new pages onto the LRU now */
+	ax8swap_lru_add_drain();	/* Push any new pages onto the LRU now */
 	return read_swap_cache_async(entry, gfp_mask, vma, addr);
 }

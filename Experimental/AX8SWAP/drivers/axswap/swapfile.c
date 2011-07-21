@@ -40,6 +40,8 @@
 #include <linux/swapops.h>
 #include <linux/page_cgroup.h>
 
+#include "hijacked_types.h"
+
 static DEFINE_SPINLOCK(swap_lock);
 static unsigned int nr_swapfiles;
 long nr_swap_pages;
@@ -720,14 +722,14 @@ static int unuse_pte(struct vm_area_struct *vma, pmd_t *pmd,
 	get_page(page);
 	set_pte_at(vma->vm_mm, addr, pte,
 		   pte_mkold(mk_pte(page, vma->vm_page_prot)));
-	page_add_anon_rmap(page, vma, addr);
+	ax8swap_page_add_anon_rmap(page, vma, addr);
 	mem_cgroup_commit_charge_swapin(page, ptr);
 	swap_free(entry);
 	/*
 	 * Move the page to the active list so it is not
 	 * immediately swapped out again after swapon.
 	 */
-	activate_page(page);
+	ax8swap_activate_page(page);
 out:
 	pte_unmap_unlock(pte, ptl);
 out_nolock:
@@ -818,7 +820,7 @@ static int unuse_vma(struct vm_area_struct *vma,
 	int ret;
 
 	if (page->mapping) {
-		addr = page_address_in_vma(page, vma);
+		addr = ax8swap_page_address_in_vma(page, vma);
 		if (addr == -EFAULT)
 			return 0;
 		else
@@ -851,7 +853,7 @@ static int unuse_mm(struct mm_struct *mm,
 		 * Activate page so shrink_inactive_list is unlikely to unmap
 		 * its ptes while lock is dropped, so swapoff can make progress.
 		 */
-		activate_page(page);
+		ax8swap_activate_page(page);
 		unlock_page(page);
 		down_read(&mm->mmap_sem);
 		lock_page(page);
@@ -1002,7 +1004,7 @@ static int try_to_unuse(unsigned int type)
 		swcount = *swap_map;
 		if (swcount > 1) {
 			if (start_mm == &init_mm)
-				shmem = shmem_unuse(entry, page);
+				shmem = ax8swap_shmem_unuse(entry, page);
 			else
 				retval = unuse_mm(start_mm, entry, page);
 		}
@@ -1032,7 +1034,7 @@ static int try_to_unuse(unsigned int type)
 					;
 				else if (mm == &init_mm) {
 					set_start_mm = 1;
-					shmem = shmem_unuse(entry, page);
+					shmem = ax8swap_shmem_unuse(entry, page);
 				} else
 					retval = unuse_mm(mm, entry, page);
 				if (set_start_mm && *swap_map < swcount) {
@@ -2000,7 +2002,7 @@ get_swap_info_struct(unsigned type)
 int valid_swaphandles(swp_entry_t entry, unsigned long *offset)
 {
 	struct swap_info_struct *si;
-	int our_page_cluster = page_cluster;
+	int our_page_cluster = *ax8swap_page_cluster;
 	pgoff_t target, toff;
 	pgoff_t base, end;
 	int nr_pages = 0;
