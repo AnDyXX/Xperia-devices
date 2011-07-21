@@ -6,10 +6,15 @@
  *
  *  Rewritten to use page cache, (C) 1998 Stephen Tweedie
  */
+
+#define CONFIG_SWAP
+#include <linux/swap.h>
+#undef CONFIG_SWAP
+
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/kernel_stat.h>
-#include <linux/swap.h>
+
 #include <linux/swapops.h>
 #include <linux/init.h>
 #include <linux/pagemap.h>

@@ -5,12 +5,17 @@
  *  Swap reorganised 29.12.95, Stephen Tweedie
  */
 
+#define CONFIG_SWAP
+#include <linux/swap.h>
+#undef CONFIG_SWAP
+
+
 #include <linux/mm.h>
 #include <linux/hugetlb.h>
 #include <linux/mman.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
-#include <linux/swap.h>
+
 #include <linux/vmalloc.h>
 #include <linux/pagemap.h>
 #include <linux/namei.h>
@@ -1522,6 +1527,7 @@ out:
 	return err;
 }
 
+//TODO:  init proc fs
 #ifdef CONFIG_PROC_FS
 /* iterator */
 static void *swap_start(struct seq_file *swap, loff_t *pos)
@@ -1614,12 +1620,14 @@ static const struct file_operations proc_swaps_operations = {
 	.release	= seq_release,
 };
 
-static int __init procswaps_init(void)
-{
-	proc_create("swaps", 0, NULL, &proc_swaps_operations);
-	return 0;
-}
-__initcall(procswaps_init);
+//static int __init procswaps_init(void)
+//{
+//	proc_create("swaps", 0, NULL, &proc_swaps_operations);
+//	return 0;
+//}
+//TODO: check what should happened
+
+//__initcall(procswaps_init);
 #endif /* CONFIG_PROC_FS */
 
 #ifdef MAX_SWAPFILES_CHECK
