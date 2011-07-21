@@ -11,6 +11,7 @@
 #include <linux/swap.h>
 #include <linux/page-flags.h>
 #include <linux/pagemap.h>
+#include <linux/nodemask.h> 
 
 #include "hijacked_types.h"
 
@@ -27,10 +28,11 @@ pmd_clear_bad_type ax8swap_pmd_clear_bad;
 cap_vm_enough_memory_type ax8swap_cap_vm_enough_memory;
 activate_page_type ax8swap_activate_page;
 atomic_long_t *ax8swap_vm_committed_space;
+struct meminfo *ax8swap_meminfo; 
 
 /************* hijacked functions **************/
 #include "ax8__swap.c"
-
+#include "ax8__init.c"
 
 #define AX_MODULE_VER			"v001"
 #define AX_MODULE_NAME			"ax8swap"
@@ -50,6 +52,7 @@ struct cfg_value_map {
 
 static const struct cfg_value_map func_mapping_table[] = {
 	{"pagevec_swap_free", 	&ax8swap_pagevec_swap_free },
+	{"show_mem", 		&ax8swap_show_mem },
 	{NULL, 0},
 };
 
@@ -66,6 +69,7 @@ static struct cfg_value_map struct_mapping_table[] = {
 	{"pmd_clear_bad", 	&ax8swap_pmd_clear_bad },
 	{"cap_vm_enough_memory",&ax8swap_cap_vm_enough_memory },
 	{"activate_page", 	&ax8swap_activate_page },
+	{"meminfo", 		&ax8swap_meminfo },
 	{NULL, 0},
 };
 
