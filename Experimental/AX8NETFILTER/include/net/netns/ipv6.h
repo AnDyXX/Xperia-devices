@@ -68,6 +68,10 @@ struct netns_ipv6 {
 #endif
 #endif
 
+
+};
+
+struct netns_ax8netfilter_ipv6 {
 #ifdef CONFIG_AX8_NETFILTER
 	struct xt_table		*ip6table_filter;
 	struct xt_table		*ip6table_mangle;
@@ -76,4 +80,5 @@ struct netns_ipv6 {
 #endif
 
 };
+
 #endif

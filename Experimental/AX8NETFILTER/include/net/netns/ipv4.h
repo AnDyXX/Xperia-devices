@@ -55,6 +55,11 @@ struct netns_ipv4 {
 	struct timer_list rt_secret_timer;
 	atomic_t rt_genid;
 	
+	
+};
+
+
+struct netns_ax8netfilter_ipv4 {
 #ifdef CONFIG_AX8_NETFILTER
 	struct xt_table		*iptable_filter;
 	struct xt_table		*iptable_mangle;
@@ -65,6 +70,7 @@ struct netns_ipv4 {
 	struct hlist_head	*nat_bysource;
 	int			nat_vmalloced;
 #endif
-	
+
 };
+
 #endif

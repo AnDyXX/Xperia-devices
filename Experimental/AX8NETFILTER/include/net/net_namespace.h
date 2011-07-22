@@ -79,22 +79,32 @@ struct net {
 	struct netns_xfrm	xfrm;
 #endif
 	struct net_generic	*gen;
-	
-	
+};
+
+
+struct ax8netfilter_net {
 #ifdef CONFIG_AX8_NETFILTER
+	struct netns_ax8netfilter_ipv4	ipv4;
+#if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
+	struct netns_ax8netfilter_ipv6	ipv6;
+#endif
+
 	struct netns_xt		xt;
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 	struct netns_ct		ct;
 #endif
 #endif
-	
 };
-
 
 #include <linux/seq_file_net.h>
 
 /* Init's network namespace */
 extern struct net init_net;
+
+#ifdef CONFIG_AX8_NETFILTER
+/* Init's network namespace */
+extern struct ax8netfilter_net init_ax8netfilter_net;
+#endif
 
 #ifdef CONFIG_NET
 #define INIT_NET_NS(net_ns) .net_ns = &init_net,
