@@ -77,7 +77,7 @@ set_ect_tcp(struct sk_buff *skb, const struct ipt_ECN_info *einfo)
 }
 
 static unsigned int
-ecn_tg(struct sk_buff *skb, const struct xt_action_param *par)
+ecn_tg(struct sk_buff *skb, const struct xt_target_param *par)
 {
 	const struct ipt_ECN_info *einfo = par->targinfo;
 
@@ -93,7 +93,7 @@ ecn_tg(struct sk_buff *skb, const struct xt_action_param *par)
 	return XT_CONTINUE;
 }
 
-static int ecn_tg_check(const struct xt_tgchk_param *par)
+static bool ecn_tg_check(const struct xt_tgchk_param *par)
 {
 	const struct ipt_ECN_info *einfo = par->targinfo;
 	const struct ipt_entry *e = par->entryinfo;
