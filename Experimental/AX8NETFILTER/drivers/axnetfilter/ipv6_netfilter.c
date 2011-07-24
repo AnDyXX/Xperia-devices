@@ -165,15 +165,9 @@ static const struct nf_afinfo nf_ip6_afinfo = {
 	.route_key_size		= sizeof(struct ip6_rt_info),
 };
 
-int __init ipv6_netfilter_init(void)
+int ipv6_netfilter_init(void)
 {
 	return nf_register_afinfo(&nf_ip6_afinfo);
 }
 
-/* This can be called from inet6_init() on errors, so it cannot
- * be marked __exit. -DaveM
- */
-void ipv6_netfilter_fini(void)
-{
-	nf_unregister_afinfo(&nf_ip6_afinfo);
-}
+

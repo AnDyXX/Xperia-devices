@@ -161,7 +161,7 @@ static const struct file_operations nflog_file_ops = {
 #endif /* PROC_FS */
 
 
-int __init netfilter_log_init(void)
+int netfilter_log_init(void)
 {
 #ifdef CONFIG_PROC_FS
 	if (!proc_create("nf_log", S_IRUGO,

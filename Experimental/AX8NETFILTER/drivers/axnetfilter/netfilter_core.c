@@ -253,7 +253,10 @@ struct proc_dir_entry *proc_net_netfilter;
 EXPORT_SYMBOL(proc_net_netfilter);
 #endif
 
-void __init netfilter_init(void)
+int netfilter_log_init(void);
+int netfilter_queue_init(void);
+
+void netfilter_init(void)
 {
 	int i, h;
 	for (i = 0; i < ARRAY_SIZE(nf_hooks); i++) {

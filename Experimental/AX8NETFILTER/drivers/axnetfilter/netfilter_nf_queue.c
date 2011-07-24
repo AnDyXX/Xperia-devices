@@ -345,7 +345,7 @@ static const struct file_operations nfqueue_file_ops = {
 #endif /* PROC_FS */
 
 
-int __init netfilter_queue_init(void)
+int netfilter_queue_init(void)
 {
 #ifdef CONFIG_PROC_FS
 	if (!proc_create("nf_queue", S_IRUGO,
