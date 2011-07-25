@@ -16,6 +16,9 @@
 #define AX_MODULE_NAME 			"ax8netfilter"
 #define AX_MODULE_VER			"v001"
 
+#define DEVICE_NAME			"X8"
+#define OFS_KALLSYMS_LOOKUP_NAME	0xC00B0654			// kallsyms_lookup_name
+
 struct ax8netfilter_net init_ax8netfilter_net;
 EXPORT_SYMBOL(init_ax8netfilter_net);
 
@@ -29,11 +32,27 @@ void netfilter_init(void);
 // init module
 static int __init ax8netfilter_init(void)
 {
-	netfilter_init();
-	ipv4_netfilter_init();
-	ipv6_netfilter_init();
+	int ret = -1;
 
-	return -1;
+	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
+
+	netfilter_init();
+	ret = ipv4_netfilter_init();
+	if( ret < 0 )
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ipv4_netfilter_init() failed\n");
+		goto eof;
+	}
+
+	ret = ipv6_netfilter_init();
+	if( ret < 0 )
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ipv6_netfilter_init() failed\n");
+		goto eof;
+	}
+
+	eof:
+	return ret;
 }
 
 module_init(ax8netfilter_init);

@@ -63,11 +63,19 @@ int nf_register_hook(struct nf_hook_ops *reg)
 	err = mutex_lock_interruptible(&nf_hook_mutex);
 	if (err < 0)
 		return err;
-	list_for_each_entry(elem, &nf_hooks[reg->pf][reg->hooknum], list) {
-		if (reg->priority < elem->priority)
-			break;
+	if(&nf_hooks[reg->pf][reg->hooknum] != nf_hooks[reg->pf][reg->hooknum].next)
+	{
+		list_for_each_entry(elem, &nf_hooks[reg->pf][reg->hooknum], list) {
+			if (reg->priority < elem->priority)
+				break;
+		}
+		list_add_rcu(&reg->list, elem->list.prev);
 	}
-	list_add_rcu(&reg->list, elem->list.prev);
+	else
+	{
+		list_add_rcu(&reg->list, &nf_hooks[reg->pf][reg->hooknum]);
+	}	
+	
 	mutex_unlock(&nf_hook_mutex);
 	return 0;
 }
