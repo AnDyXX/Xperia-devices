@@ -15,6 +15,8 @@
 #include <linux/igmp.h>
 #include <linux/inetdevice.h>
 #include <linux/pkt_sched.h>
+#include <linux/netfilter_arp.h>
+#include <linux/icmp.h>
 #include <net/net_namespace.h>
 #include <net/sock.h>
 #include <net/inet_sock.h>
@@ -22,6 +24,8 @@
 #include <net/transp_v6.h>
 #include <net/xfrm.h>
 #include <net/dst.h>
+#include <net/icmp.h>
+#include <net/raw.h>
 
 
 #define AX_MODULE_NAME 			"ax8netfilter"
@@ -49,7 +53,6 @@ static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
 //unresolved symbols
 
 //defs
-
 typedef int (*ip_mc_msfget_type)(struct sock *sk, struct ip_msfilter *msf,
 		struct ip_msfilter __user *optval, int __user *optlen);
 typedef int (*ip_mc_source_type)(int add, int omode, struct sock *sk,
@@ -64,6 +67,24 @@ typedef int (*ip_mc_gsfget_type)(struct sock *sk, struct group_filter *gsf,
 typedef int (*ip_mc_msfilter_type)(struct sock *sk, struct ip_msfilter *msf,int ifindex);
 typedef int (*ip_finish_output2_type)(struct sk_buff *skb);
 
+typedef int (*ip_cmsg_send_type)(struct net *net, struct msghdr *msg, struct ipcm_cookie *ipc);
+typedef void (*icmp_out_count_type)(struct net *net, unsigned char type);
+
+typedef int (*ip_append_data_type)(struct sock *sk,
+		   int getfrag(void *from, char *to, int offset, int len,
+			       int odd, struct sk_buff *skb),
+		   void *from, int length, int transhdrlen,
+		   struct ipcm_cookie *ipc, struct rtable **rtp,
+		   unsigned int flags); 
+typedef void (*xfrm_replay_notify_type)(struct xfrm_state *x, int event);
+typedef void (*ip_local_error_type)(struct sock *sk, int err, __be32 daddr, __be16 port, u32 info) ;
+typedef void (*ip_flush_pending_frames_type)(struct sock *sk);
+typedef void (*ip_forward_options_type)(struct sk_buff *skb);
+typedef int (*ip_push_pending_frames_type)(struct sock *sk);
+typedef int (*ip_call_ra_chain_type)(struct sk_buff *skb);
+typedef int (*raw_local_deliver_type)(struct sk_buff *skb, int protocol);
+typedef void (*ip_rt_send_redirect_type)(struct sk_buff *skb);
+
 //declared types
 static ip_mc_msfget_type ax8netfilter_ip_mc_msfget;
 static ip_mc_source_type ax8netfilter_ip_mc_source;
@@ -75,8 +96,24 @@ static ip_mc_gsfget_type ax8netfilter_ip_mc_gsfget;
 static ip_mc_msfilter_type ax8netfilter_ip_mc_msfilter;
 static ip_finish_output2_type ax8netfilter_ip_finish_output2;
 
+static ip_cmsg_send_type ax8netfilter_ip_cmsg_send;
+static icmp_out_count_type ax8netfilter_icmp_out_count;
+static ip_append_data_type ax8netfilter_ip_append_data;
+static xfrm_replay_notify_type ax8netfilter_xfrm_replay_notify;
+static ip_local_error_type ax8netfilter_ip_local_error;
+static ip_flush_pending_frames_type ax8netfilter_ip_flush_pending_frames;
+static ip_forward_options_type ax8netfilter_ip_forward_options;
+static ip_push_pending_frames_type ax8netfilter_ip_push_pending_frames;
+static ip_call_ra_chain_type ax8netfilter_ip_call_ra_chain;
+static raw_local_deliver_type ax8netfilter_raw_local_deliver;
+static ip_rt_send_redirect_type ax8netfilter_ip_rt_send_redirect;
+
 static int *ax8netfilter_sysctl_igmp_max_msf;
 static int *ax8netfilter_sysctl_ip_default_ttl;
+
+//static struct net_protocol * ax8netfilter_inet_protos[MAX_INET_PROTOS] ____cacheline_aligned_in_smp;
+
+static struct net_protocol ** ax8netfilter_inet_protos ____cacheline_aligned_in_smp;  
 
 static void patch(unsigned int addr, unsigned int value) {
 	*(unsigned int*)addr = value;
@@ -96,6 +133,720 @@ static void patch_to_jmp(unsigned int addr, void * func) {
 
 
 /*********** HIJACKED METHODS ***************/
+// from xfrm_output.c
+int ax8netfilter_xfrm_output_resume(struct sk_buff *skb, int err);
+static int ax8netfilter_xfrm_output2(struct sk_buff *skb)
+{
+	return ax8netfilter_xfrm_output_resume(skb, 1);
+} 
+
+static int ax8netfilter_xfrm_state_check_space(struct xfrm_state *x, struct sk_buff *skb)
+{
+	struct dst_entry *dst = skb->dst;
+	int nhead = dst->header_len + LL_RESERVED_SPACE(dst->dev)
+		- skb_headroom(skb);
+	int ntail = dst->dev->needed_tailroom - skb_tailroom(skb);
+
+	if (nhead <= 0) {
+		if (ntail <= 0)
+			return 0;
+		nhead = 0;
+	} else if (ntail < 0)
+		ntail = 0;
+
+	return pskb_expand_head(skb, nhead, ntail, GFP_ATOMIC);
+} 
+
+static int ax8netfilter_xfrm_output_one(struct sk_buff *skb, int err)
+{
+	struct dst_entry *dst = skb->dst;
+	struct xfrm_state *x = dst->xfrm;
+	struct net *net = xs_net(x);
+
+	if (err <= 0)
+		goto resume;
+
+	do {
+		err = ax8netfilter_xfrm_state_check_space(x, skb);
+		if (err) {
+			XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTERROR);
+			goto error_nolock;
+		}
+
+		err = x->outer_mode->output(x, skb);
+		if (err) {
+			XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTSTATEMODEERROR);
+			goto error_nolock;
+		}
+
+		spin_lock_bh(&x->lock);
+		err = xfrm_state_check_expire(x);
+		if (err) {
+			XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTSTATEEXPIRED);
+			goto error;
+		}
+
+		if (x->type->flags & XFRM_TYPE_REPLAY_PROT) {
+			XFRM_SKB_CB(skb)->seq.output = ++x->replay.oseq;
+			if (unlikely(x->replay.oseq == 0)) {
+				XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTSTATESEQERROR);
+				x->replay.oseq--;
+				xfrm_audit_state_replay_overflow(x, skb);
+				err = -EOVERFLOW;
+				goto error;
+			}
+			if (xfrm_aevent_is_on(net))
+				ax8netfilter_xfrm_replay_notify(x, XFRM_REPLAY_UPDATE);
+		}
+
+		x->curlft.bytes += skb->len;
+		x->curlft.packets++;
+
+		spin_unlock_bh(&x->lock);
+
+		err = x->type->output(x, skb);
+		if (err == -EINPROGRESS)
+			goto out_exit;
+
+resume:
+		if (err) {
+			XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTSTATEPROTOERROR);
+			goto error_nolock;
+		}
+
+		if (!(skb->dst = dst_pop(dst))) {
+			XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTERROR);
+			err = -EHOSTUNREACH;
+			goto error_nolock;
+		}
+		dst = skb->dst;
+		x = dst->xfrm;
+	} while (x && !(x->outer_mode->flags & XFRM_MODE_FLAG_TUNNEL));
+
+	err = 0;
+
+out_exit:
+	return err;
+error:
+	spin_unlock_bh(&x->lock);
+error_nolock:
+	kfree_skb(skb);
+	goto out_exit;
+} 
+
+int ax8netfilter_xfrm_output_resume(struct sk_buff *skb, int err)
+{
+	while (likely((err = ax8netfilter_xfrm_output_one(skb, err)) == 0)) {
+		nf_reset(skb);
+
+		err = skb->dst->ops->local_out(skb);
+		if (unlikely(err != 1))
+			goto out;
+
+		if (!skb->dst->xfrm)
+			return dst_output(skb);
+
+		err = nf_hook(skb->dst->ops->family,
+			      NF_INET_POST_ROUTING, skb,
+			      NULL, skb->dst->dev, ax8netfilter_xfrm_output2);
+		if (unlikely(err != 1))
+			goto out;
+	}
+
+	if (err == -EINPROGRESS)
+		err = 0;
+
+out:
+	return err;
+} 
+
+// from raw.c
+static int ax8netfilter_raw_send_hdrinc(struct sock *sk, void *from, size_t length,
+			struct rtable *rt,
+			unsigned int flags)
+{
+	struct inet_sock *inet = inet_sk(sk);
+	struct net *net = sock_net(sk);
+	struct iphdr *iph;
+	struct sk_buff *skb;
+	unsigned int iphlen;
+	int err;
+
+	if (length > rt->u.dst.dev->mtu) {
+		ax8netfilter_ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport,
+			       rt->u.dst.dev->mtu);
+		return -EMSGSIZE;
+	}
+	if (flags&MSG_PROBE)
+		goto out;
+
+	skb = sock_alloc_send_skb(sk,
+				  length + LL_ALLOCATED_SPACE(rt->u.dst.dev) + 15,
+				  flags & MSG_DONTWAIT, &err);
+	if (skb == NULL)
+		goto error;
+	skb_reserve(skb, LL_RESERVED_SPACE(rt->u.dst.dev));
+
+	skb->priority = sk->sk_priority;
+	skb->mark = sk->sk_mark;
+	skb->dst = dst_clone(&rt->u.dst);
+
+	skb_reset_network_header(skb);
+	iph = ip_hdr(skb);
+	skb_put(skb, length);
+
+	skb->ip_summed = CHECKSUM_NONE;
+
+	skb->transport_header = skb->network_header;
+	err = memcpy_fromiovecend((void *)iph, from, 0, length);
+	if (err)
+		goto error_fault;
+
+	/* We don't modify invalid header */
+	iphlen = iph->ihl * 4;
+	if (iphlen >= sizeof(*iph) && iphlen <= length) {
+		if (!iph->saddr)
+			iph->saddr = rt->rt_src;
+		iph->check   = 0;
+		iph->tot_len = htons(length);
+		if (!iph->id)
+			ip_select_ident(iph, &rt->u.dst, NULL);
+
+		iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
+	}
+	if (iph->protocol == IPPROTO_ICMP)
+		ax8netfilter_icmp_out_count(net, ((struct icmphdr *)
+			skb_transport_header(skb))->type);
+
+	err = NF_HOOK(PF_INET, NF_INET_LOCAL_OUT, skb, NULL, rt->u.dst.dev,
+		      dst_output);
+	if (err > 0)
+		err = inet->recverr ? net_xmit_errno(err) : 0;
+	if (err)
+		goto error;
+out:
+	return 0;
+
+error_fault:
+	err = -EFAULT;
+	kfree_skb(skb);
+error:
+	IP_INC_STATS(net, IPSTATS_MIB_OUTDISCARDS);
+	return err;
+} 
+
+static int ax8netfilter_raw_probe_proto_opt(struct flowi *fl, struct msghdr *msg)
+{
+	struct iovec *iov;
+	u8 __user *type = NULL;
+	u8 __user *code = NULL;
+	int probed = 0;
+	unsigned int i;
+
+	if (!msg->msg_iov)
+		return 0;
+
+	for (i = 0; i < msg->msg_iovlen; i++) {
+		iov = &msg->msg_iov[i];
+		if (!iov)
+			continue;
+
+		switch (fl->proto) {
+		case IPPROTO_ICMP:
+			/* check if one-byte field is readable or not. */
+			if (iov->iov_base && iov->iov_len < 1)
+				break;
+
+			if (!type) {
+				type = iov->iov_base;
+				/* check if code field is readable or not. */
+				if (iov->iov_len > 1)
+					code = type + 1;
+			} else if (!code)
+				code = iov->iov_base;
+
+			if (type && code) {
+				if (get_user(fl->fl_icmp_type, type) ||
+				    get_user(fl->fl_icmp_code, code))
+					return -EFAULT;
+				probed = 1;
+			}
+			break;
+		default:
+			probed = 1;
+			break;
+		}
+		if (probed)
+			break;
+	}
+	return 0;
+} 
+
+static int ax8netfilter_raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+		       size_t len)
+{
+	struct inet_sock *inet = inet_sk(sk);
+	struct ipcm_cookie ipc;
+	struct rtable *rt = NULL;
+	int free = 0;
+	__be32 daddr;
+	__be32 saddr;
+	u8  tos;
+	int err;
+
+	err = -EMSGSIZE;
+	if (len > 0xFFFF)
+		goto out;
+
+	/*
+	 *	Check the flags.
+	 */
+
+	err = -EOPNOTSUPP;
+	if (msg->msg_flags & MSG_OOB)	/* Mirror BSD error message */
+		goto out;               /* compatibility */
+
+	/*
+	 *	Get and verify the address.
+	 */
+
+	if (msg->msg_namelen) {
+		struct sockaddr_in *usin = (struct sockaddr_in *)msg->msg_name;
+		err = -EINVAL;
+		if (msg->msg_namelen < sizeof(*usin))
+			goto out;
+		if (usin->sin_family != AF_INET) {
+			static int complained;
+			if (!complained++)
+				printk(KERN_INFO "%s forgot to set AF_INET in "
+						 "raw sendmsg. Fix it!\n",
+						 current->comm);
+			err = -EAFNOSUPPORT;
+			if (usin->sin_family)
+				goto out;
+		}
+		daddr = usin->sin_addr.s_addr;
+		/* ANK: I did not forget to get protocol from port field.
+		 * I just do not know, who uses this weirdness.
+		 * IP_HDRINCL is much more convenient.
+		 */
+	} else {
+		err = -EDESTADDRREQ;
+		if (sk->sk_state != TCP_ESTABLISHED)
+			goto out;
+		daddr = inet->daddr;
+	}
+
+	ipc.addr = inet->saddr;
+	ipc.opt = NULL;
+	ipc.oif = sk->sk_bound_dev_if;
+
+	if (msg->msg_controllen) {
+		err = ax8netfilter_ip_cmsg_send(sock_net(sk), msg, &ipc);
+		if (err)
+			goto out;
+		if (ipc.opt)
+			free = 1;
+	}
+
+	saddr = ipc.addr;
+	ipc.addr = daddr;
+
+	if (!ipc.opt)
+		ipc.opt = inet->opt;
+
+	if (ipc.opt) {
+		err = -EINVAL;
+		/* Linux does not mangle headers on raw sockets,
+		 * so that IP options + IP_HDRINCL is non-sense.
+		 */
+		if (inet->hdrincl)
+			goto done;
+		if (ipc.opt->srr) {
+			if (!daddr)
+				goto done;
+			daddr = ipc.opt->faddr;
+		}
+	}
+	tos = RT_CONN_FLAGS(sk);
+	if (msg->msg_flags & MSG_DONTROUTE)
+		tos |= RTO_ONLINK;
+
+	if (ipv4_is_multicast(daddr)) {
+		if (!ipc.oif)
+			ipc.oif = inet->mc_index;
+		if (!saddr)
+			saddr = inet->mc_addr;
+	}
+
+	{
+		struct flowi fl = { .oif = ipc.oif,
+				    .mark = sk->sk_mark,
+				    .nl_u = { .ip4_u =
+					      { .daddr = daddr,
+						.saddr = saddr,
+						.tos = tos } },
+				    .proto = inet->hdrincl ? IPPROTO_RAW :
+							     sk->sk_protocol,
+				  };
+		if (!inet->hdrincl) {
+			err = ax8netfilter_raw_probe_proto_opt(&fl, msg);
+			if (err)
+				goto done;
+		}
+
+		security_sk_classify_flow(sk, &fl);
+		err = ip_route_output_flow(sock_net(sk), &rt, &fl, sk, 1);
+	}
+	if (err)
+		goto done;
+
+	err = -EACCES;
+	if (rt->rt_flags & RTCF_BROADCAST && !sock_flag(sk, SOCK_BROADCAST))
+		goto done;
+
+	if (msg->msg_flags & MSG_CONFIRM)
+		goto do_confirm;
+back_from_confirm:
+
+	if (inet->hdrincl)
+		err = ax8netfilter_raw_send_hdrinc(sk, msg->msg_iov, len,
+					rt, msg->msg_flags);
+
+	 else {
+		if (!ipc.addr)
+			ipc.addr = rt->rt_dst;
+		lock_sock(sk);
+		err = ax8netfilter_ip_append_data(sk, ip_generic_getfrag, msg->msg_iov, len, 0,
+					&ipc, &rt, msg->msg_flags);
+		if (err)
+			ax8netfilter_ip_flush_pending_frames(sk);
+		else if (!(msg->msg_flags & MSG_MORE))
+			err = ax8netfilter_ip_push_pending_frames(sk);
+		release_sock(sk);
+	}
+done:
+	if (free)
+		kfree(ipc.opt);
+	ip_rt_put(rt);
+
+out:
+	if (err < 0)
+		return err;
+	return len;
+
+do_confirm:
+	dst_confirm(&rt->u.dst);
+	if (!(msg->msg_flags & MSG_PROBE) || len)
+		goto back_from_confirm;
+	err = 0;
+	goto done;
+} 
+
+//from ip_output.c
+/* dev_loopback_xmit for use with netfilter. */
+static int ax8netfilter_ip_dev_loopback_xmit(struct sk_buff *newskb)
+{
+	skb_reset_mac_header(newskb);
+	__skb_pull(newskb, skb_network_offset(newskb));
+	newskb->pkt_type = PACKET_LOOPBACK;
+	newskb->ip_summed = CHECKSUM_UNNECESSARY;
+	WARN_ON(!newskb->dst);
+	netif_rx(newskb);
+	return 0;
+} 
+
+static int ax8netfilter_ip_finish_output(struct sk_buff *skb);
+int ax8netfilter_ip_mc_output(struct sk_buff *skb)
+{
+	struct sock *sk = skb->sk;
+	struct rtable *rt = skb->rtable;
+	struct net_device *dev = rt->u.dst.dev;
+
+	/*
+	 *	If the indicated interface is up and running, send the packet.
+	 */
+	IP_INC_STATS(dev_net(dev), IPSTATS_MIB_OUTREQUESTS);
+
+	skb->dev = dev;
+	skb->protocol = htons(ETH_P_IP);
+
+	/*
+	 *	Multicasts are looped back for other local users
+	 */
+
+	if (rt->rt_flags&RTCF_MULTICAST) {
+		if ((!sk || inet_sk(sk)->mc_loop)
+#ifdef CONFIG_IP_MROUTE
+		/* Small optimization: do not loopback not local frames,
+		   which returned after forwarding; they will be  dropped
+		   by ip_mr_input in any case.
+		   Note, that local frames are looped back to be delivered
+		   to local recipients.
+
+		   This check is duplicated in ip_mr_input at the moment.
+		 */
+		    && ((rt->rt_flags&RTCF_LOCAL) || !(IPCB(skb)->flags&IPSKB_FORWARDED))
+#endif
+		) {
+			struct sk_buff *newskb = skb_clone(skb, GFP_ATOMIC);
+			if (newskb)
+				NF_HOOK(PF_INET, NF_INET_POST_ROUTING, newskb,
+					NULL, newskb->dev,
+					ax8netfilter_ip_dev_loopback_xmit);
+		}
+
+		/* Multicasts with ttl 0 must not go beyond the host */
+
+		if (ip_hdr(skb)->ttl == 0) {
+			kfree_skb(skb);
+			return 0;
+		}
+	}
+
+	if (rt->rt_flags&RTCF_BROADCAST) {
+		struct sk_buff *newskb = skb_clone(skb, GFP_ATOMIC);
+		if (newskb)
+			NF_HOOK(PF_INET, NF_INET_POST_ROUTING, newskb, NULL,
+				newskb->dev, ax8netfilter_ip_dev_loopback_xmit);
+	}
+
+	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb, NULL, skb->dev,
+			    ax8netfilter_ip_finish_output,
+			    !(IPCB(skb)->flags & IPSKB_REROUTED));
+}
+
+int ax8netfilter_ip_output(struct sk_buff *skb)
+{
+	struct net_device *dev = skb->dst->dev;
+
+	IP_INC_STATS(dev_net(dev), IPSTATS_MIB_OUTREQUESTS);
+
+	skb->dev = dev;
+	skb->protocol = htons(ETH_P_IP);
+
+	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb, NULL, dev,
+			    ax8netfilter_ip_finish_output,
+			    !(IPCB(skb)->flags & IPSKB_REROUTED));
+} 
+
+/* Generate a checksum for an outgoing IP datagram. */
+__inline__ void ax8netfilter_ip_send_check(struct iphdr *iph)
+{
+	iph->check = 0;
+	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
+}
+
+int ax8netfilter___ip_local_out(struct sk_buff *skb)
+{
+	struct iphdr *iph = ip_hdr(skb);
+
+	iph->tot_len = htons(skb->len);
+	ax8netfilter_ip_send_check(iph);
+	return nf_hook(PF_INET, NF_INET_LOCAL_OUT, skb, NULL, skb->dst->dev,
+		       dst_output);
+}
+
+int ax8netfilter_ip_local_out(struct sk_buff *skb)
+{
+	int err;
+
+	err = ax8netfilter___ip_local_out(skb);
+	if (likely(err == 1))
+		err = dst_output(skb);
+
+	return err;
+} 
+
+//from ip_input.c
+static int ax8netfilter_ip_local_deliver_finish(struct sk_buff *skb)
+{
+	struct net *net = dev_net(skb->dev);
+
+	__skb_pull(skb, ip_hdrlen(skb));
+
+	/* Point into the IP datagram, just past the header. */
+	skb_reset_transport_header(skb);
+
+	rcu_read_lock();
+	{
+		int protocol = ip_hdr(skb)->protocol;
+		int hash, raw;
+		struct net_protocol *ipprot;
+
+	resubmit:
+		raw = ax8netfilter_raw_local_deliver(skb, protocol);
+
+		hash = protocol & (MAX_INET_PROTOS - 1);
+		ipprot = rcu_dereference(ax8netfilter_inet_protos[hash]);
+		if (ipprot != NULL) {
+			int ret;
+
+			if (!net_eq(net, &init_net) && !ipprot->netns_ok) {
+				if (net_ratelimit())
+					printk("%s: proto %d isn't netns-ready\n",
+						__func__, protocol);
+				kfree_skb(skb);
+				goto out;
+			}
+
+			if (!ipprot->no_policy) {
+				if (!xfrm4_policy_check(NULL, XFRM_POLICY_IN, skb)) {
+					kfree_skb(skb);
+					goto out;
+				}
+				nf_reset(skb);
+			}
+			ret = ipprot->handler(skb);
+			if (ret < 0) {
+				protocol = -ret;
+				goto resubmit;
+			}
+			IP_INC_STATS_BH(net, IPSTATS_MIB_INDELIVERS);
+		} else {
+			if (!raw) {
+				if (xfrm4_policy_check(NULL, XFRM_POLICY_IN, skb)) {
+					IP_INC_STATS_BH(net, IPSTATS_MIB_INUNKNOWNPROTOS);
+					icmp_send(skb, ICMP_DEST_UNREACH,
+						  ICMP_PROT_UNREACH, 0);
+				}
+			} else
+				IP_INC_STATS_BH(net, IPSTATS_MIB_INDELIVERS);
+			kfree_skb(skb);
+		}
+	}
+ out:
+	rcu_read_unlock();
+
+	return 0;
+} 
+
+/*
+ * 	Deliver IP Packets to the higher protocol layers.
+ */
+int ax8netfilter_ip_local_deliver(struct sk_buff *skb)
+{
+	/*
+	 *	Reassemble IP fragments.
+	 */
+
+	if (ip_hdr(skb)->frag_off & htons(IP_MF | IP_OFFSET)) {
+		if (ip_defrag(skb, IP_DEFRAG_LOCAL_DELIVER))
+			return 0;
+	}
+
+	return NF_HOOK(PF_INET, NF_INET_LOCAL_IN, skb, skb->dev, NULL,
+		       ax8netfilter_ip_local_deliver_finish);
+} 
+
+
+
+//from ip_forward.c
+static int ax8netfilter_ip_forward_finish(struct sk_buff *skb)
+{
+	struct ip_options * opt	= &(IPCB(skb)->opt);
+
+	IP_INC_STATS_BH(dev_net(skb->dst->dev), IPSTATS_MIB_OUTFORWDATAGRAMS);
+
+	if (unlikely(opt->optlen))
+		ax8netfilter_ip_forward_options(skb);
+
+	return dst_output(skb);
+} 
+
+int ax8netfilter_ip_forward(struct sk_buff *skb)
+{
+	struct iphdr *iph;	/* Our header */
+	struct rtable *rt;	/* Route we use */
+	struct ip_options * opt	= &(IPCB(skb)->opt);
+
+	if (skb_warn_if_lro(skb))
+		goto drop;
+
+	if (!xfrm4_policy_check(NULL, XFRM_POLICY_FWD, skb))
+		goto drop;
+
+	if (IPCB(skb)->opt.router_alert && ax8netfilter_ip_call_ra_chain(skb))
+		return NET_RX_SUCCESS;
+
+	if (skb->pkt_type != PACKET_HOST)
+		goto drop;
+
+	skb_forward_csum(skb);
+
+	/*
+	 *	According to the RFC, we must first decrease the TTL field. If
+	 *	that reaches zero, we must reply an ICMP control message telling
+	 *	that the packet's lifetime expired.
+	 */
+	if (ip_hdr(skb)->ttl <= 1)
+		goto too_many_hops;
+
+	if (!xfrm4_route_forward(skb))
+		goto drop;
+
+	rt = skb->rtable;
+
+	if (opt->is_strictroute && rt->rt_dst != rt->rt_gateway)
+		goto sr_failed;
+
+	if (unlikely(skb->len > dst_mtu(&rt->u.dst) && !skb_is_gso(skb) &&
+		     (ip_hdr(skb)->frag_off & htons(IP_DF))) && !skb->local_df) {
+		IP_INC_STATS(dev_net(rt->u.dst.dev), IPSTATS_MIB_FRAGFAILS);
+		icmp_send(skb, ICMP_DEST_UNREACH, ICMP_FRAG_NEEDED,
+			  htonl(dst_mtu(&rt->u.dst)));
+		goto drop;
+	}
+
+	/* We are about to mangle packet. Copy it! */
+	if (skb_cow(skb, LL_RESERVED_SPACE(rt->u.dst.dev)+rt->u.dst.header_len))
+		goto drop;
+	iph = ip_hdr(skb);
+
+	/* Decrease ttl after skb cow done */
+	ip_decrease_ttl(iph);
+
+	/*
+	 *	We now generate an ICMP HOST REDIRECT giving the route
+	 *	we calculated.
+	 */
+	if (rt->rt_flags&RTCF_DOREDIRECT && !opt->srr && !skb_sec_path(skb))
+		ax8netfilter_ip_rt_send_redirect(skb);
+
+	skb->priority = rt_tos2priority(iph->tos);
+
+	return NF_HOOK(PF_INET, NF_INET_FORWARD, skb, skb->dev, rt->u.dst.dev,
+		       ax8netfilter_ip_forward_finish);
+
+sr_failed:
+	/*
+	 *	Strict routing permits no gatewaying
+	 */
+	 icmp_send(skb, ICMP_DEST_UNREACH, ICMP_SR_FAILED, 0);
+	 goto drop;
+
+too_many_hops:
+	/* Tell the sender its packet died... */
+	IP_INC_STATS_BH(dev_net(skb->dst->dev), IPSTATS_MIB_INHDRERRORS);
+	icmp_send(skb, ICMP_TIME_EXCEEDED, ICMP_EXC_TTL, 0);
+drop:
+	kfree_skb(skb);
+	return NET_RX_DROP;
+} 
+
+
+// from arp.c
+
+/*
+ *	Send an arp packet.
+ */
+void ax8netfilter_arp_xmit(struct sk_buff *skb)
+{
+	/* Send it off, maybe filter it using firewalling first.  */
+	NF_HOOK(NFPROTO_ARP, NF_ARP_OUT, skb, NULL, skb->dev, dev_queue_xmit);
+} 
+
+
 // from route.c --------------------------
 #define ECN_OR_COST(class)	TC_PRIO_##class
 
@@ -990,6 +1741,14 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"xfrm4_output", 		&ax8netfilter_xfrm4_output },
 	{"ip_finish_output", 		&ax8netfilter_ip_finish_output },
 	{"xfrm4_transport_finish", 	&ax8netfilter_xfrm4_transport_finish},
+	{"arp_xmit", 			&ax8netfilter_arp_xmit },
+	{"ip_forward", 			&ax8netfilter_ip_forward },
+	{"ip_local_deliver", 		&ax8netfilter_ip_local_deliver },
+	{"ip_local_out", 		&ax8netfilter_ip_local_out },
+	{"ip_output", 			&ax8netfilter_ip_output },
+	{"ip_mc_output", 		&ax8netfilter_ip_mc_output },
+	{"raw_sendmsg", 		&ax8netfilter_raw_sendmsg },
+	{"xfrm_output_resume", &ax8netfilter_xfrm_output_resume },
 	{NULL, 0},
 };
 
@@ -1114,6 +1873,13 @@ static int __init ax8netfilter_init(void)
 		goto eof;
 	}
 
+	ax8netfilter_ip_cmsg_send= (void*) kallsyms_lookup_name_ax("ip_cmsg_send");
+	if(!ax8netfilter_ip_cmsg_send)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_cmsg_send func missing!!!\n");
+		goto eof;
+	}
+
 	ax8netfilter_ip_finish_output2= (void*) kallsyms_lookup_name_ax("ip_finish_output2");
 	if(!ax8netfilter_ip_finish_output2)
 	{
@@ -1121,6 +1887,82 @@ static int __init ax8netfilter_init(void)
 		goto eof;
 	}
 
+	ax8netfilter_icmp_out_count= (void*) kallsyms_lookup_name_ax("icmp_out_count");
+	if(!ax8netfilter_icmp_out_count)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": icmp_out_count func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_inet_protos= (struct net_protocol **) kallsyms_lookup_name_ax("inet_protos");
+	if(!ax8netfilter_inet_protos)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": inet_protos func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_append_data= (void*) kallsyms_lookup_name_ax("ip_append_data");
+	if(!ax8netfilter_ip_append_data)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_append_data func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_xfrm_replay_notify= (void*) kallsyms_lookup_name_ax("xfrm_replay_notify");
+	if(!ax8netfilter_xfrm_replay_notify)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": xfrm_replay_notify func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_local_error= (void*) kallsyms_lookup_name_ax("ip_local_error");
+	if(!ax8netfilter_ip_local_error)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_local_error func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_flush_pending_frames= (void*) kallsyms_lookup_name_ax("ip_flush_pending_frames");
+	if(!ax8netfilter_ip_flush_pending_frames)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_flush_pending_frames func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_forward_options= (void*) kallsyms_lookup_name_ax("ip_forward_options");
+	if(!ax8netfilter_ip_forward_options)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_forward_options func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_push_pending_frames= (void*) kallsyms_lookup_name_ax("ip_push_pending_frames");
+	if(!ax8netfilter_ip_push_pending_frames)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_push_pending_frames func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_call_ra_chain= (void*) kallsyms_lookup_name_ax("ip_call_ra_chain");
+	if(!ax8netfilter_ip_call_ra_chain)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_call_ra_chain func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_raw_local_deliver= (void*) kallsyms_lookup_name_ax("raw_local_deliver");
+	if(!ax8netfilter_raw_local_deliver)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": raw_local_deliver func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_rt_send_redirect= (void*) kallsyms_lookup_name_ax("ip_rt_send_redirect");
+	if(!ax8netfilter_ip_rt_send_redirect)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_rt_send_redirect func missing!!!\n");
+		goto eof;
+	}
 
 	netfilter_init();
 
