@@ -14,12 +14,12 @@
 #include <linux/mroute.h>
 #include <linux/igmp.h>
 #include <linux/inetdevice.h>
+#include <linux/pkt_sched.h>
 #include <net/net_namespace.h>
 #include <net/sock.h>
 #include <net/inet_sock.h>
 #include <net/ip.h>
 #include <net/transp_v6.h>
-#include <net/route.h>
 #include <net/xfrm.h>
 #include <net/dst.h>
 
@@ -31,7 +31,6 @@
 #define OFS_KALLSYMS_LOOKUP_NAME	0xC00B0654			// kallsyms_lookup_name
 
 // from ip_sockglue.c
-
 #define IP_CMSG_PKTINFO		1
 #define IP_CMSG_TTL		2
 #define IP_CMSG_TOS		4
@@ -44,9 +43,40 @@ struct ax8netfilter_net init_ax8netfilter_net;
 EXPORT_SYMBOL(init_ax8netfilter_net);
 
 // for get proc address
-
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
 static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
+
+//unresolved symbols
+
+//defs
+
+typedef int (*ip_mc_msfget_type)(struct sock *sk, struct ip_msfilter *msf,
+		struct ip_msfilter __user *optval, int __user *optlen);
+typedef int (*ip_mc_source_type)(int add, int omode, struct sock *sk,
+		struct ip_mreq_source *mreqs, int ifindex);
+typedef int (*ip_options_get_from_user_type)(struct net *net, struct ip_options **optp,
+				    unsigned char __user *data, int optlen);
+typedef void (*ip_options_undo_type)(struct ip_options * opt);
+typedef int	(*ip_ra_control_type)(struct sock *sk, unsigned char on, void (*destructor)(struct sock *));
+typedef int (*ip_mc_leave_group_type)(struct sock *sk, struct ip_mreqn *imr);
+typedef int (*ip_mc_gsfget_type)(struct sock *sk, struct group_filter *gsf,
+		struct group_filter __user *optval, int __user *optlen);
+typedef int (*ip_mc_msfilter_type)(struct sock *sk, struct ip_msfilter *msf,int ifindex);
+typedef int (*ip_finish_output2_type)(struct sk_buff *skb);
+
+//declared types
+static ip_mc_msfget_type ax8netfilter_ip_mc_msfget;
+static ip_mc_source_type ax8netfilter_ip_mc_source;
+static ip_options_get_from_user_type ax8netfilter_ip_options_get_from_user;
+static ip_options_undo_type ax8netfilter_ip_options_undo;
+static ip_ra_control_type ax8netfilter_ip_ra_control;
+static ip_mc_leave_group_type ax8netfilter_ip_mc_leave_group;
+static ip_mc_gsfget_type ax8netfilter_ip_mc_gsfget;
+static ip_mc_msfilter_type ax8netfilter_ip_mc_msfilter;
+static ip_finish_output2_type ax8netfilter_ip_finish_output2;
+
+static int *ax8netfilter_sysctl_igmp_max_msf;
+static int *ax8netfilter_sysctl_ip_default_ttl;
 
 static void patch(unsigned int addr, unsigned int value) {
 	*(unsigned int*)addr = value;
@@ -66,8 +96,36 @@ static void patch_to_jmp(unsigned int addr, void * func) {
 
 
 /*********** HIJACKED METHODS ***************/
+// from route.c --------------------------
+#define ECN_OR_COST(class)	TC_PRIO_##class
 
-static inline int ax8netfilter_xfrm4_rcv_encap_finish(struct sk_buff *skb)
+const __u8 ip_tos2prio[16] = {
+	TC_PRIO_BESTEFFORT,
+	ECN_OR_COST(FILLER),
+	TC_PRIO_BESTEFFORT,
+	ECN_OR_COST(BESTEFFORT),
+	TC_PRIO_BULK,
+	ECN_OR_COST(BULK),
+	TC_PRIO_BULK,
+	ECN_OR_COST(BULK),
+	TC_PRIO_INTERACTIVE,
+	ECN_OR_COST(INTERACTIVE),
+	TC_PRIO_INTERACTIVE,
+	ECN_OR_COST(INTERACTIVE),
+	TC_PRIO_INTERACTIVE_BULK,
+	ECN_OR_COST(INTERACTIVE_BULK),
+	TC_PRIO_INTERACTIVE_BULK,
+	ECN_OR_COST(INTERACTIVE_BULK)
+};
+
+static char ax8netfilter_rt_tos2priority(u8 tos)
+{
+	return ip_tos2prio[IPTOS_TOS(tos)>>1];
+}
+
+//---------------------------------------
+
+static int ax8netfilter_xfrm4_rcv_encap_finish(struct sk_buff *skb)
 {
 	if (skb->dst == NULL) {
 		const struct iphdr *iph = ip_hdr(skb);
@@ -97,6 +155,13 @@ static int ax8netfilter_xfrm4_output_finish(struct sk_buff *skb)
 	return xfrm_output(skb);
 }
 
+int ax8netfilter_xfrm4_output(struct sk_buff *skb)
+{
+	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb,
+			    NULL, skb->dst->dev, ax8netfilter_xfrm4_output_finish,
+			    !(IPCB(skb)->flags & IPSKB_REROUTED));
+}
+
 int ax8netfilter_xfrm4_transport_finish(struct sk_buff *skb, int async)
 {
 	struct iphdr *iph = ip_hdr(skb);
@@ -117,50 +182,12 @@ int ax8netfilter_xfrm4_transport_finish(struct sk_buff *skb, int async)
 	return 0;
 }
 
-static inline int ax8netfilter_ip_skb_dst_mtu(struct sk_buff *skb)
+static int ax8netfilter_ip_skb_dst_mtu(struct sk_buff *skb)
 {
 	struct inet_sock *inet = skb->sk ? inet_sk(skb->sk) : NULL;
 
 	return (inet && inet->pmtudisc == IP_PMTUDISC_PROBE) ?
 	       skb->dst->dev->mtu : dst_mtu(skb->dst);
-}
-
-static inline int ax8netfilter_ip_finish_output2(struct sk_buff *skb)
-{
-	struct dst_entry *dst = skb->dst;
-	struct rtable *rt = (struct rtable *)dst;
-	struct net_device *dev = dst->dev;
-	unsigned int hh_len = LL_RESERVED_SPACE(dev);
-
-	if (rt->rt_type == RTN_MULTICAST)
-		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_OUTMCASTPKTS);
-	else if (rt->rt_type == RTN_BROADCAST)
-		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_OUTBCASTPKTS);
-
-	/* Be paranoid, rather than too clever. */
-	if (unlikely(skb_headroom(skb) < hh_len && dev->header_ops)) {
-		struct sk_buff *skb2;
-
-		skb2 = skb_realloc_headroom(skb, LL_RESERVED_SPACE(dev));
-		if (skb2 == NULL) {
-			kfree_skb(skb);
-			return -ENOMEM;
-		}
-		if (skb->sk)
-			skb_set_owner_w(skb2, skb->sk);
-		kfree_skb(skb);
-		skb = skb2;
-	}
-
-	if (dst->hh)
-		return neigh_hh_output(dst->hh, skb);
-	else if (dst->neighbour)
-		return dst->neighbour->output(skb);
-
-	if (net_ratelimit())
-		printk(KERN_DEBUG "ip_finish_output2: No header cache and no neighbour!\n");
-	kfree_skb(skb);
-	return -EINVAL;
 }
 
 static int ax8netfilter_ip_finish_output(struct sk_buff *skb)
@@ -227,7 +254,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		struct ip_options * opt = NULL;
 		if (optlen > 40 || optlen < 0)
 			goto e_inval;
-		err = ip_options_get_from_user(sock_net(sk), &opt,
+		err = ax8netfilter_ip_options_get_from_user(sock_net(sk), &opt,
 					       optval, optlen);
 		if (err)
 			break;
@@ -301,7 +328,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		}
 		if (inet->tos != val) {
 			inet->tos = val;
-			sk->sk_priority = rt_tos2priority(val);
+			sk->sk_priority = ax8netfilter_rt_tos2priority(val);
 			sk_dst_reset(sk);
 		}
 		break;
@@ -422,12 +449,12 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		if (optname == IP_ADD_MEMBERSHIP)
 			err = ip_mc_join_group(sk, &mreq);
 		else
-			err = ip_mc_leave_group(sk, &mreq);
+			err = ax8netfilter_ip_mc_leave_group(sk, &mreq);
 		break;
 	}
 	case IP_MSFILTER:
 	{
-		extern int sysctl_igmp_max_msf;
+		//extern int sysctl_igmp_max_msf;
 		struct ip_msfilter *msf;
 
 		if (optlen < IP_MSFILTER_SIZE(0))
@@ -448,7 +475,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		}
 		/* numsrc >= (1G-4) overflow in 32 bits */
 		if (msf->imsf_numsrc >= 0x3ffffffcU ||
-		    msf->imsf_numsrc > sysctl_igmp_max_msf) {
+		    msf->imsf_numsrc > (*ax8netfilter_sysctl_igmp_max_msf)) {
 			kfree(msf);
 			err = -ENOBUFS;
 			break;
@@ -458,7 +485,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			err = -EINVAL;
 			break;
 		}
-		err = ip_mc_msfilter(sk, msf, 0);
+		err = ax8netfilter_ip_mc_msfilter(sk, msf, 0);
 		kfree(msf);
 		break;
 	}
@@ -497,7 +524,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			omode = MCAST_INCLUDE;
 			add = 0;
 		}
-		err = ip_mc_source(add, omode, sk, &mreqs, 0);
+		err = ax8netfilter_ip_mc_source(add, omode, sk, &mreqs, 0);
 		break;
 	}
 	case MCAST_JOIN_GROUP:
@@ -522,7 +549,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		if (optname == MCAST_JOIN_GROUP)
 			err = ip_mc_join_group(sk, &mreq);
 		else
-			err = ip_mc_leave_group(sk, &mreq);
+			err = ax8netfilter_ip_mc_leave_group(sk, &mreq);
 		break;
 	}
 	case MCAST_JOIN_SOURCE_GROUP:
@@ -575,13 +602,13 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			omode = MCAST_INCLUDE;
 			add = 0;
 		}
-		err = ip_mc_source(add, omode, sk, &mreqs,
+		err = ax8netfilter_ip_mc_source(add, omode, sk, &mreqs,
 				   greqs.gsr_interface);
 		break;
 	}
 	case MCAST_MSFILTER:
 	{
-		extern int sysctl_igmp_max_msf;
+		//extern int sysctl_igmp_max_msf;
 		struct sockaddr_in *psin;
 		struct ip_msfilter *msf = NULL;
 		struct group_filter *gsf = NULL;
@@ -604,7 +631,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		}
 		/* numsrc >= (4G-140)/128 overflow in 32 bits */
 		if (gsf->gf_numsrc >= 0x1ffffff ||
-		    gsf->gf_numsrc > sysctl_igmp_max_msf) {
+		    gsf->gf_numsrc > (*ax8netfilter_sysctl_igmp_max_msf)) {
 			err = -ENOBUFS;
 			goto mc_msf_out;
 		}
@@ -639,14 +666,14 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		kfree(gsf);
 		gsf = NULL;
 
-		err = ip_mc_msfilter(sk, msf, ifindex);
+		err = ax8netfilter_ip_mc_msfilter(sk, msf, ifindex);
 	mc_msf_out:
 		kfree(msf);
 		kfree(gsf);
 		break;
 	}
 	case IP_ROUTER_ALERT:
-		err = ip_ra_control(sk, val ? 1 : 0, NULL);
+		err = ax8netfilter_ip_ra_control(sk, val ? 1 : 0, NULL);
 		break;
 
 	case IP_FREEBIND:
@@ -748,7 +775,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 		if (opt->optlen == 0)
 			return put_user(0, optlen);
 
-		ip_options_undo(opt);
+		ax8netfilter_ip_options_undo(opt);
 
 		len = min_t(unsigned int, len, opt->optlen);
 		if (put_user(len, optlen))
@@ -783,7 +810,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 		break;
 	case IP_TTL:
 		val = (inet->uc_ttl == -1 ?
-		       sysctl_ip_default_ttl :
+		       (*ax8netfilter_sysctl_ip_default_ttl) :
 		       inet->uc_ttl);
 		break;
 	case IP_HDRINCL:
@@ -842,7 +869,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 			release_sock(sk);
 			return -EFAULT;
 		}
-		err = ip_mc_msfget(sk, &msf,
+		err = ax8netfilter_ip_mc_msfget(sk, &msf,
 				   (struct ip_msfilter __user *)optval, optlen);
 		release_sock(sk);
 		return err;
@@ -860,7 +887,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 			release_sock(sk);
 			return -EFAULT;
 		}
-		err = ip_mc_gsfget(sk, &gsf,
+		err = ax8netfilter_ip_mc_gsfget(sk, &gsf,
 				   (struct group_filter __user *)optval, optlen);
 		release_sock(sk);
 		return err;
@@ -960,7 +987,7 @@ struct cfg_value_map {
 static const struct cfg_value_map func_mapping_table[] = {
 	{"ip_getsockopt", 		&ax8netfilter_ip_getsockopt },
 	{"ip_setsockopt", 		&ax8netfilter_ip_setsockopt },
-	{"xfrm4_output_finish", 	&ax8netfilter_xfrm4_output_finish },
+	{"xfrm4_output", 		&ax8netfilter_xfrm4_output },
 	{"ip_finish_output", 		&ax8netfilter_ip_finish_output },
 	{"xfrm4_transport_finish", 	&ax8netfilter_xfrm4_transport_finish},
 	{NULL, 0},
@@ -1014,9 +1041,86 @@ static int __init ax8netfilter_init(void)
 
 	if(!hijack_functions(1))
 	{
-		printk(KERN_INFO AX_MODULE_NAME ": hijack_functions() failed\n");
 		goto eof;
 	}
+
+	ax8netfilter_ip_mc_msfget = (void*) kallsyms_lookup_name_ax("ip_mc_msfget");
+	if(!ax8netfilter_ip_mc_msfget)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_mc_msfget func missing!!!\n");
+		goto eof;
+	}
+		
+	ax8netfilter_ip_mc_source = (void*) kallsyms_lookup_name_ax("ip_mc_source");
+	if(!ax8netfilter_ip_mc_source)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_mc_source func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_sysctl_igmp_max_msf = (void*) kallsyms_lookup_name_ax("sysctl_igmp_max_msf");
+	if(!ax8netfilter_sysctl_igmp_max_msf)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": sysctl_igmp_max_msf func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_sysctl_ip_default_ttl = (void*) kallsyms_lookup_name_ax("sysctl_ip_default_ttl");
+	if(!ax8netfilter_sysctl_ip_default_ttl)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": sysctl_ip_default_ttlfunc missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_options_get_from_user = (void*) kallsyms_lookup_name_ax("ip_options_get_from_user");
+	if(!ax8netfilter_ip_options_get_from_user)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_options_get_from_user func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_options_undo = (void*) kallsyms_lookup_name_ax("ip_options_undo");
+	if(!ax8netfilter_ip_options_undo)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_options_undo func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_ra_control = (void*) kallsyms_lookup_name_ax("ip_ra_control");
+	if(!ax8netfilter_ip_ra_control)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_ra_control func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_mc_leave_group= (void*) kallsyms_lookup_name_ax("ip_mc_leave_group");
+	if(!ax8netfilter_ip_mc_leave_group)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_mc_leave_group func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_mc_gsfget= (void*) kallsyms_lookup_name_ax("ip_mc_gsfget");
+	if(!ax8netfilter_ip_mc_gsfget)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_mc_gsfget func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_mc_msfilter= (void*) kallsyms_lookup_name_ax("ip_mc_msfilter");
+	if(!ax8netfilter_ip_mc_msfilter)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_mc_msfilter func missing!!!\n");
+		goto eof;
+	}
+
+	ax8netfilter_ip_finish_output2= (void*) kallsyms_lookup_name_ax("ip_finish_output2");
+	if(!ax8netfilter_ip_finish_output2)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_finish_output2 func missing!!!\n");
+		goto eof;
+	}
+
 
 	netfilter_init();
 
