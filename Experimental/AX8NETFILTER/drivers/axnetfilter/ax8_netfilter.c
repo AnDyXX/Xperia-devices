@@ -21,6 +21,7 @@
 #include <net/transp_v6.h>
 #include <net/route.h>
 #include <net/xfrm.h>
+#include <net/dst.h>
 
 
 #define AX_MODULE_NAME 			"ax8netfilter"
@@ -65,10 +66,124 @@ static void patch_to_jmp(unsigned int addr, void * func) {
 
 
 /*********** HIJACKED METHODS ***************/
+
+static inline int ax8netfilter_xfrm4_rcv_encap_finish(struct sk_buff *skb)
+{
+	if (skb->dst == NULL) {
+		const struct iphdr *iph = ip_hdr(skb);
+
+		if (ip_route_input(skb, iph->daddr, iph->saddr, iph->tos,
+				   skb->dev))
+			goto drop;
+	}
+	return dst_input(skb);
+drop:
+	kfree_skb(skb);
+	return NET_RX_DROP;
+}
+
+static int ax8netfilter_xfrm4_output_finish(struct sk_buff *skb)
+{
+#ifdef CONFIG_AX8_NETFILTER
+	if (!skb->dst->xfrm) {
+		IPCB(skb)->flags |= IPSKB_REROUTED;
+		return dst_output(skb);
+	}
+
+	IPCB(skb)->flags |= IPSKB_XFRM_TRANSFORMED;
+#endif
+
+	skb->protocol = htons(ETH_P_IP);
+	return xfrm_output(skb);
+}
+
+int ax8netfilter_xfrm4_transport_finish(struct sk_buff *skb, int async)
+{
+	struct iphdr *iph = ip_hdr(skb);
+
+	iph->protocol = XFRM_MODE_SKB_CB(skb)->protocol;
+
+#ifndef CONFIG_AX8_NETFILTER
+	if (!async)
+		return -iph->protocol;
+#endif
+
+	__skb_push(skb, skb->data - skb_network_header(skb));
+	iph->tot_len = htons(skb->len);
+	ip_send_check(iph);
+
+	NF_HOOK(PF_INET, NF_INET_PRE_ROUTING, skb, skb->dev, NULL,
+		ax8netfilter_xfrm4_rcv_encap_finish);
+	return 0;
+}
+
+static inline int ax8netfilter_ip_skb_dst_mtu(struct sk_buff *skb)
+{
+	struct inet_sock *inet = skb->sk ? inet_sk(skb->sk) : NULL;
+
+	return (inet && inet->pmtudisc == IP_PMTUDISC_PROBE) ?
+	       skb->dst->dev->mtu : dst_mtu(skb->dst);
+}
+
+static inline int ax8netfilter_ip_finish_output2(struct sk_buff *skb)
+{
+	struct dst_entry *dst = skb->dst;
+	struct rtable *rt = (struct rtable *)dst;
+	struct net_device *dev = dst->dev;
+	unsigned int hh_len = LL_RESERVED_SPACE(dev);
+
+	if (rt->rt_type == RTN_MULTICAST)
+		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_OUTMCASTPKTS);
+	else if (rt->rt_type == RTN_BROADCAST)
+		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_OUTBCASTPKTS);
+
+	/* Be paranoid, rather than too clever. */
+	if (unlikely(skb_headroom(skb) < hh_len && dev->header_ops)) {
+		struct sk_buff *skb2;
+
+		skb2 = skb_realloc_headroom(skb, LL_RESERVED_SPACE(dev));
+		if (skb2 == NULL) {
+			kfree_skb(skb);
+			return -ENOMEM;
+		}
+		if (skb->sk)
+			skb_set_owner_w(skb2, skb->sk);
+		kfree_skb(skb);
+		skb = skb2;
+	}
+
+	if (dst->hh)
+		return neigh_hh_output(dst->hh, skb);
+	else if (dst->neighbour)
+		return dst->neighbour->output(skb);
+
+	if (net_ratelimit())
+		printk(KERN_DEBUG "ip_finish_output2: No header cache and no neighbour!\n");
+	kfree_skb(skb);
+	return -EINVAL;
+}
+
+static int ax8netfilter_ip_finish_output(struct sk_buff *skb)
+{
+#if defined(CONFIG_AX8_NETFILTER) && defined(CONFIG_XFRM)
+	/* Policy lookup after SNAT yielded a new policy */
+	if (skb->dst->xfrm != NULL) {
+		IPCB(skb)->flags |= IPSKB_REROUTED;
+		return dst_output(skb);
+	}
+#endif
+	if (skb->len > ax8netfilter_ip_skb_dst_mtu(skb) && !skb_is_gso(skb))
+		return ip_fragment(skb, ax8netfilter_ip_finish_output2);
+	else
+		return ax8netfilter_ip_finish_output2(skb);
+}
+
+
 /*
  *	Socket option code for IP. This is the end of the line after any TCP,UDP etc options on
  *	an IP socket.
  */
+
 
 static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			    int optname, char __user *optval, int optlen)
@@ -843,8 +958,11 @@ struct cfg_value_map {
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
-	{"ip_getsockopt", 	&ax8netfilter_ip_getsockopt },
-	{"ip_setsockopt", 	&ax8netfilter_ip_setsockopt },
+	{"ip_getsockopt", 		&ax8netfilter_ip_getsockopt },
+	{"ip_setsockopt", 		&ax8netfilter_ip_setsockopt },
+	{"xfrm4_output_finish", 	&ax8netfilter_xfrm4_output_finish },
+	{"ip_finish_output", 		&ax8netfilter_ip_finish_output },
+	{"xfrm4_transport_finish", 	&ax8netfilter_xfrm4_transport_finish},
 	{NULL, 0},
 };
 
