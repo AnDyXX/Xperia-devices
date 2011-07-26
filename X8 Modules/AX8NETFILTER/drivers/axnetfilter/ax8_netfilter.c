@@ -17,6 +17,7 @@
 #include <linux/pkt_sched.h>
 #include <linux/netfilter_arp.h>
 #include <linux/icmp.h>
+#include <linux/netfilter_bridge.h>
 #include <net/net_namespace.h>
 #include <net/sock.h>
 #include <net/inet_sock.h>
@@ -24,12 +25,14 @@
 #include <net/transp_v6.h>
 #include <net/xfrm.h>
 #include <net/dst.h>
+#include <net/tcp.h>
+#include <net/udp.h>
 #include <net/icmp.h>
 #include <net/raw.h>
 
 
 #define AX_MODULE_NAME 			"ax8netfilter"
-#define AX_MODULE_VER			"v001"
+#define AX_MODULE_VER			"v001a"
 
 #define DEVICE_NAME			"X8"
 #define OFS_KALLSYMS_LOOKUP_NAME	0xC00B0654			// kallsyms_lookup_name
@@ -133,6 +136,385 @@ static void patch_to_jmp(unsigned int addr, void * func) {
 
 
 /*********** HIJACKED METHODS ***************/
+//from ip_options.c
+/*
+ *	Options "fragmenting", just fill options not
+ *	allowed in fragments with NOOPs.
+ *	Simple and stupid 8), but the most efficient way.
+ */
+
+void ax8netfilter_ip_options_fragment(struct sk_buff * skb)
+{
+	unsigned char *optptr = skb_network_header(skb) + sizeof(struct iphdr);
+	struct ip_options * opt = &(IPCB(skb)->opt);
+	int  l = opt->optlen;
+	int  optlen;
+
+	while (l > 0) {
+		switch (*optptr) {
+		case IPOPT_END:
+			return;
+		case IPOPT_NOOP:
+			l--;
+			optptr++;
+			continue;
+		}
+		optlen = optptr[1];
+		if (optlen<2 || optlen>l)
+		  return;
+		if (!IPOPT_COPIED(*optptr))
+			memset(optptr, IPOPT_NOOP, optlen);
+		l -= optlen;
+		optptr += optlen;
+	}
+	opt->ts = 0;
+	opt->rr = 0;
+	opt->rr_needaddr = 0;
+	opt->ts_needaddr = 0;
+	opt->ts_needtime = 0;
+	return;
+}
+
+//from ip_output.c
+static inline int ax8netfilter_ip_skb_dst_mtu(struct sk_buff *skb)
+{
+	struct inet_sock *inet = skb->sk ? inet_sk(skb->sk) : NULL;
+
+	return (inet && inet->pmtudisc == IP_PMTUDISC_PROBE) ?
+	       skb->dst->dev->mtu : dst_mtu(skb->dst);
+}
+
+static void ax8netfilter_ip_copy_metadata(struct sk_buff *to, struct sk_buff *from)
+{
+	to->pkt_type = from->pkt_type;
+	to->priority = from->priority;
+	to->protocol = from->protocol;
+	dst_release(to->dst);
+	to->dst = dst_clone(from->dst);
+	to->dev = from->dev;
+	to->mark = from->mark;
+
+	/* Copy the flags to each fragment. */
+	IPCB(to)->flags = IPCB(from)->flags;
+
+#ifdef CONFIG_NET_SCHED
+	to->tc_index = from->tc_index;
+#endif
+	nf_copy(to, from);
+#if defined(CONFIG_NETFILTER_XT_TARGET_TRACE) || \
+    defined(CONFIG_NETFILTER_XT_TARGET_TRACE_MODULE)
+	to->nf_trace = from->nf_trace;
+#endif
+#if defined(CONFIG_IP_VS) || defined(CONFIG_IP_VS_MODULE)
+	to->ipvs_property = from->ipvs_property;
+#endif
+	skb_copy_secmark(to, from);
+}
+
+/*
+ *	This IP datagram is too large to be sent in one piece.  Break it up into
+ *	smaller pieces (each of size equal to IP header plus
+ *	a block of the data of the original IP data part) that will yet fit in a
+ *	single device frame, and queue such a frame for sending.
+ */
+
+int ax8netfilter_ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
+{
+	struct iphdr *iph;
+	int raw = 0;
+	int ptr;
+	struct net_device *dev;
+	struct sk_buff *skb2;
+	unsigned int mtu, hlen, left, len, ll_rs, pad;
+	int offset;
+	__be16 not_last_frag;
+	struct rtable *rt = skb->rtable;
+	int err = 0;
+
+	dev = rt->u.dst.dev;
+
+	/*
+	 *	Point into the IP datagram header.
+	 */
+
+	iph = ip_hdr(skb);
+
+	if (unlikely((iph->frag_off & htons(IP_DF)) && !skb->local_df)) {
+		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGFAILS);
+		icmp_send(skb, ICMP_DEST_UNREACH, ICMP_FRAG_NEEDED,
+			  htonl(ax8netfilter_ip_skb_dst_mtu(skb)));
+		kfree_skb(skb);
+		return -EMSGSIZE;
+	}
+
+	/*
+	 *	Setup starting values.
+	 */
+
+	hlen = iph->ihl * 4;
+	mtu = dst_mtu(&rt->u.dst) - hlen;	/* Size of data space */
+	IPCB(skb)->flags |= IPSKB_FRAG_COMPLETE;
+
+	/* When frag_list is given, use it. First, check its validity:
+	 * some transformers could create wrong frag_list or break existing
+	 * one, it is not prohibited. In this case fall back to copying.
+	 *
+	 * LATER: this step can be merged to real generation of fragments,
+	 * we can switch to copy when see the first bad fragment.
+	 */
+	if (skb_shinfo(skb)->frag_list) {
+		struct sk_buff *frag;
+		int first_len = skb_pagelen(skb);
+		int truesizes = 0;
+
+		if (first_len - hlen > mtu ||
+		    ((first_len - hlen) & 7) ||
+		    (iph->frag_off & htons(IP_MF|IP_OFFSET)) ||
+		    skb_cloned(skb))
+			goto slow_path;
+
+		for (frag = skb_shinfo(skb)->frag_list; frag; frag = frag->next) {
+			/* Correct geometry. */
+			if (frag->len > mtu ||
+			    ((frag->len & 7) && frag->next) ||
+			    skb_headroom(frag) < hlen)
+			    goto slow_path;
+
+			/* Partially cloned skb? */
+			if (skb_shared(frag))
+				goto slow_path;
+
+			BUG_ON(frag->sk);
+			if (skb->sk) {
+				sock_hold(skb->sk);
+				frag->sk = skb->sk;
+				frag->destructor = sock_wfree;
+				truesizes += frag->truesize;
+			}
+		}
+
+		/* Everything is OK. Generate! */
+
+		err = 0;
+		offset = 0;
+		frag = skb_shinfo(skb)->frag_list;
+		skb_shinfo(skb)->frag_list = NULL;
+		skb->data_len = first_len - skb_headlen(skb);
+		skb->truesize -= truesizes;
+		skb->len = first_len;
+		iph->tot_len = htons(first_len);
+		iph->frag_off = htons(IP_MF);
+		ip_send_check(iph);
+
+		for (;;) {
+			/* Prepare header of the next frame,
+			 * before previous one went down. */
+			if (frag) {
+				frag->ip_summed = CHECKSUM_NONE;
+				skb_reset_transport_header(frag);
+				__skb_push(frag, hlen);
+				skb_reset_network_header(frag);
+				memcpy(skb_network_header(frag), iph, hlen);
+				iph = ip_hdr(frag);
+				iph->tot_len = htons(frag->len);
+				ax8netfilter_ip_copy_metadata(frag, skb);
+				if (offset == 0)
+					ax8netfilter_ip_options_fragment(frag);
+				offset += skb->len - hlen;
+				iph->frag_off = htons(offset>>3);
+				if (frag->next != NULL)
+					iph->frag_off |= htons(IP_MF);
+				/* Ready, complete checksum */
+				ip_send_check(iph);
+			}
+
+			err = output(skb);
+
+			if (!err)
+				IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGCREATES);
+			if (err || !frag)
+				break;
+
+			skb = frag;
+			frag = skb->next;
+			skb->next = NULL;
+		}
+
+		if (err == 0) {
+			IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGOKS);
+			return 0;
+		}
+
+		while (frag) {
+			skb = frag->next;
+			kfree_skb(frag);
+			frag = skb;
+		}
+		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGFAILS);
+		return err;
+	}
+
+slow_path:
+	left = skb->len - hlen;		/* Space per frame */
+	ptr = raw + hlen;		/* Where to start from */
+
+	/* for bridged IP traffic encapsulated inside f.e. a vlan header,
+	 * we need to make room for the encapsulating header
+	 */
+	pad = nf_bridge_pad(skb);
+	ll_rs = LL_RESERVED_SPACE_EXTRA(rt->u.dst.dev, pad);
+	mtu -= pad;
+
+	/*
+	 *	Fragment the datagram.
+	 */
+
+	offset = (ntohs(iph->frag_off) & IP_OFFSET) << 3;
+	not_last_frag = iph->frag_off & htons(IP_MF);
+
+	/*
+	 *	Keep copying data until we run out.
+	 */
+
+	while (left > 0) {
+		len = left;
+		/* IF: it doesn't fit, use 'mtu' - the data space left */
+		if (len > mtu)
+			len = mtu;
+		/* IF: we are not sending upto and including the packet end
+		   then align the next start on an eight byte boundary */
+		if (len < left)	{
+			len &= ~7;
+		}
+		/*
+		 *	Allocate buffer.
+		 */
+
+		if ((skb2 = alloc_skb(len+hlen+ll_rs, GFP_ATOMIC)) == NULL) {
+			NETDEBUG(KERN_INFO "IP: frag: no memory for new fragment!\n");
+			err = -ENOMEM;
+			goto fail;
+		}
+
+		/*
+		 *	Set up data on packet
+		 */
+
+		ax8netfilter_ip_copy_metadata(skb2, skb);
+		skb_reserve(skb2, ll_rs);
+		skb_put(skb2, len + hlen);
+		skb_reset_network_header(skb2);
+		skb2->transport_header = skb2->network_header + hlen;
+
+		/*
+		 *	Charge the memory for the fragment to any owner
+		 *	it might possess
+		 */
+
+		if (skb->sk)
+			skb_set_owner_w(skb2, skb->sk);
+
+		/*
+		 *	Copy the packet header into the new buffer.
+		 */
+
+		skb_copy_from_linear_data(skb, skb_network_header(skb2), hlen);
+
+		/*
+		 *	Copy a block of the IP datagram.
+		 */
+		if (skb_copy_bits(skb, ptr, skb_transport_header(skb2), len))
+			BUG();
+		left -= len;
+
+		/*
+		 *	Fill in the new header fields.
+		 */
+		iph = ip_hdr(skb2);
+		iph->frag_off = htons((offset >> 3));
+
+		/* ANK: dirty, but effective trick. Upgrade options only if
+		 * the segment to be fragmented was THE FIRST (otherwise,
+		 * options are already fixed) and make it ONCE
+		 * on the initial skb, so that all the following fragments
+		 * will inherit fixed options.
+		 */
+		if (offset == 0)
+			ax8netfilter_ip_options_fragment(skb);
+
+		/*
+		 *	Added AC : If we are fragmenting a fragment that's not the
+		 *		   last fragment then keep MF on each bit
+		 */
+		if (left > 0 || not_last_frag)
+			iph->frag_off |= htons(IP_MF);
+		ptr += len;
+		offset += len;
+
+		/*
+		 *	Put this fragment into the sending queue.
+		 */
+		iph->tot_len = htons(len + hlen);
+
+		ip_send_check(iph);
+
+		err = output(skb2);
+		if (err)
+			goto fail;
+
+		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGCREATES);
+	}
+	kfree_skb(skb);
+	IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGOKS);
+	return err;
+
+fail:
+	kfree_skb(skb);
+	IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGFAILS);
+	return err;
+}
+
+
+//from skbuff.c
+static void ax8_netfilter___copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
+{
+	new->tstamp		= old->tstamp;
+	new->dev		= old->dev;
+	new->transport_header	= old->transport_header;
+	new->network_header	= old->network_header;
+	new->mac_header		= old->mac_header;
+	new->dst		= dst_clone(old->dst);
+#ifdef CONFIG_XFRM
+	new->sp			= secpath_get(old->sp);
+#endif
+	memcpy(new->cb, old->cb, sizeof(old->cb));
+	new->csum_start		= old->csum_start;
+	new->csum_offset	= old->csum_offset;
+	new->local_df		= old->local_df;
+	new->pkt_type		= old->pkt_type;
+	new->ip_summed		= old->ip_summed;
+	skb_copy_queue_mapping(new, old);
+	new->priority		= old->priority;
+#if defined(CONFIG_IP_VS) || defined(CONFIG_IP_VS_MODULE)
+	new->ipvs_property	= old->ipvs_property;
+#endif
+	new->protocol		= old->protocol;
+	new->mark		= old->mark;
+	__nf_copy(new, old);
+#if defined(CONFIG_NETFILTER_XT_TARGET_TRACE) || \
+    defined(CONFIG_NETFILTER_XT_TARGET_TRACE_MODULE)
+	new->nf_trace		= old->nf_trace;
+#endif
+#ifdef CONFIG_NET_SCHED
+	new->tc_index		= old->tc_index;
+#ifdef CONFIG_NET_CLS_ACT
+	new->tc_verd		= old->tc_verd;
+#endif
+#endif
+	new->vlan_tci		= old->vlan_tci;
+
+	skb_copy_secmark(new, old);
+}
 // from xfrm_output.c
 int ax8netfilter_xfrm_output_resume(struct sk_buff *skb, int err);
 static int ax8netfilter_xfrm_output2(struct sk_buff *skb)
@@ -931,14 +1313,6 @@ int ax8netfilter_xfrm4_transport_finish(struct sk_buff *skb, int async)
 	NF_HOOK(PF_INET, NF_INET_PRE_ROUTING, skb, skb->dev, NULL,
 		ax8netfilter_xfrm4_rcv_encap_finish);
 	return 0;
-}
-
-static int ax8netfilter_ip_skb_dst_mtu(struct sk_buff *skb)
-{
-	struct inet_sock *inet = skb->sk ? inet_sk(skb->sk) : NULL;
-
-	return (inet && inet->pmtudisc == IP_PMTUDISC_PROBE) ?
-	       skb->dst->dev->mtu : dst_mtu(skb->dst);
 }
 
 static int ax8netfilter_ip_finish_output(struct sk_buff *skb)
@@ -1748,7 +2122,9 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"ip_output", 			&ax8netfilter_ip_output },
 	{"ip_mc_output", 		&ax8netfilter_ip_mc_output },
 	{"raw_sendmsg", 		&ax8netfilter_raw_sendmsg },
-	{"xfrm_output_resume", &ax8netfilter_xfrm_output_resume },
+	{"xfrm_output_resume", 		&ax8netfilter_xfrm_output_resume },
+	{"__copy_skb_header",		&ax8_netfilter___copy_skb_header},
+	{"ip_options_fragment",		&ax8netfilter_ip_options_fragment},
 	{NULL, 0},
 };
 
@@ -1792,8 +2168,24 @@ void netfilter_init(void);
 static int __init ax8netfilter_init(void)
 {
 	int ret = -1;
+	struct sk_buff aaa;
+	long a;
+
+
+	a = ((long)&aaa.nfct) - ((long)&aaa.cb);
 
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
+
+	printk(KERN_INFO AX_MODULE_NAME ": struct tcp_skb_cb size %d!!!\n", sizeof(struct tcp_skb_cb));
+	printk(KERN_INFO AX_MODULE_NAME ": struct udp_skb_cb size %d!!!\n", sizeof(struct udp_skb_cb));
+	printk(KERN_INFO AX_MODULE_NAME ": struct xfrm_skb_cb size %d!!!\n", sizeof(struct xfrm_skb_cb));
+	printk(KERN_INFO AX_MODULE_NAME ": sizeof(void *) size %d!!!\n", sizeof(void *));
+	printk(KERN_INFO AX_MODULE_NAME ": place of nfct %d!!!\n", (int)a);
+
+	if(sizeof(struct tcp_skb_cb) > 4)
+	{
+	//	goto eof;
+	}
 
 	// our 'GetProcAddress' :D
 	kallsyms_lookup_name_ax = (void*) OFS_KALLSYMS_LOOKUP_NAME;
