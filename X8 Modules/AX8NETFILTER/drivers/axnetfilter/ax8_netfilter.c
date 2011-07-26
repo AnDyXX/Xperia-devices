@@ -2176,16 +2176,7 @@ static int __init ax8netfilter_init(void)
 
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
 
-	printk(KERN_INFO AX_MODULE_NAME ": struct tcp_skb_cb size %d!!!\n", sizeof(struct tcp_skb_cb));
-	printk(KERN_INFO AX_MODULE_NAME ": struct udp_skb_cb size %d!!!\n", sizeof(struct udp_skb_cb));
-	printk(KERN_INFO AX_MODULE_NAME ": struct xfrm_skb_cb size %d!!!\n", sizeof(struct xfrm_skb_cb));
-	printk(KERN_INFO AX_MODULE_NAME ": sizeof(void *) size %d!!!\n", sizeof(void *));
 	printk(KERN_INFO AX_MODULE_NAME ": place of nfct %d!!!\n", (int)a);
-
-	if(sizeof(struct tcp_skb_cb) > 4)
-	{
-	//	goto eof;
-	}
 
 	// our 'GetProcAddress' :D
 	kallsyms_lookup_name_ax = (void*) OFS_KALLSYMS_LOOKUP_NAME;
