@@ -128,6 +128,11 @@ static const struct cfg_value_map func_mapping_table[] = {
 
 	{"xfrm4_transport_finish",	&ax8netfilter_xfrm4_transport_finish,	1},
 
+	{"xfrm4_output",		&ax8netfilter_xfrm4_output,		1},
+
+	{"xfrm_output_resume",		&ax8netfilter_xfrm_output_resume,	0},
+	{"xfrm_output",			&ax8netfilter_xfrm_output,		0},
+
 	{NULL, 0, 0},
 };
 
@@ -169,7 +174,8 @@ void patch_xfrm(void)
 	xfrm4_state_afinfo = (void*) kallsyms_lookup_name_ax("xfrm4_state_afinfo");
 	if(xfrm4_state_afinfo)
 	{
-		PATCH_FUNC(xfrm4_state_afinfo->transport_finish, "xfrm4_transport_finish",	ax8netfilter_xfrm4_transport_finish)
+		PATCH_FUNC(xfrm4_state_afinfo->transport_finish, 	"xfrm4_transport_finish",	ax8netfilter_xfrm4_transport_finish)
+		PATCH_FUNC(xfrm4_state_afinfo->output, 			"xfrm4_output",			ax8netfilter_xfrm4_output)
 	}
 
 	printk(KERN_INFO AX_MODULE_NAME ": XFRM structs patched.\n");

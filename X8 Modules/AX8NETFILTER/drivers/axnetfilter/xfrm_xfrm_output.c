@@ -20,9 +20,9 @@
 
 #include "ax8netfilter.h"
 
-static int xfrm_output2(struct sk_buff *skb);
+static int ax8netfilter_xfrm_output2(struct sk_buff *skb);
 
-static int xfrm_state_check_space(struct xfrm_state *x, struct sk_buff *skb)
+static int ax8netfilter_xfrm_state_check_space(struct xfrm_state *x, struct sk_buff *skb)
 {
 	struct dst_entry *dst = skb->dst;
 	int nhead = dst->header_len + LL_RESERVED_SPACE(dst->dev)
@@ -39,7 +39,7 @@ static int xfrm_state_check_space(struct xfrm_state *x, struct sk_buff *skb)
 	return pskb_expand_head(skb, nhead, ntail, GFP_ATOMIC);
 }
 
-static int xfrm_output_one(struct sk_buff *skb, int err)
+static int ax8netfilter_xfrm_output_one(struct sk_buff *skb, int err)
 {
 	struct dst_entry *dst = skb->dst;
 	struct xfrm_state *x = dst->xfrm;
@@ -49,7 +49,7 @@ static int xfrm_output_one(struct sk_buff *skb, int err)
 		goto resume;
 
 	do {
-		err = xfrm_state_check_space(x, skb);
+		err = ax8netfilter_xfrm_state_check_space(x, skb);
 		if (err) {
 			XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTERROR);
 			goto error_nolock;
@@ -116,9 +116,9 @@ error_nolock:
 	goto out_exit;
 }
 
-int xfrm_output_resume(struct sk_buff *skb, int err)
+int ax8netfilter_xfrm_output_resume(struct sk_buff *skb, int err)
 {
-	while (likely((err = xfrm_output_one(skb, err)) == 0)) {
+	while (likely((err = ax8netfilter_xfrm_output_one(skb, err)) == 0)) {
 		nf_reset(skb);
 
 		err = skb->dst->ops->local_out(skb);
@@ -130,7 +130,7 @@ int xfrm_output_resume(struct sk_buff *skb, int err)
 
 		err = nf_hook(skb->dst->ops->family,
 			      NF_INET_POST_ROUTING, skb,
-			      NULL, skb->dst->dev, xfrm_output2);
+			      NULL, skb->dst->dev, ax8netfilter_xfrm_output2);
 		if (unlikely(err != 1))
 			goto out;
 	}
@@ -141,14 +141,14 @@ int xfrm_output_resume(struct sk_buff *skb, int err)
 out:
 	return err;
 }
-EXPORT_SYMBOL_GPL(xfrm_output_resume);
 
-static int xfrm_output2(struct sk_buff *skb)
+
+static int ax8netfilter_xfrm_output2(struct sk_buff *skb)
 {
-	return xfrm_output_resume(skb, 1);
+	return ax8netfilter_xfrm_output_resume(skb, 1);
 }
 
-static int xfrm_output_gso(struct sk_buff *skb)
+static int ax8netfilter_xfrm_output_gso(struct sk_buff *skb)
 {
 	struct sk_buff *segs;
 
@@ -162,7 +162,7 @@ static int xfrm_output_gso(struct sk_buff *skb)
 		int err;
 
 		segs->next = NULL;
-		err = xfrm_output2(segs);
+		err = ax8netfilter_xfrm_output2(segs);
 
 		if (unlikely(err)) {
 			while ((segs = nskb)) {
@@ -179,13 +179,13 @@ static int xfrm_output_gso(struct sk_buff *skb)
 	return 0;
 }
 
-int xfrm_output(struct sk_buff *skb)
+int ax8netfilter_xfrm_output(struct sk_buff *skb)
 {
 	struct net *net = dev_net(skb->dst->dev);
 	int err;
 
 	if (skb_is_gso(skb))
-		return xfrm_output_gso(skb);
+		return ax8netfilter_xfrm_output_gso(skb);
 
 	if (skb->ip_summed == CHECKSUM_PARTIAL) {
 		err = skb_checksum_help(skb);
@@ -196,22 +196,7 @@ int xfrm_output(struct sk_buff *skb)
 		}
 	}
 
-	return xfrm_output2(skb);
+	return ax8netfilter_xfrm_output2(skb);
 }
 
-int xfrm_inner_extract_output(struct xfrm_state *x, struct sk_buff *skb)
-{
-	struct xfrm_mode *inner_mode;
-	if (x->sel.family == AF_UNSPEC)
-		inner_mode = xfrm_ip2inner_mode(x,
-				xfrm_af2proto(skb->dst->ops->family));
-	else
-		inner_mode = x->inner_mode;
 
-	if (inner_mode == NULL)
-		return -EAFNOSUPPORT;
-	return inner_mode->afinfo->extract_output(x, skb);
-}
-
-EXPORT_SYMBOL_GPL(xfrm_output);
-EXPORT_SYMBOL_GPL(xfrm_inner_extract_output);
