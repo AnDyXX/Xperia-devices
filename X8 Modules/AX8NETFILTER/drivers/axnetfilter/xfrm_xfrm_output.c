@@ -18,6 +18,8 @@
 #include <net/dst.h>
 #include <net/xfrm.h>
 
+#include "ax8netfilter.h"
+
 static int xfrm_output2(struct sk_buff *skb);
 
 static int xfrm_state_check_space(struct xfrm_state *x, struct sk_buff *skb)
@@ -110,7 +112,7 @@ out_exit:
 error:
 	spin_unlock_bh(&x->lock);
 error_nolock:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	goto out_exit;
 }
 
@@ -151,7 +153,7 @@ static int xfrm_output_gso(struct sk_buff *skb)
 	struct sk_buff *segs;
 
 	segs = skb_gso_segment(skb, 0);
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	if (IS_ERR(segs))
 		return PTR_ERR(segs);
 
@@ -166,7 +168,7 @@ static int xfrm_output_gso(struct sk_buff *skb)
 			while ((segs = nskb)) {
 				nskb = segs->next;
 				segs->next = NULL;
-				kfree_skb(segs);
+				ax8netfilter_kfree_skb(segs);
 			}
 			return err;
 		}
@@ -189,7 +191,7 @@ int xfrm_output(struct sk_buff *skb)
 		err = skb_checksum_help(skb);
 		if (err) {
 			XFRM_INC_STATS(net, LINUX_MIB_XFRMOUTERROR);
-			kfree_skb(skb);
+			ax8netfilter_kfree_skb(skb);
 			return err;
 		}
 	}

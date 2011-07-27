@@ -18,6 +18,8 @@
 #include <net/xfrm.h>
 #include <net/icmp.h>
 
+#include "ax8netfilter.h"
+
 static int xfrm4_tunnel_check_size(struct sk_buff *skb)
 {
 	int mtu, ret = 0;

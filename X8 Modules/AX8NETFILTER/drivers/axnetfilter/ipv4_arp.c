@@ -121,6 +121,8 @@ struct neigh_table *clip_tbl_hook;
 
 #include <linux/netfilter_arp.h>
 
+#include "ax8netfilter.h"
+
 /*
  *	Interface to generic neighbour cache.
  */
@@ -321,7 +323,7 @@ static int arp_constructor(struct neighbour *neigh)
 static void arp_error_report(struct neighbour *neigh, struct sk_buff *skb)
 {
 	dst_link_failure(skb);
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 }
 
 static void arp_solicit(struct neighbour *neigh, struct sk_buff *skb)
@@ -470,7 +472,7 @@ int arp_find(unsigned char *haddr, struct sk_buff *skb)
 
 	if (!skb->dst) {
 		printk(KERN_DEBUG "arp_find is called with dst==NULL\n");
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 		return 1;
 	}
 
@@ -492,7 +494,7 @@ int arp_find(unsigned char *haddr, struct sk_buff *skb)
 		}
 		neigh_release(n);
 	} else
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 	return 1;
 }
 
@@ -653,7 +655,7 @@ struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 	return skb;
 
 out:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return NULL;
 }
 
@@ -892,7 +894,7 @@ static int arp_process(struct sk_buff *skb)
 out:
 	if (in_dev)
 		in_dev_put(in_dev);
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return 0;
 }
 
@@ -931,7 +933,7 @@ static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	return NF_HOOK(NFPROTO_ARP, NF_ARP_IN, skb, dev, NULL, arp_process);
 
 freeskb:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 out_of_mem:
 	return 0;
 }

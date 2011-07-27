@@ -42,6 +42,8 @@
 #include <linux/errqueue.h>
 #include <asm/uaccess.h>
 
+#include "ax8netfilter.h"
+
 #define IP_CMSG_PKTINFO		1
 #define IP_CMSG_TTL		2
 #define IP_CMSG_TOS		4
@@ -310,7 +312,7 @@ void ip_icmp_error(struct sock *sk, struct sk_buff *skb, int err,
 		if (sock_queue_err_skb(sk, skb) == 0)
 			return;
 	}
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 }
 
 void ip_local_error(struct sock *sk, int err, __be32 daddr, __be16 port, u32 info)
@@ -347,7 +349,7 @@ void ip_local_error(struct sock *sk, int err, __be32 daddr, __be16 port, u32 inf
 	skb_reset_transport_header(skb);
 
 	if (sock_queue_err_skb(sk, skb))
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 }
 
 /*
@@ -424,7 +426,7 @@ int ip_recv_error(struct sock *sk, struct msghdr *msg, int len)
 		spin_unlock_bh(&sk->sk_error_queue.lock);
 
 out_free_skb:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 out:
 	return err;
 }

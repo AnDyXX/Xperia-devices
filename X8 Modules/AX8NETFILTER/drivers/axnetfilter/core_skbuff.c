@@ -72,7 +72,7 @@
 struct kmem_cache ** ax8netfilter_skbuff_head_cache __read_mostly;
 struct kmem_cache ** ax8netfilter_skbuff_fclone_cache __read_mostly;
 
-static void skb_drop_list(struct sk_buff **listp)
+static void ax8netfilter_skb_drop_list(struct sk_buff **listp)
 {
 	struct sk_buff *list = *listp;
 
@@ -81,16 +81,16 @@ static void skb_drop_list(struct sk_buff **listp)
 	do {
 		struct sk_buff *this = list;
 		list = list->next;
-		kfree_skb(this);
+		ax8netfilter_kfree_skb(this);
 	} while (list);
 }
 
-static inline void skb_drop_fraglist(struct sk_buff *skb)
+static inline void ax8netfilter_skb_drop_fraglist(struct sk_buff *skb)
 {
-	skb_drop_list(&skb_shinfo(skb)->frag_list);
+	ax8netfilter_skb_drop_list(&skb_shinfo(skb)->frag_list);
 }
 
-static void skb_clone_fraglist(struct sk_buff *skb)
+static void ax8netfilter_skb_clone_fraglist(struct sk_buff *skb)
 {
 	struct sk_buff *list;
 
@@ -98,7 +98,7 @@ static void skb_clone_fraglist(struct sk_buff *skb)
 		skb_get(list);
 }
 
-static void skb_release_data(struct sk_buff *skb)
+void ax8netfilter_skb_release_data(struct sk_buff *skb)
 {
 	if (!skb->cloned ||
 	    !atomic_sub_return(skb->nohdr ? (1 << SKB_DATAREF_SHIFT) + 1 : 1,
@@ -110,7 +110,7 @@ static void skb_release_data(struct sk_buff *skb)
 		}
 
 		if (skb_shinfo(skb)->frag_list)
-			skb_drop_fraglist(skb);
+			ax8netfilter_skb_drop_fraglist(skb);
 
 		kfree(skb->head);
 	}
@@ -119,7 +119,7 @@ static void skb_release_data(struct sk_buff *skb)
 /*
  *	Free an skbuff by memory without cleaning the state.
  */
-static void kfree_skbmem(struct sk_buff *skb)
+static void ax8netfilter_kfree_skbmem(struct sk_buff *skb)
 {
 	struct sk_buff *other;
 	atomic_t *fclone_ref;
@@ -150,7 +150,7 @@ static void kfree_skbmem(struct sk_buff *skb)
 	}
 }
 
-static void skb_release_head_state(struct sk_buff *skb)
+void ax8netfilter_skb_release_head_state(struct sk_buff *skb)
 {
 	dst_release(skb->dst);
 #ifdef CONFIG_XFRM
@@ -179,10 +179,10 @@ static void skb_release_head_state(struct sk_buff *skb)
 }
 
 /* Free everything but the sk_buff shell. */
-static void skb_release_all(struct sk_buff *skb)
+static void ax8netfilter_skb_release_all(struct sk_buff *skb)
 {
-	skb_release_head_state(skb);
-	skb_release_data(skb);
+	ax8netfilter_skb_release_head_state(skb);
+	ax8netfilter_skb_release_data(skb);
 }
 
 /**
@@ -194,10 +194,10 @@ static void skb_release_all(struct sk_buff *skb)
  *	always call kfree_skb
  */
 
-void __kfree_skb(struct sk_buff *skb)
+void ax8netfilter___kfree_skb(struct sk_buff *skb)
 {
-	skb_release_all(skb);
-	kfree_skbmem(skb);
+	ax8netfilter_skb_release_all(skb);
+	ax8netfilter_kfree_skbmem(skb);
 }
 
 /**
@@ -207,7 +207,7 @@ void __kfree_skb(struct sk_buff *skb)
  *	Drop a reference to the buffer and free it if the usage count has
  *	hit zero.
  */
-void kfree_skb(struct sk_buff *skb)
+void ax8netfilter_kfree_skb(struct sk_buff *skb)
 {
 	if (unlikely(!skb))
 		return;
@@ -215,54 +215,10 @@ void kfree_skb(struct sk_buff *skb)
 		smp_rmb();
 	else if (likely(!atomic_dec_and_test(&skb->users)))
 		return;
-	__kfree_skb(skb);
+	ax8netfilter___kfree_skb(skb);
 }
 
-/**
- *	skb_recycle_check - check if skb can be reused for receive
- *	@skb: buffer
- *	@skb_size: minimum receive buffer size
- *
- *	Checks that the skb passed in is not shared or cloned, and
- *	that it is linear and its head portion at least as large as
- *	skb_size so that it can be recycled as a receive buffer.
- *	If these conditions are met, this function does any necessary
- *	reference count dropping and cleans up the skbuff as if it
- *	just came from __alloc_skb().
- */
-int skb_recycle_check(struct sk_buff *skb, int skb_size)
-{
-	struct skb_shared_info *shinfo;
-
-	if (skb_is_nonlinear(skb) || skb->fclone != SKB_FCLONE_UNAVAILABLE)
-		return 0;
-
-	skb_size = SKB_DATA_ALIGN(skb_size + NET_SKB_PAD);
-	if (skb_end_pointer(skb) - skb->head < skb_size)
-		return 0;
-
-	if (skb_shared(skb) || skb_cloned(skb))
-		return 0;
-
-	skb_release_head_state(skb);
-	shinfo = skb_shinfo(skb);
-	atomic_set(&shinfo->dataref, 1);
-	shinfo->nr_frags = 0;
-	shinfo->gso_size = 0;
-	shinfo->gso_segs = 0;
-	shinfo->gso_type = 0;
-	shinfo->ip6_frag_id = 0;
-	shinfo->frag_list = NULL;
-
-	memset(skb, 0, offsetof(struct sk_buff, tail));
-	skb->data = skb->head + NET_SKB_PAD;
-	skb_reset_tail_pointer(skb);
-
-	return 1;
-}
-
-
-static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
+void ax8netfilter___copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 {
 	new->tstamp		= old->tstamp;
 	new->dev		= old->dev;
@@ -302,13 +258,13 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	skb_copy_secmark(new, old);
 }
 
-static struct sk_buff *__skb_clone(struct sk_buff *n, struct sk_buff *skb)
+struct sk_buff *ax8netfilter___skb_clone(struct sk_buff *n, struct sk_buff *skb)
 {
 #define C(x) n->x = skb->x
 
 	n->next = n->prev = NULL;
 	n->sk = NULL;
-	__copy_skb_header(n, skb);
+	ax8netfilter___copy_skb_header(n, skb);
 
 	C(len);
 	C(data_len);
@@ -346,10 +302,10 @@ static struct sk_buff *__skb_clone(struct sk_buff *n, struct sk_buff *skb)
  *
  *	The target skb is returned upon exit.
  */
-struct sk_buff *skb_morph(struct sk_buff *dst, struct sk_buff *src)
+struct sk_buff *ax8netfilter_skb_morph(struct sk_buff *dst, struct sk_buff *src)
 {
-	skb_release_all(dst);
-	return __skb_clone(dst, src);
+	ax8netfilter_skb_release_all(dst);
+	return ax8netfilter___skb_clone(dst, src);
 }
 
 
@@ -367,7 +323,7 @@ struct sk_buff *skb_morph(struct sk_buff *dst, struct sk_buff *src)
  *	%GFP_ATOMIC.
  */
 
-struct sk_buff *skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
+struct sk_buff *ax8netfilter_skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
 {
 	struct sk_buff *n;
 
@@ -384,10 +340,10 @@ struct sk_buff *skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
 		n->fclone = SKB_FCLONE_UNAVAILABLE;
 	}
 
-	return __skb_clone(n, skb);
+	return ax8netfilter___skb_clone(n, skb);
 }
 
-static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
+static void ax8netfilter_copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 {
 #ifndef NET_SKBUFF_DATA_USES_OFFSET
 	/*
@@ -396,7 +352,7 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	unsigned long offset = new->data - old->data;
 #endif
 
-	__copy_skb_header(new, old);
+	ax8netfilter___copy_skb_header(new, old);
 
 #ifndef NET_SKBUFF_DATA_USES_OFFSET
 	/* {transport,network,mac}_header are relative to skb->head */
@@ -426,7 +382,7 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
  *	header is going to be modified. Use pskb_copy() instead.
  */
 
-struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
+struct sk_buff *ax8netfilter_skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
 {
 	int headerlen = skb->data - skb->head;
 	/*
@@ -449,7 +405,7 @@ struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
 	if (skb_copy_bits(skb, -headerlen, n->head, headerlen + skb->len))
 		BUG();
 
-	copy_skb_header(n, skb);
+	ax8netfilter_copy_skb_header(n, skb);
 	return n;
 }
 
@@ -467,7 +423,7 @@ struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
  *	The returned buffer has a reference count of 1.
  */
 
-struct sk_buff *pskb_copy(struct sk_buff *skb, gfp_t gfp_mask)
+struct sk_buff *ax8netfilter_pskb_copy(struct sk_buff *skb, gfp_t gfp_mask)
 {
 	/*
 	 *	Allocate the copy buffer
@@ -504,10 +460,10 @@ struct sk_buff *pskb_copy(struct sk_buff *skb, gfp_t gfp_mask)
 
 	if (skb_shinfo(skb)->frag_list) {
 		skb_shinfo(n)->frag_list = skb_shinfo(skb)->frag_list;
-		skb_clone_fraglist(n);
+		ax8netfilter_skb_clone_fraglist(n);
 	}
 
-	copy_skb_header(n, skb);
+	ax8netfilter_copy_skb_header(n, skb);
 out:
 	return n;
 }

@@ -69,6 +69,16 @@ struct cfg_value_map {
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
+	{"skb_release_data", 		&ax8netfilter_skb_release_data, 	0},
+	{"skb_release_head_state" , 	&ax8netfilter_skb_release_head_state, 	1},
+	{"__kfree_skb", 		&ax8netfilter___kfree_skb, 		1},
+	{"kfree_skb", 			&ax8netfilter_kfree_skb, 		1},
+	{"__copy_skb_header", 		&ax8netfilter___copy_skb_header, 	1},
+	{"__skb_clone", 		&ax8netfilter___skb_clone, 		1},
+	{"skb_morph", 			&ax8netfilter_skb_morph,		0},
+	{"skb_clone", 			&ax8netfilter_skb_clone,		0},
+	{"skb_copy", 			&ax8netfilter_skb_copy ,		0},
+	{"pskb_copy", 			&ax8netfilter_pskb_copy, 		0},
 	{NULL, 0, 0},
 };
 

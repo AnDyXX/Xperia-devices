@@ -144,6 +144,8 @@
 #include <linux/mroute.h>
 #include <linux/netlink.h>
 
+#include "ax8netfilter.h"
+
 /*
  *	Process Router Attention IP option
  */
@@ -216,13 +218,13 @@ static int ip_local_deliver_finish(struct sk_buff *skb)
 				if (net_ratelimit())
 					printk("%s: proto %d isn't netns-ready\n",
 						__func__, protocol);
-				kfree_skb(skb);
+				ax8netfilter_kfree_skb(skb);
 				goto out;
 			}
 
 			if (!ipprot->no_policy) {
 				if (!xfrm4_policy_check(NULL, XFRM_POLICY_IN, skb)) {
-					kfree_skb(skb);
+					ax8netfilter_kfree_skb(skb);
 					goto out;
 				}
 				nf_reset(skb);
@@ -242,7 +244,7 @@ static int ip_local_deliver_finish(struct sk_buff *skb)
 				}
 			} else
 				IP_INC_STATS_BH(net, IPSTATS_MIB_INDELIVERS);
-			kfree_skb(skb);
+			ax8netfilter_kfree_skb(skb);
 		}
 	}
  out:
@@ -366,7 +368,7 @@ static int ip_rcv_finish(struct sk_buff *skb)
 	return dst_input(skb);
 
 drop:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return NET_RX_DROP;
 }
 
@@ -443,7 +445,7 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 inhdr_error:
 	IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INHDRERRORS);
 drop:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 out:
 	return NET_RX_DROP;
 }

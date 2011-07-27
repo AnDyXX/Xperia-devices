@@ -38,6 +38,8 @@
 #include <net/route.h>
 #include <net/xfrm.h>
 
+#include "ax8netfilter.h"
+
 static int ip_forward_finish(struct sk_buff *skb)
 {
 	struct ip_options * opt	= &(IPCB(skb)->opt);
@@ -126,6 +128,6 @@ too_many_hops:
 	IP_INC_STATS_BH(dev_net(skb->dst->dev), IPSTATS_MIB_INHDRERRORS);
 	icmp_send(skb, ICMP_TIME_EXCEEDED, ICMP_EXC_TTL, 0);
 drop:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return NET_RX_DROP;
 }

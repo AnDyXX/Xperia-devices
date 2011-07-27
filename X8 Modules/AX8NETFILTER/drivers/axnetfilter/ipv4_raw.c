@@ -78,6 +78,8 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 
+#include "ax8netfilter.h"
+
 static struct raw_hashinfo raw_v4_hashinfo = {
 	.lock = __RW_LOCK_UNLOCKED(raw_v4_hashinfo.lock),
 };
@@ -293,7 +295,7 @@ static int raw_rcv_skb(struct sock * sk, struct sk_buff * skb)
 
 	if (sock_queue_rcv_skb(sk, skb) < 0) {
 		atomic_inc(&sk->sk_drops);
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 		return NET_RX_DROP;
 	}
 
@@ -304,7 +306,7 @@ int raw_rcv(struct sock *sk, struct sk_buff *skb)
 {
 	if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb)) {
 		atomic_inc(&sk->sk_drops);
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 		return NET_RX_DROP;
 	}
 	nf_reset(skb);
@@ -383,7 +385,7 @@ out:
 
 error_fault:
 	err = -EFAULT;
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 error:
 	IP_INC_STATS(net, IPSTATS_MIB_OUTDISCARDS);
 	return err;

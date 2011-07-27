@@ -80,6 +80,8 @@
 #include <linux/netlink.h>
 #include <linux/tcp.h>
 
+#include "ax8netfilter.h"
+
 int sysctl_ip_default_ttl __read_mostly = IPDEFTTL;
 
 /* Generate a checksum for an outgoing IP datagram. */
@@ -192,12 +194,12 @@ static inline int ip_finish_output2(struct sk_buff *skb)
 
 		skb2 = skb_realloc_headroom(skb, LL_RESERVED_SPACE(dev));
 		if (skb2 == NULL) {
-			kfree_skb(skb);
+			ax8netfilter_kfree_skb(skb);
 			return -ENOMEM;
 		}
 		if (skb->sk)
 			skb_set_owner_w(skb2, skb->sk);
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 		skb = skb2;
 	}
 
@@ -208,7 +210,7 @@ static inline int ip_finish_output2(struct sk_buff *skb)
 
 	if (net_ratelimit())
 		printk(KERN_DEBUG "ip_finish_output2: No header cache and no neighbour!\n");
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return -EINVAL;
 }
 
@@ -277,7 +279,7 @@ int ip_mc_output(struct sk_buff *skb)
 		/* Multicasts with ttl 0 must not go beyond the host */
 
 		if (ip_hdr(skb)->ttl == 0) {
-			kfree_skb(skb);
+			ax8netfilter_kfree_skb(skb);
 			return 0;
 		}
 	}
@@ -391,7 +393,7 @@ packet_routed:
 
 no_route:
 	IP_INC_STATS(sock_net(sk), IPSTATS_MIB_OUTNOROUTES);
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return -EHOSTUNREACH;
 }
 
@@ -455,7 +457,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGFAILS);
 		icmp_send(skb, ICMP_DEST_UNREACH, ICMP_FRAG_NEEDED,
 			  htonl(ip_skb_dst_mtu(skb)));
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 		return -EMSGSIZE;
 	}
 
@@ -559,7 +561,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 
 		while (frag) {
 			skb = frag->next;
-			kfree_skb(frag);
+			ax8netfilter_kfree_skb(frag);
 			frag = skb;
 		}
 		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGFAILS);
@@ -676,12 +678,12 @@ slow_path:
 
 		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGCREATES);
 	}
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGOKS);
 	return err;
 
 fail:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGFAILS);
 	return err;
 }
@@ -968,7 +970,7 @@ alloc_new_skb:
 			copy = datalen - transhdrlen - fraggap;
 			if (copy > 0 && getfrag(from, data + transhdrlen, offset, copy, fraggap, skb) < 0) {
 				err = -EFAULT;
-				kfree_skb(skb);
+				ax8netfilter_kfree_skb(skb);
 				goto error;
 			}
 
@@ -1321,7 +1323,7 @@ void ip_flush_pending_frames(struct sock *sk)
 	struct sk_buff *skb;
 
 	while ((skb = __skb_dequeue_tail(&sk->sk_write_queue)) != NULL)
-		kfree_skb(skb);
+		ax8netfilter_kfree_skb(skb);
 
 	ip_cork_release(inet_sk(sk));
 }

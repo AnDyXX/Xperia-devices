@@ -16,6 +16,8 @@
 #include <net/ip.h>
 #include <net/xfrm.h>
 
+#include "ax8netfilter.h"
+
 int xfrm4_extract_input(struct xfrm_state *x, struct sk_buff *skb)
 {
 	return xfrm4_extract_header(skb);
@@ -32,7 +34,7 @@ static inline int xfrm4_rcv_encap_finish(struct sk_buff *skb)
 	}
 	return dst_input(skb);
 drop:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return NET_RX_DROP;
 }
 
@@ -154,7 +156,7 @@ int xfrm4_udp_encap_rcv(struct sock *sk, struct sk_buff *skb)
 	return xfrm4_rcv_encap(skb, IPPROTO_ESP, 0, encap_type);
 
 drop:
-	kfree_skb(skb);
+	ax8netfilter_kfree_skb(skb);
 	return 0;
 }
 
