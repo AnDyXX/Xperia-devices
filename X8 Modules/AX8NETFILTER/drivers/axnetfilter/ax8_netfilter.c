@@ -16,6 +16,8 @@
 #include <net/arp.h>
 #include <net/dst.h>
 #include <net/inet_connection_sock.h>
+#include <net/xfrm.h>
+
 
 #include "ax8netfilter.h"
 
@@ -124,6 +126,8 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"raw_bind",			&ax8netfilter_raw_bind,			0},
 	{"raw_recvmsg",			&ax8netfilter_raw_recvmsg,		0},
 
+	{"xfrm4_transport_finish",	&ax8netfilter_xfrm4_transport_finish,	1},
+
 	{NULL, 0, 0},
 };
 
@@ -158,6 +162,18 @@ static int hijack_functions(int check_only)
 }
 
 #define PATCH_FUNC(what, name, function) if((long) what == (long)kallsyms_lookup_name_ax(name))  what = function;
+
+void patch_xfrm(void)
+{
+	struct xfrm_state_afinfo * xfrm4_state_afinfo;
+	xfrm4_state_afinfo = (void*) kallsyms_lookup_name_ax("xfrm4_state_afinfo");
+	if(xfrm4_state_afinfo)
+	{
+		PATCH_FUNC(xfrm4_state_afinfo->transport_finish, "xfrm4_transport_finish",	ax8netfilter_xfrm4_transport_finish)
+	}
+
+	printk(KERN_INFO AX_MODULE_NAME ": XFRM structs patched.\n");
+}
 
 void patch_raw(void)
 {
@@ -310,6 +326,8 @@ static int __init ax8netfilter_init(void)
 	//patch_arp();
 	//patch_ip();
 	//patch_raw();
+	//patch_xfrm();
+
 	eof:
 	return ret;
 }

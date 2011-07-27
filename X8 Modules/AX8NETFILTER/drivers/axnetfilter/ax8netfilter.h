@@ -85,6 +85,6 @@ void ax8netfilter_raw_destroy(struct sock *sk);
 int ax8netfilter_raw_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len);
 int ax8netfilter_raw_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		       size_t len, int noblock, int flags, int *addr_len);
-
+int ax8netfilter_xfrm4_transport_finish(struct sk_buff *skb, int async);
 
 #endif
