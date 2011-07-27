@@ -133,6 +133,10 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"xfrm_output_resume",		&ax8netfilter_xfrm_output_resume,	0},
 	{"xfrm_output",			&ax8netfilter_xfrm_output,		0},
 
+	{"ip_mc_inc_group",		&ax8netfilter_ip_mc_inc_group,		0},
+	{"ip_mc_dec_group",		&ax8netfilter_ip_mc_dec_group,		0},
+
+
 	{NULL, 0, 0},
 };
 

@@ -98,5 +98,7 @@ int ax8netfilter_xfrm4_output(struct sk_buff *skb);
 int ax8netfilter_xfrm_output_resume(struct sk_buff *skb, int err);
 int ax8netfilter_xfrm_output(struct sk_buff *skb);
 
-
+//from ipv4_igmp
+void ax8netfilter_ip_mc_inc_group(struct in_device *in_dev, __be32 addr);
+void ax8netfilter_ip_mc_dec_group(struct in_device *in_dev, __be32 addr);
 #endif

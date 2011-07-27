@@ -24,6 +24,9 @@
 #include <net/route.h>
 #include <net/cipso_ipv4.h>
 
+
+#include "ax8netfilter.h"
+
 /*
  * Write options to IP header, record destination address to
  * source route option, address of outgoing interface
