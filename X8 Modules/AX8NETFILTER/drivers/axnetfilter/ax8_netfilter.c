@@ -309,6 +309,13 @@ static int __init ax8netfilter_init(void)
 		goto eof;
 	}
 
+	ax8netfilter_ip_ra_chain = (void*) kallsyms_lookup_name_ax("ip_ra_chain");
+	if(!ax8netfilter_ip_ra_chain)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": ip_ra_chain missing!!!\n");
+		goto eof;
+	}
+
 	netfilter_init();
 
 	ret = ipv4_netfilter_init();

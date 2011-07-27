@@ -248,7 +248,7 @@ int ax8netfilter_ip_ra_control(struct sock *sk, unsigned char on, void (*destruc
 	new_ra = on ? kmalloc(sizeof(*new_ra), GFP_KERNEL) : NULL;
 
 	write_lock_bh(&ip_ra_lock);
-	for (rap = &ip_ra_chain; (ra=*rap) != NULL; rap = &ra->next) {
+	for (rap = ax8netfilter_ip_ra_chain; (ra=*rap) != NULL; rap = &ra->next) {
 		if (ra->sk == sk) {
 			if (on) {
 				write_unlock_bh(&ip_ra_lock);

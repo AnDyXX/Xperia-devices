@@ -302,7 +302,7 @@ static int ax8netfilter_raw_send_hdrinc(struct sock *sk, void *from, size_t leng
 	int err;
 
 	if (length > rt->u.dst.dev->mtu) {
-		ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport,
+		ax8netfilter_ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport,
 			       rt->u.dst.dev->mtu);
 		return -EMSGSIZE;
 	}

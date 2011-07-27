@@ -146,6 +146,8 @@
 
 #include "ax8netfilter.h"
 
+struct ip_ra_chain **ax8netfilter_ip_ra_chain; 
+
 /*
  *	Process Router Attention IP option
  */
@@ -157,7 +159,7 @@ int ax8netfilter_ip_call_ra_chain(struct sk_buff *skb)
 	struct net_device *dev = skb->dev;
 
 	read_lock(&ip_ra_lock);
-	for (ra = ip_ra_chain; ra; ra = ra->next) {
+	for (ra = *ax8netfilter_ip_ra_chain; ra; ra = ra->next) {
 		struct sock *sk = ra->sk;
 
 		/* If socket is bound to an interface, only report
