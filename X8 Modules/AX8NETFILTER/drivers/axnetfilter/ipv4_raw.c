@@ -176,7 +176,7 @@ static int raw_v4_input(struct sk_buff *skb, struct iphdr *iph, int hash)
 	while (sk) {
 		delivered = 1;
 		if (iph->protocol != IPPROTO_ICMP || !icmp_filter(sk, skb)) {
-			struct sk_buff *clone = skb_clone(skb, GFP_ATOMIC);
+			struct sk_buff *clone = ax8netfilter_skb_clone(skb, GFP_ATOMIC);
 
 			/* Not releasing hash table! */
 			if (clone)
@@ -254,7 +254,7 @@ static void raw_err(struct sock *sk, struct sk_buff *skb, u32 info)
 
 		if (inet->hdrincl)
 			payload = skb->data;
-		ip_icmp_error(sk, skb, err, 0, info, payload);
+		ax8netfilter_ip_icmp_error(sk, skb, err, 0, info, payload);
 	}
 
 	if (inet->recverr || harderr) {
@@ -498,7 +498,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	ipc.oif = sk->sk_bound_dev_if;
 
 	if (msg->msg_controllen) {
-		err = ip_cmsg_send(sock_net(sk), msg, &ipc);
+		err = ax8netfilter_ip_cmsg_send(sock_net(sk), msg, &ipc);
 		if (err)
 			goto out;
 		if (ipc.opt)
@@ -604,7 +604,7 @@ static void raw_close(struct sock *sk, long timeout)
 	/*
 	 * Raw sockets may have direct kernel refereneces. Kill them.
 	 */
-	ip_ra_control(sk, 0, NULL);
+	ax8netfilter_ip_ra_control(sk, 0, NULL);
 
 	sk_common_release(sk);
 }
@@ -660,7 +660,7 @@ static int raw_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		*addr_len = sizeof(*sin);
 
 	if (flags & MSG_ERRQUEUE) {
-		err = ip_recv_error(sk, msg, len);
+		err = ax8netfilter_ip_recv_error(sk, msg, len);
 		goto out;
 	}
 
@@ -688,7 +688,7 @@ static int raw_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		memset(&sin->sin_zero, 0, sizeof(sin->sin_zero));
 	}
 	if (inet->cmsg_flags)
-		ip_cmsg_recv(msg, skb);
+		ax8netfilter_ip_cmsg_recv(msg, skb);
 	if (flags & MSG_TRUNC)
 		copied = skb->len;
 done:
@@ -752,7 +752,7 @@ static int raw_setsockopt(struct sock *sk, int level, int optname,
 			  char __user *optval, int optlen)
 {
 	if (level != SOL_RAW)
-		return ip_setsockopt(sk, level, optname, optval, optlen);
+		return ax8netfilter_ip_setsockopt(sk, level, optname, optval, optlen);
 	return do_raw_setsockopt(sk, level, optname, optval, optlen);
 }
 
@@ -782,7 +782,7 @@ static int raw_getsockopt(struct sock *sk, int level, int optname,
 			  char __user *optval, int __user *optlen)
 {
 	if (level != SOL_RAW)
-		return ip_getsockopt(sk, level, optname, optval, optlen);
+		return ax8netfilter_ip_getsockopt(sk, level, optname, optval, optlen);
 	return do_raw_getsockopt(sk, level, optname, optval, optlen);
 }
 

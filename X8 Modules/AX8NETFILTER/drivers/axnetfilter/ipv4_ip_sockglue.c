@@ -56,7 +56,7 @@
  *	SOL_IP control messages.
  */
 
-static void ip_cmsg_recv_pktinfo(struct msghdr *msg, struct sk_buff *skb)
+static void ax8netfilter_ip_cmsg_recv_pktinfo(struct msghdr *msg, struct sk_buff *skb)
 {
 	struct in_pktinfo info;
 	struct rtable *rt = skb->rtable;
@@ -73,18 +73,18 @@ static void ip_cmsg_recv_pktinfo(struct msghdr *msg, struct sk_buff *skb)
 	put_cmsg(msg, SOL_IP, IP_PKTINFO, sizeof(info), &info);
 }
 
-static void ip_cmsg_recv_ttl(struct msghdr *msg, struct sk_buff *skb)
+static void ax8netfilter_ip_cmsg_recv_ttl(struct msghdr *msg, struct sk_buff *skb)
 {
 	int ttl = ip_hdr(skb)->ttl;
 	put_cmsg(msg, SOL_IP, IP_TTL, sizeof(int), &ttl);
 }
 
-static void ip_cmsg_recv_tos(struct msghdr *msg, struct sk_buff *skb)
+static void ax8netfilter_ip_cmsg_recv_tos(struct msghdr *msg, struct sk_buff *skb)
 {
 	put_cmsg(msg, SOL_IP, IP_TOS, 1, &ip_hdr(skb)->tos);
 }
 
-static void ip_cmsg_recv_opts(struct msghdr *msg, struct sk_buff *skb)
+static void ax8netfilter_ip_cmsg_recv_opts(struct msghdr *msg, struct sk_buff *skb)
 {
 	if (IPCB(skb)->opt.optlen == 0)
 		return;
@@ -94,7 +94,7 @@ static void ip_cmsg_recv_opts(struct msghdr *msg, struct sk_buff *skb)
 }
 
 
-static void ip_cmsg_recv_retopts(struct msghdr *msg, struct sk_buff *skb)
+static void ax8netfilter_ip_cmsg_recv_retopts(struct msghdr *msg, struct sk_buff *skb)
 {
 	unsigned char optbuf[sizeof(struct ip_options) + 40];
 	struct ip_options * opt = (struct ip_options *)optbuf;
@@ -111,7 +111,7 @@ static void ip_cmsg_recv_retopts(struct msghdr *msg, struct sk_buff *skb)
 	put_cmsg(msg, SOL_IP, IP_RETOPTS, opt->optlen, opt->__data);
 }
 
-static void ip_cmsg_recv_security(struct msghdr *msg, struct sk_buff *skb)
+static void ax8netfilter_ip_cmsg_recv_security(struct msghdr *msg, struct sk_buff *skb)
 {
 	char *secdata;
 	u32 seclen, secid;
@@ -129,7 +129,7 @@ static void ip_cmsg_recv_security(struct msghdr *msg, struct sk_buff *skb)
 	security_release_secctx(secdata, seclen);
 }
 
-static void ip_cmsg_recv_dstaddr(struct msghdr *msg, struct sk_buff *skb)
+static void ax8netfilter_ip_cmsg_recv_dstaddr(struct msghdr *msg, struct sk_buff *skb)
 {
 	struct sockaddr_in sin;
 	struct iphdr *iph = ip_hdr(skb);
@@ -151,48 +151,48 @@ static void ip_cmsg_recv_dstaddr(struct msghdr *msg, struct sk_buff *skb)
 	put_cmsg(msg, SOL_IP, IP_ORIGDSTADDR, sizeof(sin), &sin);
 }
 
-void ip_cmsg_recv(struct msghdr *msg, struct sk_buff *skb)
+void ax8netfilter_ip_cmsg_recv(struct msghdr *msg, struct sk_buff *skb)
 {
 	struct inet_sock *inet = inet_sk(skb->sk);
 	unsigned flags = inet->cmsg_flags;
 
 	/* Ordered by supposed usage frequency */
 	if (flags & 1)
-		ip_cmsg_recv_pktinfo(msg, skb);
+		ax8netfilter_ip_cmsg_recv_pktinfo(msg, skb);
 	if ((flags>>=1) == 0)
 		return;
 
 	if (flags & 1)
-		ip_cmsg_recv_ttl(msg, skb);
+		ax8netfilter_ip_cmsg_recv_ttl(msg, skb);
 	if ((flags>>=1) == 0)
 		return;
 
 	if (flags & 1)
-		ip_cmsg_recv_tos(msg, skb);
+		ax8netfilter_ip_cmsg_recv_tos(msg, skb);
 	if ((flags>>=1) == 0)
 		return;
 
 	if (flags & 1)
-		ip_cmsg_recv_opts(msg, skb);
+		ax8netfilter_ip_cmsg_recv_opts(msg, skb);
 	if ((flags>>=1) == 0)
 		return;
 
 	if (flags & 1)
-		ip_cmsg_recv_retopts(msg, skb);
+		ax8netfilter_ip_cmsg_recv_retopts(msg, skb);
 	if ((flags>>=1) == 0)
 		return;
 
 	if (flags & 1)
-		ip_cmsg_recv_security(msg, skb);
+		ax8netfilter_ip_cmsg_recv_security(msg, skb);
 
 	if ((flags>>=1) == 0)
 		return;
 	if (flags & 1)
-		ip_cmsg_recv_dstaddr(msg, skb);
+		ax8netfilter_ip_cmsg_recv_dstaddr(msg, skb);
 
 }
 
-int ip_cmsg_send(struct net *net, struct msghdr *msg, struct ipcm_cookie *ipc)
+int ax8netfilter_ip_cmsg_send(struct net *net, struct msghdr *msg, struct ipcm_cookie *ipc)
 {
 	int err;
 	struct cmsghdr *cmsg;
@@ -237,10 +237,8 @@ int ip_cmsg_send(struct net *net, struct msghdr *msg, struct ipcm_cookie *ipc)
    but receiver should be enough clever f.e. to forward mtrace requests,
    sent to multicast group to reach destination designated router.
  */
-struct ip_ra_chain *ip_ra_chain;
-DEFINE_RWLOCK(ip_ra_lock);
 
-int ip_ra_control(struct sock *sk, unsigned char on, void (*destructor)(struct sock *))
+int ax8netfilter_ip_ra_control(struct sock *sk, unsigned char on, void (*destructor)(struct sock *))
 {
 	struct ip_ra_chain *ra, *new_ra, **rap;
 
@@ -282,7 +280,7 @@ int ip_ra_control(struct sock *sk, unsigned char on, void (*destructor)(struct s
 	return 0;
 }
 
-void ip_icmp_error(struct sock *sk, struct sk_buff *skb, int err,
+void ax8netfilter_ip_icmp_error(struct sock *sk, struct sk_buff *skb, int err,
 		   __be16 port, u32 info, u8 *payload)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -315,7 +313,7 @@ void ip_icmp_error(struct sock *sk, struct sk_buff *skb, int err,
 	ax8netfilter_kfree_skb(skb);
 }
 
-void ip_local_error(struct sock *sk, int err, __be32 daddr, __be16 port, u32 info)
+void ax8netfilter_ip_local_error(struct sock *sk, int err, __be32 daddr, __be16 port, u32 info)
 {
 	struct inet_sock *inet = inet_sk(sk);
 	struct sock_exterr_skb *serr;
@@ -355,7 +353,7 @@ void ip_local_error(struct sock *sk, int err, __be32 daddr, __be16 port, u32 inf
 /*
  *	Handle MSG_ERRQUEUE
  */
-int ip_recv_error(struct sock *sk, struct msghdr *msg, int len)
+int ax8netfilter_ip_recv_error(struct sock *sk, struct msghdr *msg, int len)
 {
 	struct sock_exterr_skb *serr;
 	struct sk_buff *skb, *skb2;
@@ -405,7 +403,7 @@ int ip_recv_error(struct sock *sk, struct msghdr *msg, int len)
 		sin->sin_port = 0;
 		memset(&sin->sin_zero, 0, sizeof(sin->sin_zero));
 		if (inet->cmsg_flags)
-			ip_cmsg_recv(msg, skb);
+			ax8netfilter_ip_cmsg_recv(msg, skb);
 	}
 
 	put_cmsg(msg, SOL_IP, IP_RECVERR, sizeof(errhdr), &errhdr);
@@ -437,7 +435,7 @@ out:
  *	an IP socket.
  */
 
-static int do_ip_setsockopt(struct sock *sk, int level,
+static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			    int optname, char __user *optval, int optlen)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -898,7 +896,7 @@ static int do_ip_setsockopt(struct sock *sk, int level,
 		break;
 	}
 	case IP_ROUTER_ALERT:
-		err = ip_ra_control(sk, val ? 1 : 0, NULL);
+		err = ax8netfilter_ip_ra_control(sk, val ? 1 : 0, NULL);
 		break;
 
 	case IP_FREEBIND:
@@ -937,7 +935,7 @@ e_inval:
 	return -EINVAL;
 }
 
-int ip_setsockopt(struct sock *sk, int level,
+int ax8netfilter_ip_setsockopt(struct sock *sk, int level,
 		int optname, char __user *optval, int optlen)
 {
 	int err;
@@ -945,8 +943,8 @@ int ip_setsockopt(struct sock *sk, int level,
 	if (level != SOL_IP)
 		return -ENOPROTOOPT;
 
-	err = do_ip_setsockopt(sk, level, optname, optval, optlen);
-#ifdef CONFIG_NETFILTER
+	err = ax8netfilter_do_ip_setsockopt(sk, level, optname, optval, optlen);
+#ifdef CONFIG_AX8_NETFILTER
 	/* we need to exclude all possible ENOPROTOOPTs except default case */
 	if (err == -ENOPROTOOPT && optname != IP_HDRINCL &&
 			optname != IP_IPSEC_POLICY &&
@@ -961,7 +959,7 @@ int ip_setsockopt(struct sock *sk, int level,
 }
 
 #ifdef CONFIG_COMPAT
-int compat_ip_setsockopt(struct sock *sk, int level, int optname,
+int ax8netfilter_compat_ip_setsockopt(struct sock *sk, int level, int optname,
 			 char __user *optval, int optlen)
 {
 	int err;
@@ -973,8 +971,8 @@ int compat_ip_setsockopt(struct sock *sk, int level, int optname,
 		return compat_mc_setsockopt(sk, level, optname, optval, optlen,
 			ip_setsockopt);
 
-	err = do_ip_setsockopt(sk, level, optname, optval, optlen);
-#ifdef CONFIG_NETFILTER
+	err = ax8netfilter_do_ip_setsockopt(sk, level, optname, optval, optlen);
+#ifdef CONFIG_AX8_NETFILTER
 	/* we need to exclude all possible ENOPROTOOPTs except default case */
 	if (err == -ENOPROTOOPT && optname != IP_HDRINCL &&
 			optname != IP_IPSEC_POLICY &&
@@ -989,7 +987,7 @@ int compat_ip_setsockopt(struct sock *sk, int level, int optname,
 	return err;
 }
 
-EXPORT_SYMBOL(compat_ip_setsockopt);
+
 #endif
 
 /*
@@ -997,7 +995,7 @@ EXPORT_SYMBOL(compat_ip_setsockopt);
  *	_received_ ones. The set sets the _sent_ ones.
  */
 
-static int do_ip_getsockopt(struct sock *sk, int level, int optname,
+static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname,
 			    char __user *optval, int __user *optlen)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -1206,13 +1204,13 @@ static int do_ip_getsockopt(struct sock *sk, int level, int optname,
 	return 0;
 }
 
-int ip_getsockopt(struct sock *sk, int level,
+int ax8netfilter_ip_getsockopt(struct sock *sk, int level,
 		  int optname, char __user *optval, int __user *optlen)
 {
 	int err;
 
-	err = do_ip_getsockopt(sk, level, optname, optval, optlen);
-#ifdef CONFIG_NETFILTER
+	err = ax8netfilter_do_ip_getsockopt(sk, level, optname, optval, optlen);
+#ifdef CONFIG_AX8_NETFILTER
 	/* we need to exclude all possible ENOPROTOOPTs except default case */
 	if (err == -ENOPROTOOPT && optname != IP_PKTOPTIONS &&
 			!ip_mroute_opt(optname)) {
@@ -1234,7 +1232,7 @@ int ip_getsockopt(struct sock *sk, int level,
 }
 
 #ifdef CONFIG_COMPAT
-int compat_ip_getsockopt(struct sock *sk, int level, int optname,
+int ax8netfilter_compat_ip_getsockopt(struct sock *sk, int level, int optname,
 			 char __user *optval, int __user *optlen)
 {
 	int err;
@@ -1243,9 +1241,9 @@ int compat_ip_getsockopt(struct sock *sk, int level, int optname,
 		return compat_mc_getsockopt(sk, level, optname, optval, optlen,
 			ip_getsockopt);
 
-	err = do_ip_getsockopt(sk, level, optname, optval, optlen);
+	err = ax8netfilter_do_ip_getsockopt(sk, level, optname, optval, optlen);
 
-#ifdef CONFIG_NETFILTER
+#ifdef CONFIG_AX8_NETFILTER
 	/* we need to exclude all possible ENOPROTOOPTs except default case */
 	if (err == -ENOPROTOOPT && optname != IP_PKTOPTIONS &&
 			!ip_mroute_opt(optname)) {
@@ -1265,10 +1263,7 @@ int compat_ip_getsockopt(struct sock *sk, int level, int optname,
 	return err;
 }
 
-EXPORT_SYMBOL(compat_ip_getsockopt);
+
 #endif
 
-EXPORT_SYMBOL(ip_cmsg_recv);
 
-EXPORT_SYMBOL(ip_getsockopt);
-EXPORT_SYMBOL(ip_setsockopt);

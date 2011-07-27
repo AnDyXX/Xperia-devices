@@ -107,6 +107,16 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"ip_flush_pending_frames",	&ax8netfilter_ip_flush_pending_frames,	0},
 	{"ip_send_reply",		&ax8netfilter_ip_send_reply,		0},
 
+	{"ip_cmsg_recv",		&ax8netfilter_ip_cmsg_recv,		0},
+	{"ip_cmsg_send",		&ax8netfilter_ip_cmsg_send,		0},
+	{"ip_ra_control",		&ax8netfilter_ip_ra_control,		0},
+	{"ip_icmp_error",		&ax8netfilter_ip_icmp_error,		0},
+
+	{"ip_local_error", 		&ax8netfilter_ip_local_error,		0},
+	{"ip_recv_error", 		&ax8netfilter_ip_recv_error,		0},
+	{"ip_setsockopt",		&ax8netfilter_ip_setsockopt,		1},
+	{"ip_getsockopt",		&ax8netfilter_ip_getsockopt ,		1},
+
 	{NULL, 0, 0},
 };
 
@@ -162,6 +172,8 @@ void patch_ip(void)
 	if(ipv4_specific)
 	{
 		ipv4_specific->queue_xmit = ax8netfilter_ip_queue_xmit;
+		ipv4_specific->setsockopt = ax8netfilter_ip_setsockopt;
+		ipv4_specific->getsockopt = ax8netfilter_ip_getsockopt;
 	}
 
 	printk(KERN_INFO AX_MODULE_NAME ": IP structs patched.\n");

@@ -265,7 +265,7 @@ int ax8netfilter_ip_mc_output(struct sk_buff *skb)
 		    && ((rt->rt_flags&RTCF_LOCAL) || !(IPCB(skb)->flags&IPSKB_FORWARDED))
 #endif
 		) {
-			struct sk_buff *newskb = skb_clone(skb, GFP_ATOMIC);
+			struct sk_buff *newskb = ax8netfilter_skb_clone(skb, GFP_ATOMIC);
 			if (newskb)
 				NF_HOOK(PF_INET, NF_INET_POST_ROUTING, newskb,
 					NULL, newskb->dev,
@@ -281,7 +281,7 @@ int ax8netfilter_ip_mc_output(struct sk_buff *skb)
 	}
 
 	if (rt->rt_flags&RTCF_BROADCAST) {
-		struct sk_buff *newskb = skb_clone(skb, GFP_ATOMIC);
+		struct sk_buff *newskb = ax8netfilter_skb_clone(skb, GFP_ATOMIC);
 		if (newskb)
 			NF_HOOK(PF_INET, NF_INET_POST_ROUTING, newskb, NULL,
 				newskb->dev, ax8netfilter_ip_dev_loopback_xmit);
@@ -825,7 +825,7 @@ int ax8netfilter_ip_append_data(struct sock *sk,
 	maxfraglen = ((mtu - fragheaderlen) & ~7) + fragheaderlen;
 
 	if (inet->cork.length + length > 0xFFFF - fragheaderlen) {
-		ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport, mtu-exthdrlen);
+		ax8netfilter_ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport, mtu-exthdrlen);
 		return -EMSGSIZE;
 	}
 
@@ -1074,7 +1074,7 @@ ssize_t	ax8netfilter_ip_append_page(struct sock *sk, struct page *page,
 	maxfraglen = ((mtu - fragheaderlen) & ~7) + fragheaderlen;
 
 	if (inet->cork.length + size > 0xFFFF - fragheaderlen) {
-		ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport, mtu);
+		ax8netfilter_ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport, mtu);
 		return -EMSGSIZE;
 	}
 

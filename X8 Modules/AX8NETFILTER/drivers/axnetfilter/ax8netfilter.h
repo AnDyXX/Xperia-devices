@@ -61,4 +61,18 @@ void ax8netfilter_ip_flush_pending_frames(struct sock *sk);
 void ax8netfilter_ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *arg,
 		   unsigned int len);
 
+//from ipv4_sockglue.c
+
+void ax8netfilter_ip_cmsg_recv(struct msghdr *msg, struct sk_buff *skb);
+int ax8netfilter_ip_cmsg_send(struct net *net, struct msghdr *msg, struct ipcm_cookie *ipc);
+int ax8netfilter_ip_ra_control(struct sock *sk, unsigned char on, void (*destructor)(struct sock *));
+void ax8netfilter_ip_icmp_error(struct sock *sk, struct sk_buff *skb, int err,
+		   __be16 port, u32 info, u8 *payload);
+void ax8netfilter_ip_local_error(struct sock *sk, int err, __be32 daddr, __be16 port, u32 info);
+int ax8netfilter_ip_recv_error(struct sock *sk, struct msghdr *msg, int len);
+int ax8netfilter_ip_setsockopt(struct sock *sk, int level,
+		int optname, char __user *optval, int optlen);
+int ax8netfilter_ip_getsockopt(struct sock *sk, int level,
+		  int optname, char __user *optval, int __user *optlen);
+
 #endif
