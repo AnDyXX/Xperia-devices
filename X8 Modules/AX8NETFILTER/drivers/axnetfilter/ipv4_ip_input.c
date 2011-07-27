@@ -176,14 +176,14 @@ int ax8netfilter_ip_call_ra_chain(struct sk_buff *skb)
 			if (last) {
 				struct sk_buff *skb2 = ax8netfilter_skb_clone(skb, GFP_ATOMIC);
 				if (skb2)
-					raw_rcv(last, skb2);
+					ax8netfilter_raw_rcv(last, skb2);
 			}
 			last = sk;
 		}
 	}
 
 	if (last) {
-		raw_rcv(last, skb);
+		ax8netfilter_raw_rcv(last, skb);
 		read_unlock(&ip_ra_lock);
 		return 1;
 	}

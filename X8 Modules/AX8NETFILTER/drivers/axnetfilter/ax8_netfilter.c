@@ -117,6 +117,13 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"ip_setsockopt",		&ax8netfilter_ip_setsockopt,		1},
 	{"ip_getsockopt",		&ax8netfilter_ip_getsockopt ,		1},
 
+	{"raw_rcv", 			&ax8netfilter_raw_rcv,			0},
+	{"raw_sendmsg",			&ax8netfilter_raw_sendmsg,		0},
+	{"raw_close",			&ax8netfilter_raw_close,		0},
+	{"raw_destroy",			&ax8netfilter_raw_destroy,		0},
+	{"raw_bind",			&ax8netfilter_raw_bind,			0},
+	{"raw_recvmsg",			&ax8netfilter_raw_recvmsg,		0},
+
 	{NULL, 0, 0},
 };
 
@@ -148,6 +155,25 @@ static int hijack_functions(int check_only)
 	}
 
 	return ret;
+}
+
+#define PATCH_FUNC(what, name, function) if((long) what == (long)kallsyms_lookup_name_ax(name))  what = function;
+
+void patch_raw(void)
+{
+	struct proto *raw_prot;
+
+	raw_prot = (void*) kallsyms_lookup_name_ax("raw_prot");
+	if(raw_prot)
+	{
+		PATCH_FUNC(raw_prot->sendmsg, 	"raw_sendmsg", 	ax8netfilter_raw_sendmsg)
+		PATCH_FUNC(raw_prot->close, 	"raw_close", 	ax8netfilter_raw_close)
+		PATCH_FUNC(raw_prot->destroy, 	"raw_destroy", 	ax8netfilter_raw_destroy)
+		PATCH_FUNC(raw_prot->bind, 	"raw_bind", 	ax8netfilter_raw_bind)
+		PATCH_FUNC(raw_prot->recvmsg, 	"raw_recvmsg", 	ax8netfilter_raw_recvmsg)
+	}
+
+	printk(KERN_INFO AX_MODULE_NAME ": RAW structs patched.\n");
 }
 
 void patch_ip(void)
@@ -254,6 +280,13 @@ static int __init ax8netfilter_init(void)
 		goto eof;
 	}
 
+	ax8netfilter_raw_v4_hashinfo = (void*) kallsyms_lookup_name_ax("raw_v4_hashinfo");
+	if(!ax8netfilter_raw_v4_hashinfo)
+	{
+		printk(KERN_INFO AX_MODULE_NAME ": raw_v4_hashinfo missing!!!\n");
+		goto eof;
+	}
+
 	netfilter_init();
 
 	ret = ipv4_netfilter_init();
@@ -276,7 +309,7 @@ static int __init ax8netfilter_init(void)
 
 	//patch_arp();
 	//patch_ip();
-
+	//patch_raw();
 	eof:
 	return ret;
 }

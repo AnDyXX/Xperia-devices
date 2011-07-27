@@ -75,4 +75,16 @@ int ax8netfilter_ip_setsockopt(struct sock *sk, int level,
 int ax8netfilter_ip_getsockopt(struct sock *sk, int level,
 		  int optname, char __user *optval, int __user *optlen);
 
+//from ipv4_raw.c
+extern struct raw_hashinfo * ax8netfilter_raw_v4_hashinfo;
+int ax8netfilter_raw_rcv(struct sock *sk, struct sk_buff *skb);
+int ax8netfilter_raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+		       size_t len);
+void ax8netfilter_raw_close(struct sock *sk, long timeout);
+void ax8netfilter_raw_destroy(struct sock *sk);
+int ax8netfilter_raw_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len);
+int ax8netfilter_raw_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+		       size_t len, int noblock, int flags, int *addr_len);
+
+
 #endif

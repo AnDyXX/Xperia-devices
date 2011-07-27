@@ -80,36 +80,9 @@
 
 #include "ax8netfilter.h"
 
-static struct raw_hashinfo raw_v4_hashinfo = {
-	.lock = __RW_LOCK_UNLOCKED(raw_v4_hashinfo.lock),
-};
+struct raw_hashinfo * ax8netfilter_raw_v4_hashinfo;
 
-void raw_hash_sk(struct sock *sk)
-{
-	struct raw_hashinfo *h = sk->sk_prot->h.raw_hash;
-	struct hlist_head *head;
-
-	head = &h->ht[inet_sk(sk)->num & (RAW_HTABLE_SIZE - 1)];
-
-	write_lock_bh(&h->lock);
-	sk_add_node(sk, head);
-	sock_prot_inuse_add(sock_net(sk), sk->sk_prot, 1);
-	write_unlock_bh(&h->lock);
-}
-EXPORT_SYMBOL_GPL(raw_hash_sk);
-
-void raw_unhash_sk(struct sock *sk)
-{
-	struct raw_hashinfo *h = sk->sk_prot->h.raw_hash;
-
-	write_lock_bh(&h->lock);
-	if (sk_del_node_init(sk))
-		sock_prot_inuse_add(sock_net(sk), sk->sk_prot, -1);
-	write_unlock_bh(&h->lock);
-}
-EXPORT_SYMBOL_GPL(raw_unhash_sk);
-
-static struct sock *__raw_v4_lookup(struct net *net, struct sock *sk,
+static struct sock * ax8netfilter___raw_v4_lookup(struct net *net, struct sock *sk,
 		unsigned short num, __be32 raddr, __be32 laddr, int dif)
 {
 	struct hlist_node *node;
@@ -132,7 +105,7 @@ found:
  *	0 - deliver
  *	1 - block
  */
-static __inline__ int icmp_filter(struct sock *sk, struct sk_buff *skb)
+static __inline__ int ax8netfilter_icmp_filter(struct sock *sk, struct sk_buff *skb)
 {
 	int type;
 
@@ -163,31 +136,31 @@ static int raw_v4_input(struct sk_buff *skb, struct iphdr *iph, int hash)
 	int delivered = 0;
 	struct net *net;
 
-	read_lock(&raw_v4_hashinfo.lock);
-	head = &raw_v4_hashinfo.ht[hash];
+	read_lock(&(*ax8netfilter_raw_v4_hashinfo).lock);
+	head = &(*ax8netfilter_raw_v4_hashinfo).ht[hash];
 	if (hlist_empty(head))
 		goto out;
 
 	net = dev_net(skb->dev);
-	sk = __raw_v4_lookup(net, __sk_head(head), iph->protocol,
+	sk = ax8netfilter___raw_v4_lookup(net, __sk_head(head), iph->protocol,
 			     iph->saddr, iph->daddr,
 			     skb->dev->ifindex);
 
 	while (sk) {
 		delivered = 1;
-		if (iph->protocol != IPPROTO_ICMP || !icmp_filter(sk, skb)) {
+		if (iph->protocol != IPPROTO_ICMP || !ax8netfilter_icmp_filter(sk, skb)) {
 			struct sk_buff *clone = ax8netfilter_skb_clone(skb, GFP_ATOMIC);
 
 			/* Not releasing hash table! */
 			if (clone)
-				raw_rcv(sk, clone);
+				ax8netfilter_raw_rcv(sk, clone);
 		}
-		sk = __raw_v4_lookup(net, sk_next(sk), iph->protocol,
+		sk = ax8netfilter___raw_v4_lookup(net, sk_next(sk), iph->protocol,
 				     iph->saddr, iph->daddr,
 				     skb->dev->ifindex);
 	}
 out:
-	read_unlock(&raw_v4_hashinfo.lock);
+	read_unlock(&(*ax8netfilter_raw_v4_hashinfo).lock);
 	return delivered;
 }
 
@@ -197,7 +170,7 @@ int raw_local_deliver(struct sk_buff *skb, int protocol)
 	struct sock *raw_sk;
 
 	hash = protocol & (RAW_HTABLE_SIZE - 1);
-	raw_sk = sk_head(&raw_v4_hashinfo.ht[hash]);
+	raw_sk = sk_head(&(*ax8netfilter_raw_v4_hashinfo).ht[hash]);
 
 	/* If there maybe a raw socket we must check - if not we
 	 * don't care less
@@ -272,13 +245,13 @@ void raw_icmp_error(struct sk_buff *skb, int protocol, u32 info)
 
 	hash = protocol & (RAW_HTABLE_SIZE - 1);
 
-	read_lock(&raw_v4_hashinfo.lock);
-	raw_sk = sk_head(&raw_v4_hashinfo.ht[hash]);
+	read_lock(&(*ax8netfilter_raw_v4_hashinfo).lock);
+	raw_sk = sk_head(&(*ax8netfilter_raw_v4_hashinfo).ht[hash]);
 	if (raw_sk != NULL) {
 		iph = (struct iphdr *)skb->data;
 		net = dev_net(skb->dev);
 
-		while ((raw_sk = __raw_v4_lookup(net, raw_sk, protocol,
+		while ((raw_sk = ax8netfilter___raw_v4_lookup(net, raw_sk, protocol,
 						iph->daddr, iph->saddr,
 						skb->dev->ifindex)) != NULL) {
 			raw_err(raw_sk, skb, info);
@@ -286,10 +259,10 @@ void raw_icmp_error(struct sk_buff *skb, int protocol, u32 info)
 			iph = (struct iphdr *)skb->data;
 		}
 	}
-	read_unlock(&raw_v4_hashinfo.lock);
+	read_unlock(&(*ax8netfilter_raw_v4_hashinfo).lock);
 }
 
-static int raw_rcv_skb(struct sock * sk, struct sk_buff * skb)
+static int ax8netfilter_raw_rcv_skb(struct sock * sk, struct sk_buff * skb)
 {
 	/* Charge it to the socket. */
 
@@ -302,7 +275,7 @@ static int raw_rcv_skb(struct sock * sk, struct sk_buff * skb)
 	return NET_RX_SUCCESS;
 }
 
-int raw_rcv(struct sock *sk, struct sk_buff *skb)
+int ax8netfilter_raw_rcv(struct sock *sk, struct sk_buff *skb)
 {
 	if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb)) {
 		atomic_inc(&sk->sk_drops);
@@ -313,11 +286,11 @@ int raw_rcv(struct sock *sk, struct sk_buff *skb)
 
 	skb_push(skb, skb->data - skb_network_header(skb));
 
-	raw_rcv_skb(sk, skb);
+	ax8netfilter_raw_rcv_skb(sk, skb);
 	return 0;
 }
 
-static int raw_send_hdrinc(struct sock *sk, void *from, size_t length,
+static int ax8netfilter_raw_send_hdrinc(struct sock *sk, void *from, size_t length,
 			struct rtable *rt,
 			unsigned int flags)
 {
@@ -391,7 +364,7 @@ error:
 	return err;
 }
 
-static int raw_probe_proto_opt(struct flowi *fl, struct msghdr *msg)
+static int ax8netfilter_raw_probe_proto_opt(struct flowi *fl, struct msghdr *msg)
 {
 	struct iovec *iov;
 	u8 __user *type = NULL;
@@ -438,7 +411,7 @@ static int raw_probe_proto_opt(struct flowi *fl, struct msghdr *msg)
 	return 0;
 }
 
-static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+int ax8netfilter_raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		       size_t len)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -546,7 +519,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 							     sk->sk_protocol,
 				  };
 		if (!inet->hdrincl) {
-			err = raw_probe_proto_opt(&fl, msg);
+			err = ax8netfilter_raw_probe_proto_opt(&fl, msg);
 			if (err)
 				goto done;
 		}
@@ -566,7 +539,7 @@ static int raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 back_from_confirm:
 
 	if (inet->hdrincl)
-		err = raw_send_hdrinc(sk, msg->msg_iov, len,
+		err = ax8netfilter_raw_send_hdrinc(sk, msg->msg_iov, len,
 					rt, msg->msg_flags);
 
 	 else {
@@ -599,7 +572,7 @@ do_confirm:
 	goto done;
 }
 
-static void raw_close(struct sock *sk, long timeout)
+void ax8netfilter_raw_close(struct sock *sk, long timeout)
 {
 	/*
 	 * Raw sockets may have direct kernel refereneces. Kill them.
@@ -609,15 +582,15 @@ static void raw_close(struct sock *sk, long timeout)
 	sk_common_release(sk);
 }
 
-static void raw_destroy(struct sock *sk)
+void ax8netfilter_raw_destroy(struct sock *sk)
 {
 	lock_sock(sk);
-	ip_flush_pending_frames(sk);
+	ax8netfilter_ip_flush_pending_frames(sk);
 	release_sock(sk);
 }
 
 /* This gets rid of all the nasties in af_inet. -DaveM */
-static int raw_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len)
+int ax8netfilter_raw_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 {
 	struct inet_sock *inet = inet_sk(sk);
 	struct sockaddr_in *addr = (struct sockaddr_in *) uaddr;
@@ -644,7 +617,7 @@ out:	return ret;
  *	we return it, otherwise we block.
  */
 
-static int raw_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+int ax8netfilter_raw_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		       size_t len, int noblock, int flags, int *addr_len)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -699,321 +672,7 @@ out:
 	return copied;
 }
 
-static int raw_init(struct sock *sk)
-{
-	struct raw_sock *rp = raw_sk(sk);
 
-	if (inet_sk(sk)->num == IPPROTO_ICMP)
-		memset(&rp->filter, 0, sizeof(rp->filter));
-	return 0;
-}
 
-static int raw_seticmpfilter(struct sock *sk, char __user *optval, int optlen)
-{
-	if (optlen > sizeof(struct icmp_filter))
-		optlen = sizeof(struct icmp_filter);
-	if (copy_from_user(&raw_sk(sk)->filter, optval, optlen))
-		return -EFAULT;
-	return 0;
-}
 
-static int raw_geticmpfilter(struct sock *sk, char __user *optval, int __user *optlen)
-{
-	int len, ret = -EFAULT;
 
-	if (get_user(len, optlen))
-		goto out;
-	ret = -EINVAL;
-	if (len < 0)
-		goto out;
-	if (len > sizeof(struct icmp_filter))
-		len = sizeof(struct icmp_filter);
-	ret = -EFAULT;
-	if (put_user(len, optlen) ||
-	    copy_to_user(optval, &raw_sk(sk)->filter, len))
-		goto out;
-	ret = 0;
-out:	return ret;
-}
-
-static int do_raw_setsockopt(struct sock *sk, int level, int optname,
-			  char __user *optval, int optlen)
-{
-	if (optname == ICMP_FILTER) {
-		if (inet_sk(sk)->num != IPPROTO_ICMP)
-			return -EOPNOTSUPP;
-		else
-			return raw_seticmpfilter(sk, optval, optlen);
-	}
-	return -ENOPROTOOPT;
-}
-
-static int raw_setsockopt(struct sock *sk, int level, int optname,
-			  char __user *optval, int optlen)
-{
-	if (level != SOL_RAW)
-		return ax8netfilter_ip_setsockopt(sk, level, optname, optval, optlen);
-	return do_raw_setsockopt(sk, level, optname, optval, optlen);
-}
-
-#ifdef CONFIG_COMPAT
-static int compat_raw_setsockopt(struct sock *sk, int level, int optname,
-				 char __user *optval, int optlen)
-{
-	if (level != SOL_RAW)
-		return compat_ip_setsockopt(sk, level, optname, optval, optlen);
-	return do_raw_setsockopt(sk, level, optname, optval, optlen);
-}
-#endif
-
-static int do_raw_getsockopt(struct sock *sk, int level, int optname,
-			  char __user *optval, int __user *optlen)
-{
-	if (optname == ICMP_FILTER) {
-		if (inet_sk(sk)->num != IPPROTO_ICMP)
-			return -EOPNOTSUPP;
-		else
-			return raw_geticmpfilter(sk, optval, optlen);
-	}
-	return -ENOPROTOOPT;
-}
-
-static int raw_getsockopt(struct sock *sk, int level, int optname,
-			  char __user *optval, int __user *optlen)
-{
-	if (level != SOL_RAW)
-		return ax8netfilter_ip_getsockopt(sk, level, optname, optval, optlen);
-	return do_raw_getsockopt(sk, level, optname, optval, optlen);
-}
-
-#ifdef CONFIG_COMPAT
-static int compat_raw_getsockopt(struct sock *sk, int level, int optname,
-				 char __user *optval, int __user *optlen)
-{
-	if (level != SOL_RAW)
-		return compat_ip_getsockopt(sk, level, optname, optval, optlen);
-	return do_raw_getsockopt(sk, level, optname, optval, optlen);
-}
-#endif
-
-static int raw_ioctl(struct sock *sk, int cmd, unsigned long arg)
-{
-	switch (cmd) {
-		case SIOCOUTQ: {
-			int amount = atomic_read(&sk->sk_wmem_alloc);
-			return put_user(amount, (int __user *)arg);
-		}
-		case SIOCINQ: {
-			struct sk_buff *skb;
-			int amount = 0;
-
-			spin_lock_bh(&sk->sk_receive_queue.lock);
-			skb = skb_peek(&sk->sk_receive_queue);
-			if (skb != NULL)
-				amount = skb->len;
-			spin_unlock_bh(&sk->sk_receive_queue.lock);
-			return put_user(amount, (int __user *)arg);
-		}
-
-		default:
-#ifdef CONFIG_IP_MROUTE
-			return ipmr_ioctl(sk, cmd, (void __user *)arg);
-#else
-			return -ENOIOCTLCMD;
-#endif
-	}
-}
-
-struct proto raw_prot = {
-	.name		   = "RAW",
-	.owner		   = THIS_MODULE,
-	.close		   = raw_close,
-	.destroy	   = raw_destroy,
-	.connect	   = ip4_datagram_connect,
-	.disconnect	   = udp_disconnect,
-	.ioctl		   = raw_ioctl,
-	.init		   = raw_init,
-	.setsockopt	   = raw_setsockopt,
-	.getsockopt	   = raw_getsockopt,
-	.sendmsg	   = raw_sendmsg,
-	.recvmsg	   = raw_recvmsg,
-	.bind		   = raw_bind,
-	.backlog_rcv	   = raw_rcv_skb,
-	.hash		   = raw_hash_sk,
-	.unhash		   = raw_unhash_sk,
-	.obj_size	   = sizeof(struct raw_sock),
-	.h.raw_hash	   = &raw_v4_hashinfo,
-#ifdef CONFIG_COMPAT
-	.compat_setsockopt = compat_raw_setsockopt,
-	.compat_getsockopt = compat_raw_getsockopt,
-#endif
-};
-
-#ifdef CONFIG_PROC_FS
-static struct sock *raw_get_first(struct seq_file *seq)
-{
-	struct sock *sk;
-	struct raw_iter_state *state = raw_seq_private(seq);
-
-	for (state->bucket = 0; state->bucket < RAW_HTABLE_SIZE;
-			++state->bucket) {
-		struct hlist_node *node;
-
-		sk_for_each(sk, node, &state->h->ht[state->bucket])
-			if (sock_net(sk) == seq_file_net(seq))
-				goto found;
-	}
-	sk = NULL;
-found:
-	return sk;
-}
-
-static struct sock *raw_get_next(struct seq_file *seq, struct sock *sk)
-{
-	struct raw_iter_state *state = raw_seq_private(seq);
-
-	do {
-		sk = sk_next(sk);
-try_again:
-		;
-	} while (sk && sock_net(sk) != seq_file_net(seq));
-
-	if (!sk && ++state->bucket < RAW_HTABLE_SIZE) {
-		sk = sk_head(&state->h->ht[state->bucket]);
-		goto try_again;
-	}
-	return sk;
-}
-
-static struct sock *raw_get_idx(struct seq_file *seq, loff_t pos)
-{
-	struct sock *sk = raw_get_first(seq);
-
-	if (sk)
-		while (pos && (sk = raw_get_next(seq, sk)) != NULL)
-			--pos;
-	return pos ? NULL : sk;
-}
-
-void *raw_seq_start(struct seq_file *seq, loff_t *pos)
-{
-	struct raw_iter_state *state = raw_seq_private(seq);
-
-	read_lock(&state->h->lock);
-	return *pos ? raw_get_idx(seq, *pos - 1) : SEQ_START_TOKEN;
-}
-EXPORT_SYMBOL_GPL(raw_seq_start);
-
-void *raw_seq_next(struct seq_file *seq, void *v, loff_t *pos)
-{
-	struct sock *sk;
-
-	if (v == SEQ_START_TOKEN)
-		sk = raw_get_first(seq);
-	else
-		sk = raw_get_next(seq, v);
-	++*pos;
-	return sk;
-}
-EXPORT_SYMBOL_GPL(raw_seq_next);
-
-void raw_seq_stop(struct seq_file *seq, void *v)
-{
-	struct raw_iter_state *state = raw_seq_private(seq);
-
-	read_unlock(&state->h->lock);
-}
-EXPORT_SYMBOL_GPL(raw_seq_stop);
-
-static void raw_sock_seq_show(struct seq_file *seq, struct sock *sp, int i)
-{
-	struct inet_sock *inet = inet_sk(sp);
-	__be32 dest = inet->daddr,
-	       src = inet->rcv_saddr;
-	__u16 destp = 0,
-	      srcp  = inet->num;
-
-	seq_printf(seq, "%4d: %08X:%04X %08X:%04X"
-		" %02X %08X:%08X %02X:%08lX %08X %5d %8d %lu %d %p %d\n",
-		i, src, srcp, dest, destp, sp->sk_state,
-		atomic_read(&sp->sk_wmem_alloc),
-		atomic_read(&sp->sk_rmem_alloc),
-		0, 0L, 0, sock_i_uid(sp), 0, sock_i_ino(sp),
-		atomic_read(&sp->sk_refcnt), sp, atomic_read(&sp->sk_drops));
-}
-
-static int raw_seq_show(struct seq_file *seq, void *v)
-{
-	if (v == SEQ_START_TOKEN)
-		seq_printf(seq, "  sl  local_address rem_address   st tx_queue "
-				"rx_queue tr tm->when retrnsmt   uid  timeout "
-				"inode ref pointer drops\n");
-	else
-		raw_sock_seq_show(seq, v, raw_seq_private(seq)->bucket);
-	return 0;
-}
-
-static const struct seq_operations raw_seq_ops = {
-	.start = raw_seq_start,
-	.next  = raw_seq_next,
-	.stop  = raw_seq_stop,
-	.show  = raw_seq_show,
-};
-
-int raw_seq_open(struct inode *ino, struct file *file,
-		 struct raw_hashinfo *h, const struct seq_operations *ops)
-{
-	int err;
-	struct raw_iter_state *i;
-
-	err = seq_open_net(ino, file, ops, sizeof(struct raw_iter_state));
-	if (err < 0)
-		return err;
-
-	i = raw_seq_private((struct seq_file *)file->private_data);
-	i->h = h;
-	return 0;
-}
-EXPORT_SYMBOL_GPL(raw_seq_open);
-
-static int raw_v4_seq_open(struct inode *inode, struct file *file)
-{
-	return raw_seq_open(inode, file, &raw_v4_hashinfo, &raw_seq_ops);
-}
-
-static const struct file_operations raw_seq_fops = {
-	.owner	 = THIS_MODULE,
-	.open	 = raw_v4_seq_open,
-	.read	 = seq_read,
-	.llseek	 = seq_lseek,
-	.release = seq_release_net,
-};
-
-static __net_init int raw_init_net(struct net *net)
-{
-	if (!proc_net_fops_create(net, "raw", S_IRUGO, &raw_seq_fops))
-		return -ENOMEM;
-
-	return 0;
-}
-
-static __net_exit void raw_exit_net(struct net *net)
-{
-	proc_net_remove(net, "raw");
-}
-
-static __net_initdata struct pernet_operations raw_net_ops = {
-	.init = raw_init_net,
-	.exit = raw_exit_net,
-};
-
-int __init raw_proc_init(void)
-{
-	return register_pernet_subsys(&raw_net_ops);
-}
-
-void __init raw_proc_exit(void)
-{
-	unregister_pernet_subsys(&raw_net_ops);
-}
-#endif /* CONFIG_PROC_FS */
