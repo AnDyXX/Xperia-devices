@@ -85,6 +85,8 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"arp_solicit", 		&ax8netfilter_arp_solicit,		0},	
 	{"arp_send", 			&ax8netfilter_arp_send,			1},
 
+	{"ip_forward", 			&ax8netfilter_ip_forward,		1},
+
 	{NULL, 0, 0},
 };
 

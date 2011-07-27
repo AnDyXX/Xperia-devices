@@ -40,7 +40,7 @@
 
 #include "ax8netfilter.h"
 
-static int ip_forward_finish(struct sk_buff *skb)
+static int ax8netfilter_ip_forward_finish(struct sk_buff *skb)
 {
 	struct ip_options * opt	= &(IPCB(skb)->opt);
 
@@ -52,7 +52,7 @@ static int ip_forward_finish(struct sk_buff *skb)
 	return dst_output(skb);
 }
 
-int ip_forward(struct sk_buff *skb)
+int ax8netfilter_ip_forward(struct sk_buff *skb)
 {
 	struct iphdr *iph;	/* Our header */
 	struct rtable *rt;	/* Route we use */
@@ -114,7 +114,7 @@ int ip_forward(struct sk_buff *skb)
 	skb->priority = rt_tos2priority(iph->tos);
 
 	return NF_HOOK(PF_INET, NF_INET_FORWARD, skb, skb->dev, rt->u.dst.dev,
-		       ip_forward_finish);
+		       ax8netfilter_ip_forward_finish);
 
 sr_failed:
 	/*

@@ -26,4 +26,8 @@ void ax8netfilter_arp_send(int type, int ptype, __be32 dest_ip,
 	      struct net_device *dev, __be32 src_ip,
 	      const unsigned char *dest_hw, const unsigned char *src_hw,
 	      const unsigned char *target_hw);
+
+//from ipv4_ip_forward.c
+int ax8netfilter_ip_forward(struct sk_buff *skb);
+
 #endif
