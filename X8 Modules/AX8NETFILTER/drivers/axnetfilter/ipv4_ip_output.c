@@ -82,39 +82,37 @@
 
 #include "ax8netfilter.h"
 
-int sysctl_ip_default_ttl __read_mostly = IPDEFTTL;
-
 /* Generate a checksum for an outgoing IP datagram. */
-__inline__ void ip_send_check(struct iphdr *iph)
+__inline__ void ax8netfilter_ip_send_check(struct iphdr *iph)
 {
 	iph->check = 0;
 	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
 }
 
-int __ip_local_out(struct sk_buff *skb)
+int ax8netfilter___ip_local_out(struct sk_buff *skb)
 {
 	struct iphdr *iph = ip_hdr(skb);
 
 	iph->tot_len = htons(skb->len);
-	ip_send_check(iph);
+	ax8netfilter_ip_send_check(iph);
 	return nf_hook(PF_INET, NF_INET_LOCAL_OUT, skb, NULL, skb->dst->dev,
 		       dst_output);
 }
 
-int ip_local_out(struct sk_buff *skb)
+int ax8netfilter_ip_local_out(struct sk_buff *skb)
 {
 	int err;
 
-	err = __ip_local_out(skb);
+	err = ax8netfilter___ip_local_out(skb);
 	if (likely(err == 1))
 		err = dst_output(skb);
 
 	return err;
 }
-EXPORT_SYMBOL_GPL(ip_local_out);
+
 
 /* dev_loopback_xmit for use with netfilter. */
-static int ip_dev_loopback_xmit(struct sk_buff *newskb)
+static int ax8netfilter_ip_dev_loopback_xmit(struct sk_buff *newskb)
 {
 	skb_reset_mac_header(newskb);
 	__skb_pull(newskb, skb_network_offset(newskb));
@@ -125,7 +123,7 @@ static int ip_dev_loopback_xmit(struct sk_buff *newskb)
 	return 0;
 }
 
-static inline int ip_select_ttl(struct inet_sock *inet, struct dst_entry *dst)
+static inline int ax8netfilter_ip_select_ttl(struct inet_sock *inet, struct dst_entry *dst)
 {
 	int ttl = inet->uc_ttl;
 
@@ -138,7 +136,7 @@ static inline int ip_select_ttl(struct inet_sock *inet, struct dst_entry *dst)
  *		Add an ip header to a skbuff and send it out.
  *
  */
-int ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
+int ax8netfilter_ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
 			  __be32 saddr, __be32 daddr, struct ip_options *opt)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -156,7 +154,7 @@ int ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
 		iph->frag_off = htons(IP_DF);
 	else
 		iph->frag_off = 0;
-	iph->ttl      = ip_select_ttl(inet, &rt->u.dst);
+	iph->ttl      = ax8netfilter_ip_select_ttl(inet, &rt->u.dst);
 	iph->daddr    = rt->rt_dst;
 	iph->saddr    = rt->rt_src;
 	iph->protocol = sk->sk_protocol;
@@ -171,12 +169,10 @@ int ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
 	skb->mark = sk->sk_mark;
 
 	/* Send it out. */
-	return ip_local_out(skb);
+	return ax8netfilter_ip_local_out(skb);
 }
 
-EXPORT_SYMBOL_GPL(ip_build_and_send_pkt);
-
-static inline int ip_finish_output2(struct sk_buff *skb)
+static inline int ax8netfilter_ip_finish_output2(struct sk_buff *skb)
 {
 	struct dst_entry *dst = skb->dst;
 	struct rtable *rt = (struct rtable *)dst;
@@ -214,7 +210,7 @@ static inline int ip_finish_output2(struct sk_buff *skb)
 	return -EINVAL;
 }
 
-static inline int ip_skb_dst_mtu(struct sk_buff *skb)
+static inline int ax8netfilter_ip_skb_dst_mtu(struct sk_buff *skb)
 {
 	struct inet_sock *inet = skb->sk ? inet_sk(skb->sk) : NULL;
 
@@ -222,7 +218,7 @@ static inline int ip_skb_dst_mtu(struct sk_buff *skb)
 	       skb->dst->dev->mtu : dst_mtu(skb->dst);
 }
 
-static int ip_finish_output(struct sk_buff *skb)
+int ax8netfilter_ip_finish_output(struct sk_buff *skb)
 {
 #if defined(CONFIG_NETFILTER) && defined(CONFIG_XFRM)
 	/* Policy lookup after SNAT yielded a new policy */
@@ -231,10 +227,10 @@ static int ip_finish_output(struct sk_buff *skb)
 		return dst_output(skb);
 	}
 #endif
-	if (skb->len > ip_skb_dst_mtu(skb) && !skb_is_gso(skb))
-		return ip_fragment(skb, ip_finish_output2);
+	if (skb->len > ax8netfilter_ip_skb_dst_mtu(skb) && !skb_is_gso(skb))
+		return ip_fragment(skb, ax8netfilter_ip_finish_output2);
 	else
-		return ip_finish_output2(skb);
+		return ax8netfilter_ip_finish_output2(skb);
 }
 
 int ip_mc_output(struct sk_buff *skb)
@@ -273,7 +269,7 @@ int ip_mc_output(struct sk_buff *skb)
 			if (newskb)
 				NF_HOOK(PF_INET, NF_INET_POST_ROUTING, newskb,
 					NULL, newskb->dev,
-					ip_dev_loopback_xmit);
+					ax8netfilter_ip_dev_loopback_xmit);
 		}
 
 		/* Multicasts with ttl 0 must not go beyond the host */
@@ -288,7 +284,7 @@ int ip_mc_output(struct sk_buff *skb)
 		struct sk_buff *newskb = skb_clone(skb, GFP_ATOMIC);
 		if (newskb)
 			NF_HOOK(PF_INET, NF_INET_POST_ROUTING, newskb, NULL,
-				newskb->dev, ip_dev_loopback_xmit);
+				newskb->dev, ax8netfilter_ip_dev_loopback_xmit);
 	}
 
 	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb, NULL, skb->dev,
@@ -372,7 +368,7 @@ packet_routed:
 		iph->frag_off = htons(IP_DF);
 	else
 		iph->frag_off = 0;
-	iph->ttl      = ip_select_ttl(inet, &rt->u.dst);
+	iph->ttl      = ax8netfilter_ip_select_ttl(inet, &rt->u.dst);
 	iph->protocol = sk->sk_protocol;
 	iph->saddr    = rt->rt_src;
 	iph->daddr    = rt->rt_dst;
@@ -456,7 +452,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 	if (unlikely((iph->frag_off & htons(IP_DF)) && !skb->local_df)) {
 		IP_INC_STATS(dev_net(dev), IPSTATS_MIB_FRAGFAILS);
 		icmp_send(skb, ICMP_DEST_UNREACH, ICMP_FRAG_NEEDED,
-			  htonl(ip_skb_dst_mtu(skb)));
+			  htonl(ax8netfilter_ip_skb_dst_mtu(skb)));
 		ax8netfilter_kfree_skb(skb);
 		return -EMSGSIZE;
 	}
@@ -518,7 +514,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 		skb->len = first_len;
 		iph->tot_len = htons(first_len);
 		iph->frag_off = htons(IP_MF);
-		ip_send_check(iph);
+		ax8netfilter_ip_send_check(iph);
 
 		for (;;) {
 			/* Prepare header of the next frame,
@@ -539,7 +535,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 				if (frag->next != NULL)
 					iph->frag_off |= htons(IP_MF);
 				/* Ready, complete checksum */
-				ip_send_check(iph);
+				ax8netfilter_ip_send_check(iph);
 			}
 
 			err = output(skb);
@@ -670,7 +666,7 @@ slow_path:
 		 */
 		iph->tot_len = htons(len + hlen);
 
-		ip_send_check(iph);
+		ax8netfilter_ip_send_check(iph);
 
 		err = output(skb2);
 		if (err)
@@ -1267,7 +1263,7 @@ int ip_push_pending_frames(struct sock *sk)
 	if (rt->rt_type == RTN_MULTICAST)
 		ttl = inet->mc_ttl;
 	else
-		ttl = ip_select_ttl(inet, &rt->u.dst);
+		ttl = ax8netfilter_ip_select_ttl(inet, &rt->u.dst);
 
 	iph = (struct iphdr *)skb->data;
 	iph->version = 4;
@@ -1418,16 +1414,4 @@ void ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *ar
 	ip_rt_put(rt);
 }
 
-void __init ip_init(void)
-{
-	ip_rt_init();
-	inet_initpeers();
 
-#if defined(CONFIG_IP_MULTICAST) && defined(CONFIG_PROC_FS)
-	igmp_mc_proc_init();
-#endif
-}
-
-EXPORT_SYMBOL(ip_generic_getfrag);
-EXPORT_SYMBOL(ip_queue_xmit);
-EXPORT_SYMBOL(ip_send_check);

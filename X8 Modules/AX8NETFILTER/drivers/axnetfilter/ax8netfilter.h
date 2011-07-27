@@ -2,6 +2,7 @@
 #define __AX8NETFILTER_H__
 
 #include <linux/inetdevice.h>
+#include <net/inet_sock.h>
 
 extern struct kmem_cache ** ax8netfilter_skbuff_head_cache __read_mostly;
 extern struct kmem_cache ** ax8netfilter_skbuff_fclone_cache __read_mostly;
@@ -36,5 +37,11 @@ int ax8netfilter_ip_local_deliver(struct sk_buff *skb);
 int ax8netfilter_ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
 
 
+//from ipv4_ip_output.c
+int ax8netfilter___ip_local_out(struct sk_buff *skb);
+int ax8netfilter_ip_local_out(struct sk_buff *skb);
+int ax8netfilter_ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
+			  __be32 saddr, __be32 daddr, struct ip_options *opt);
+int ax8netfilter_ip_finish_output(struct sk_buff *skb);
 
 #endif

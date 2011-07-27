@@ -14,6 +14,7 @@
 #include <net/net_namespace.h>
 #include <linux/skbuff.h>
 #include <net/arp.h>
+#include <net/dst.h>
 
 #include "ax8netfilter.h"
 
@@ -91,6 +92,11 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"ip_local_deliver",		&ax8netfilter_ip_local_deliver,		1},
 	{"ip_rcv", 			&ax8netfilter_ip_rcv,			1},
 
+	{"__ip_local_out",		&ax8netfilter___ip_local_out,		1},
+	{"ip_local_out",		&ax8netfilter_ip_local_out,		0},
+	{"ip_build_and_send_pkt",	&ax8netfilter_ip_build_and_send_pkt,	0},
+	{"ip_finish_output", 		&ax8netfilter_ip_finish_output,		1},
+
 	{NULL, 0, 0},
 };
 
@@ -127,10 +133,18 @@ static int hijack_functions(int check_only)
 static void patch_ip(void)
 {
 	struct packet_type * ip_packet_type;
+	struct dst_ops * ipv4_dst_ops;
+	
 	ip_packet_type = (void*) kallsyms_lookup_name_ax("ip_packet_type");
-	if(!ip_packet_type)
+	if(ip_packet_type)
 	{
 		ip_packet_type->func = ax8netfilter_ip_rcv;
+	}
+
+	ipv4_dst_ops = (void*) kallsyms_lookup_name_ax("ipv4_dst_ops");
+	if(ipv4_dst_ops)
+	{
+		ipv4_dst_ops->local_out = ax8netfilter___ip_local_out;
 	}
 
 	printk(KERN_INFO AX_MODULE_NAME ": IP structs patched.\n");
@@ -142,25 +156,25 @@ static void patch_arp(void)
 	struct packet_type* arp_packet_type;
 	
 	arp_neigh_ops = (void*) kallsyms_lookup_name_ax("arp_generic_ops");
-	if(!arp_neigh_ops)
+	if(arp_neigh_ops)
 	{
 		arp_neigh_ops->solicit = ax8netfilter_arp_solicit;
 	}
 
 	arp_neigh_ops = (void*) kallsyms_lookup_name_ax("arp_hh_ops");
-	if(!arp_neigh_ops)
+	if(arp_neigh_ops)
 	{
 		arp_neigh_ops->solicit = ax8netfilter_arp_solicit;
 	}
 
 	arp_neigh_ops = (void*) kallsyms_lookup_name_ax("arp_broken_ops");
-	if(!arp_neigh_ops)
+	if(arp_neigh_ops)
 	{
 		arp_neigh_ops->solicit = ax8netfilter_arp_solicit;
 	}
 
 	arp_packet_type = (void*) kallsyms_lookup_name_ax("arp_packet_type");
-	if(!arp_packet_type)
+	if(arp_packet_type)
 	{
 		arp_packet_type->func = ax8netfilter_arp_rcv;
 	}
