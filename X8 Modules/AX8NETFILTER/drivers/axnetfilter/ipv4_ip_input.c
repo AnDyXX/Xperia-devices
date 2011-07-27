@@ -149,7 +149,7 @@
 /*
  *	Process Router Attention IP option
  */
-int ip_call_ra_chain(struct sk_buff *skb)
+int ax8netfilter_ip_call_ra_chain(struct sk_buff *skb)
 {
 	struct ip_ra_chain *ra;
 	u8 protocol = ip_hdr(skb)->protocol;
@@ -191,7 +191,7 @@ int ip_call_ra_chain(struct sk_buff *skb)
 	return 0;
 }
 
-static int ip_local_deliver_finish(struct sk_buff *skb)
+static int ax8netfilter_ip_local_deliver_finish(struct sk_buff *skb)
 {
 	struct net *net = dev_net(skb->dev);
 
@@ -256,7 +256,7 @@ static int ip_local_deliver_finish(struct sk_buff *skb)
 /*
  * 	Deliver IP Packets to the higher protocol layers.
  */
-int ip_local_deliver(struct sk_buff *skb)
+int ax8netfilter_ip_local_deliver(struct sk_buff *skb)
 {
 	/*
 	 *	Reassemble IP fragments.
@@ -268,10 +268,10 @@ int ip_local_deliver(struct sk_buff *skb)
 	}
 
 	return NF_HOOK(PF_INET, NF_INET_LOCAL_IN, skb, skb->dev, NULL,
-		       ip_local_deliver_finish);
+		       ax8netfilter_ip_local_deliver_finish);
 }
 
-static inline int ip_rcv_options(struct sk_buff *skb)
+static inline int ax8netfilter_ip_rcv_options(struct sk_buff *skb)
 {
 	struct ip_options *opt;
 	struct iphdr *iph;
@@ -322,7 +322,7 @@ drop:
 	return -1;
 }
 
-static int ip_rcv_finish(struct sk_buff *skb)
+static int ax8netfilter_ip_rcv_finish(struct sk_buff *skb)
 {
 	const struct iphdr *iph = ip_hdr(skb);
 	struct rtable *rt;
@@ -356,7 +356,7 @@ static int ip_rcv_finish(struct sk_buff *skb)
 	}
 #endif
 
-	if (iph->ihl > 5 && ip_rcv_options(skb))
+	if (iph->ihl > 5 && ax8netfilter_ip_rcv_options(skb))
 		goto drop;
 
 	rt = skb->rtable;
@@ -375,7 +375,7 @@ drop:
 /*
  * 	Main IP Receive routine.
  */
-int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
+int ax8netfilter_ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
 {
 	struct iphdr *iph;
 	u32 len;
@@ -440,7 +440,7 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 	memset(IPCB(skb), 0, sizeof(struct inet_skb_parm));
 
 	return NF_HOOK(PF_INET, NF_INET_PRE_ROUTING, skb, dev, NULL,
-		       ip_rcv_finish);
+		       ax8netfilter_ip_rcv_finish);
 
 inhdr_error:
 	IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INHDRERRORS);

@@ -87,6 +87,10 @@ static const struct cfg_value_map func_mapping_table[] = {
 
 	{"ip_forward", 			&ax8netfilter_ip_forward,		1},
 
+	{"ip_call_ra_chain",		&ax8netfilter_ip_call_ra_chain,		0},
+	{"ip_local_deliver",		&ax8netfilter_ip_local_deliver,		1},
+	{"ip_rcv", 			&ax8netfilter_ip_rcv,			1},
+
 	{NULL, 0, 0},
 };
 
@@ -118,6 +122,18 @@ static int hijack_functions(int check_only)
 	}
 
 	return ret;
+}
+
+static void patch_ip(void)
+{
+	struct packet_type * ip_packet_type;
+	ip_packet_type = (void*) kallsyms_lookup_name_ax("ip_packet_type");
+	if(!ip_packet_type)
+	{
+		ip_packet_type->func = ax8netfilter_ip_rcv;
+	}
+
+	printk(KERN_INFO AX_MODULE_NAME ": IP structs patched.\n");
 }
 
 static void patch_arp(void)
@@ -216,6 +232,7 @@ static int __init ax8netfilter_init(void)
 	hijack_functions(0);
 
 	patch_arp();
+	patch_ip();
 
 	eof:
 	return ret;

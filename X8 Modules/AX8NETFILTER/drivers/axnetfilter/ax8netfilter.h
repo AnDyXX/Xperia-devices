@@ -30,4 +30,11 @@ void ax8netfilter_arp_send(int type, int ptype, __be32 dest_ip,
 //from ipv4_ip_forward.c
 int ax8netfilter_ip_forward(struct sk_buff *skb);
 
+//from ipv4_ip_input.c
+int ax8netfilter_ip_call_ra_chain(struct sk_buff *skb);
+int ax8netfilter_ip_local_deliver(struct sk_buff *skb);
+int ax8netfilter_ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev);
+
+
+
 #endif

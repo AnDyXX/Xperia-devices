@@ -64,7 +64,7 @@ int ax8netfilter_ip_forward(struct sk_buff *skb)
 	if (!xfrm4_policy_check(NULL, XFRM_POLICY_FWD, skb))
 		goto drop;
 
-	if (IPCB(skb)->opt.router_alert && ip_call_ra_chain(skb))
+	if (IPCB(skb)->opt.router_alert && ax8netfilter_ip_call_ra_chain(skb))
 		return NET_RX_SUCCESS;
 
 	if (skb->pkt_type != PACKET_HOST)
