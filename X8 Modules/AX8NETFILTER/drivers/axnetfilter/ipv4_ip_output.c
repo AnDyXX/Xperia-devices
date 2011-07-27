@@ -220,7 +220,7 @@ static inline int ax8netfilter_ip_skb_dst_mtu(struct sk_buff *skb)
 
 int ax8netfilter_ip_finish_output(struct sk_buff *skb)
 {
-#if defined(CONFIG_NETFILTER) && defined(CONFIG_XFRM)
+#if defined(CONFIG_AX8_NETFILTER) && defined(CONFIG_XFRM)
 	/* Policy lookup after SNAT yielded a new policy */
 	if (skb->dst->xfrm != NULL) {
 		IPCB(skb)->flags |= IPSKB_REROUTED;
@@ -228,12 +228,12 @@ int ax8netfilter_ip_finish_output(struct sk_buff *skb)
 	}
 #endif
 	if (skb->len > ax8netfilter_ip_skb_dst_mtu(skb) && !skb_is_gso(skb))
-		return ip_fragment(skb, ax8netfilter_ip_finish_output2);
+		return ax8netfilter_ip_fragment(skb, ax8netfilter_ip_finish_output2);
 	else
 		return ax8netfilter_ip_finish_output2(skb);
 }
 
-int ip_mc_output(struct sk_buff *skb)
+int ax8netfilter_ip_mc_output(struct sk_buff *skb)
 {
 	struct sock *sk = skb->sk;
 	struct rtable *rt = skb->rtable;
@@ -288,11 +288,11 @@ int ip_mc_output(struct sk_buff *skb)
 	}
 
 	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb, NULL, skb->dev,
-			    ip_finish_output,
+			    ax8netfilter_ip_finish_output,
 			    !(IPCB(skb)->flags & IPSKB_REROUTED));
 }
 
-int ip_output(struct sk_buff *skb)
+int ax8netfilter_ip_output(struct sk_buff *skb)
 {
 	struct net_device *dev = skb->dst->dev;
 
@@ -302,11 +302,11 @@ int ip_output(struct sk_buff *skb)
 	skb->protocol = htons(ETH_P_IP);
 
 	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb, NULL, dev,
-			    ip_finish_output,
+			    ax8netfilter_ip_finish_output,
 			    !(IPCB(skb)->flags & IPSKB_REROUTED));
 }
 
-int ip_queue_xmit(struct sk_buff *skb, int ipfragok)
+int ax8netfilter_ip_queue_xmit(struct sk_buff *skb, int ipfragok)
 {
 	struct sock *sk = skb->sk;
 	struct inet_sock *inet = inet_sk(sk);
@@ -394,7 +394,7 @@ no_route:
 }
 
 
-static void ip_copy_metadata(struct sk_buff *to, struct sk_buff *from)
+static void ax8netfilter_ip_copy_metadata(struct sk_buff *to, struct sk_buff *from)
 {
 	to->pkt_type = from->pkt_type;
 	to->priority = from->priority;
@@ -428,7 +428,7 @@ static void ip_copy_metadata(struct sk_buff *to, struct sk_buff *from)
  *	single device frame, and queue such a frame for sending.
  */
 
-int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
+int ax8netfilter_ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 {
 	struct iphdr *iph;
 	int raw = 0;
@@ -527,7 +527,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 				memcpy(skb_network_header(frag), iph, hlen);
 				iph = ip_hdr(frag);
 				iph->tot_len = htons(frag->len);
-				ip_copy_metadata(frag, skb);
+				ax8netfilter_ip_copy_metadata(frag, skb);
 				if (offset == 0)
 					ip_options_fragment(frag);
 				offset += skb->len - hlen;
@@ -610,7 +610,7 @@ slow_path:
 		 *	Set up data on packet
 		 */
 
-		ip_copy_metadata(skb2, skb);
+		ax8netfilter_ip_copy_metadata(skb2, skb);
 		skb_reserve(skb2, ll_rs);
 		skb_put(skb2, len + hlen);
 		skb_reset_network_header(skb2);
@@ -684,27 +684,10 @@ fail:
 	return err;
 }
 
-EXPORT_SYMBOL(ip_fragment);
 
-int
-ip_generic_getfrag(void *from, char *to, int offset, int len, int odd, struct sk_buff *skb)
-{
-	struct iovec *iov = from;
-
-	if (skb->ip_summed == CHECKSUM_PARTIAL) {
-		if (memcpy_fromiovecend(to, iov, offset, len) < 0)
-			return -EFAULT;
-	} else {
-		__wsum csum = 0;
-		if (csum_partial_copy_fromiovecend(to, iov, offset, len, &csum) < 0)
-			return -EFAULT;
-		skb->csum = csum_block_add(skb->csum, csum, odd);
-	}
-	return 0;
-}
 
 static inline __wsum
-csum_page(struct page *page, int offset, int copy)
+ax8netfilter_csum_page(struct page *page, int offset, int copy)
 {
 	char *kaddr;
 	__wsum csum;
@@ -714,7 +697,7 @@ csum_page(struct page *page, int offset, int copy)
 	return csum;
 }
 
-static inline int ip_ufo_append_data(struct sock *sk,
+static inline int ax8netfilter_ip_ufo_append_data(struct sock *sk,
 			int getfrag(void *from, char *to, int offset, int len,
 			       int odd, struct sk_buff *skb),
 			void *from, int length, int hh_len, int fragheaderlen,
@@ -772,7 +755,7 @@ static inline int ip_ufo_append_data(struct sock *sk,
  *
  *	LATER: length must be adjusted by pad at tail, when it is required.
  */
-int ip_append_data(struct sock *sk,
+int ax8netfilter_ip_append_data(struct sock *sk,
 		   int getfrag(void *from, char *to, int offset, int len,
 			       int odd, struct sk_buff *skb),
 		   void *from, int length, int transhdrlen,
@@ -860,7 +843,7 @@ int ip_append_data(struct sock *sk,
 	if (((length> mtu) || !skb_queue_empty(&sk->sk_write_queue)) &&
 	    (sk->sk_protocol == IPPROTO_UDP) &&
 	    (rt->u.dst.dev->features & NETIF_F_UFO)) {
-		err = ip_ufo_append_data(sk, getfrag, from, length, hh_len,
+		err = ax8netfilter_ip_ufo_append_data(sk, getfrag, from, length, hh_len,
 					 fragheaderlen, transhdrlen, mtu,
 					 flags);
 		if (err)
@@ -1055,7 +1038,7 @@ error:
 	return err;
 }
 
-ssize_t	ip_append_page(struct sock *sk, struct page *page,
+ssize_t	ax8netfilter_ip_append_page(struct sock *sk, struct page *page,
 		       int offset, size_t size, int flags)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -1178,7 +1161,7 @@ ssize_t	ip_append_page(struct sock *sk, struct page *page,
 
 		if (skb->ip_summed == CHECKSUM_NONE) {
 			__wsum csum;
-			csum = csum_page(page, offset, len);
+			csum = ax8netfilter_csum_page(page, offset, len);
 			skb->csum = csum_block_add(skb->csum, csum, skb->len);
 		}
 
@@ -1197,7 +1180,7 @@ error:
 	return err;
 }
 
-static void ip_cork_release(struct inet_sock *inet)
+static void ax8netfilter_ip_cork_release(struct inet_sock *inet)
 {
 	inet->cork.flags &= ~IPCORK_OPT;
 	kfree(inet->cork.opt);
@@ -1210,7 +1193,7 @@ static void ip_cork_release(struct inet_sock *inet)
  *	Combined all pending IP fragments on the socket as one IP datagram
  *	and push them out.
  */
-int ip_push_pending_frames(struct sock *sk)
+int ax8netfilter_ip_push_pending_frames(struct sock *sk)
 {
 	struct sk_buff *skb, *tmp_skb;
 	struct sk_buff **tail_skb;
@@ -1303,7 +1286,7 @@ int ip_push_pending_frames(struct sock *sk)
 	}
 
 out:
-	ip_cork_release(inet);
+	ax8netfilter_ip_cork_release(inet);
 	return err;
 
 error:
@@ -1314,21 +1297,21 @@ error:
 /*
  *	Throw away all pending data on the socket.
  */
-void ip_flush_pending_frames(struct sock *sk)
+void ax8netfilter_ip_flush_pending_frames(struct sock *sk)
 {
 	struct sk_buff *skb;
 
 	while ((skb = __skb_dequeue_tail(&sk->sk_write_queue)) != NULL)
 		ax8netfilter_kfree_skb(skb);
 
-	ip_cork_release(inet_sk(sk));
+	ax8netfilter_ip_cork_release(inet_sk(sk));
 }
 
 
 /*
  *	Fetch data from kernel space and fill in checksum if needed.
  */
-static int ip_reply_glue_bits(void *dptr, char *to, int offset,
+static int ax8netfilter_ip_reply_glue_bits(void *dptr, char *to, int offset,
 			      int len, int odd, struct sk_buff *skb)
 {
 	__wsum csum;
@@ -1345,7 +1328,7 @@ static int ip_reply_glue_bits(void *dptr, char *to, int offset,
  *	Should run single threaded per socket because it uses the sock
  *     	structure to pass arguments.
  */
-void ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *arg,
+void ax8netfilter_ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *arg,
 		   unsigned int len)
 {
 	struct inet_sock *inet = inet_sk(sk);
@@ -1398,7 +1381,7 @@ void ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *ar
 	sk->sk_priority = skb->priority;
 	sk->sk_protocol = ip_hdr(skb)->protocol;
 	sk->sk_bound_dev_if = arg->bound_dev_if;
-	ip_append_data(sk, ip_reply_glue_bits, arg->iov->iov_base, len, 0,
+	ax8netfilter_ip_append_data(sk, ax8netfilter_ip_reply_glue_bits, arg->iov->iov_base, len, 0,
 		       &ipc, &rt, MSG_DONTWAIT);
 	if ((skb = skb_peek(&sk->sk_write_queue)) != NULL) {
 		if (arg->csumoffset >= 0)
@@ -1406,7 +1389,7 @@ void ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *ar
 			  arg->csumoffset) = csum_fold(csum_add(skb->csum,
 								arg->csum));
 		skb->ip_summed = CHECKSUM_NONE;
-		ip_push_pending_frames(sk);
+		ax8netfilter_ip_push_pending_frames(sk);
 	}
 
 	bh_unlock_sock(sk);

@@ -3,6 +3,7 @@
 
 #include <linux/inetdevice.h>
 #include <net/inet_sock.h>
+#include <net/ip.h>
 
 extern struct kmem_cache ** ax8netfilter_skbuff_head_cache __read_mostly;
 extern struct kmem_cache ** ax8netfilter_skbuff_fclone_cache __read_mostly;
@@ -43,5 +44,21 @@ int ax8netfilter_ip_local_out(struct sk_buff *skb);
 int ax8netfilter_ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
 			  __be32 saddr, __be32 daddr, struct ip_options *opt);
 int ax8netfilter_ip_finish_output(struct sk_buff *skb);
+int ax8netfilter_ip_mc_output(struct sk_buff *skb);
+int ax8netfilter_ip_output(struct sk_buff *skb);
+int ax8netfilter_ip_queue_xmit(struct sk_buff *skb, int ipfragok);
+int ax8netfilter_ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *));
+int ax8netfilter_ip_append_data(struct sock *sk,
+		   int getfrag(void *from, char *to, int offset, int len,
+			       int odd, struct sk_buff *skb),
+		   void *from, int length, int transhdrlen,
+		   struct ipcm_cookie *ipc, struct rtable **rtp,
+		   unsigned int flags);
+ssize_t	ax8netfilter_ip_append_page(struct sock *sk, struct page *page,
+		       int offset, size_t size, int flags);
+int ax8netfilter_ip_push_pending_frames(struct sock *sk);
+void ax8netfilter_ip_flush_pending_frames(struct sock *sk);
+void ax8netfilter_ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *arg,
+		   unsigned int len);
 
 #endif

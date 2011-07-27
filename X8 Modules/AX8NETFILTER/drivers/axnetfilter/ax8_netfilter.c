@@ -15,6 +15,7 @@
 #include <linux/skbuff.h>
 #include <net/arp.h>
 #include <net/dst.h>
+#include <net/inet_connection_sock.h>
 
 #include "ax8netfilter.h"
 
@@ -96,6 +97,15 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"ip_local_out",		&ax8netfilter_ip_local_out,		0},
 	{"ip_build_and_send_pkt",	&ax8netfilter_ip_build_and_send_pkt,	0},
 	{"ip_finish_output", 		&ax8netfilter_ip_finish_output,		1},
+	{"ip_mc_output",		&ax8netfilter_ip_mc_output,		1},
+	{"ip_output",			&ax8netfilter_ip_output,		1},
+	{"ip_queue_xmit",		&ax8netfilter_ip_queue_xmit,		1},
+	{"ip_fragment",			&ax8netfilter_ip_fragment,		1},
+	{"ip_append_data",		&ax8netfilter_ip_append_data,		0},	
+	{"ip_append_page", 		&ax8netfilter_ip_append_page,		0},
+	{"ip_push_pending_frames", 	&ax8netfilter_ip_push_pending_frames,	0},
+	{"ip_flush_pending_frames",	&ax8netfilter_ip_flush_pending_frames,	0},
+	{"ip_send_reply",		&ax8netfilter_ip_send_reply,		0},
 
 	{NULL, 0, 0},
 };
@@ -130,10 +140,11 @@ static int hijack_functions(int check_only)
 	return ret;
 }
 
-static void patch_ip(void)
+void patch_ip(void)
 {
 	struct packet_type * ip_packet_type;
 	struct dst_ops * ipv4_dst_ops;
+	struct inet_connection_sock_af_ops *ipv4_specific;
 	
 	ip_packet_type = (void*) kallsyms_lookup_name_ax("ip_packet_type");
 	if(ip_packet_type)
@@ -147,10 +158,16 @@ static void patch_ip(void)
 		ipv4_dst_ops->local_out = ax8netfilter___ip_local_out;
 	}
 
+	ipv4_specific = (void*) kallsyms_lookup_name_ax("ipv4_specific");
+	if(ipv4_specific)
+	{
+		ipv4_specific->queue_xmit = ax8netfilter_ip_queue_xmit;
+	}
+
 	printk(KERN_INFO AX_MODULE_NAME ": IP structs patched.\n");
 }
 
-static void patch_arp(void)
+void patch_arp(void)
 {
 	struct neigh_ops * arp_neigh_ops;
 	struct packet_type* arp_packet_type;
@@ -245,8 +262,8 @@ static int __init ax8netfilter_init(void)
 	
 	hijack_functions(0);
 
-	patch_arp();
-	patch_ip();
+	//patch_arp();
+	//patch_ip();
 
 	eof:
 	return ret;
