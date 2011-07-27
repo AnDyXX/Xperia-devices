@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <net/net_namespace.h>
 #include <linux/skbuff.h>
+#include <net/arp.h>
 
 #include "ax8netfilter.h"
 
@@ -79,6 +80,11 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"skb_clone", 			&ax8netfilter_skb_clone,		0},
 	{"skb_copy", 			&ax8netfilter_skb_copy ,		0},
 	{"pskb_copy", 			&ax8netfilter_pskb_copy, 		0},
+
+	{"arp_rcv", 			&ax8netfilter_arp_rcv,			1},
+	{"arp_solicit", 		&ax8netfilter_arp_solicit,		0},	
+	{"arp_send", 			&ax8netfilter_arp_send,			1},
+
 	{NULL, 0, 0},
 };
 
@@ -110,6 +116,38 @@ static int hijack_functions(int check_only)
 	}
 
 	return ret;
+}
+
+static void patch_arp(void)
+{
+	struct neigh_ops * arp_neigh_ops;
+	struct packet_type* arp_packet_type;
+	
+	arp_neigh_ops = (void*) kallsyms_lookup_name_ax("arp_generic_ops");
+	if(!arp_neigh_ops)
+	{
+		arp_neigh_ops->solicit = ax8netfilter_arp_solicit;
+	}
+
+	arp_neigh_ops = (void*) kallsyms_lookup_name_ax("arp_hh_ops");
+	if(!arp_neigh_ops)
+	{
+		arp_neigh_ops->solicit = ax8netfilter_arp_solicit;
+	}
+
+	arp_neigh_ops = (void*) kallsyms_lookup_name_ax("arp_broken_ops");
+	if(!arp_neigh_ops)
+	{
+		arp_neigh_ops->solicit = ax8netfilter_arp_solicit;
+	}
+
+	arp_packet_type = (void*) kallsyms_lookup_name_ax("arp_packet_type");
+	if(!arp_packet_type)
+	{
+		arp_packet_type->func = ax8netfilter_arp_rcv;
+	}
+
+	printk(KERN_INFO AX_MODULE_NAME ": ARP structs patched.\n");
 }
 
 /* inits of netfilters */
@@ -172,8 +210,10 @@ static int __init ax8netfilter_init(void)
 		printk(KERN_INFO AX_MODULE_NAME ": ipv6_netfilter_init() failed\n");
 		goto eof;
 	}
-
+	
 	hijack_functions(0);
+
+	patch_arp();
 
 	eof:
 	return ret;
