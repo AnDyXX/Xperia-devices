@@ -16,6 +16,7 @@
 #include <net/arp.h>
 #include <net/dst.h>
 
+
 #include "ax8netfilter.h"
 
 #define AX_MODULE_NAME 			"ax8netfilter"
@@ -49,6 +50,11 @@ EXPORT_SYMBOL(init_ax8netfilter_net);
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
 static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
 
+ax8netfilter_arp_processtype ax8netfilter_arp_process;
+ax8netfilter_ip_finish_output2_type ax8netfilter_ip_finish_output2;
+ax8netfilter_xfrm_output_type ax8netfilter_xfrm_output;
+ax8netfilter_xfrm_output2_type ax8netfilter_xfrm_output2;
+
 static void patch(unsigned int addr, unsigned int value) {
 	*(unsigned int*)addr = value;
 }
@@ -67,12 +73,53 @@ static void patch_to_jmp(unsigned int addr, void * func) {
 struct cfg_value_map {
 	const char* name;
 	void * new_func;
-	int required;
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
 
-	{NULL, 0, 0},
+	{"skb_release_head_state",	&ax8netfilter_skb_release_head_state},
+	{"__copy_skb_header", 		&ax8netfilter___copy_skb_header},
+
+	{"arp_xmit",			&ax8netfilter_arp_xmit},
+	{"arp_rcv", 			&ax8netfilter_arp_rcv},
+
+	{"ip_forward",			&ax8netfilter_ip_forward},
+
+	{"ip_local_deliver", 		&ax8netfilter_ip_local_deliver},
+
+	{"__ip_local_out", 		&ax8netfilter___ip_local_out},
+	{"ip_mc_output",		&ax8netfilter_ip_mc_output},
+	{"ip_output",			&ax8netfilter_ip_output},
+	{"ip_fragment",			&ax8netfilter_ip_fragment},
+
+	{"ip_setsockopt",		&ax8netfilter_ip_setsockopt},
+	{"ip_getsockopt",		&ax8netfilter_ip_getsockopt},
+
+	{"raw_sendmsg", 		&ax8netfilter_raw_sendmsg},
+	{"raw_rcv",			&ax8netfilter_raw_rcv},
+
+	{"xfrm4_transport_finish",	&ax8netfilter_xfrm4_transport_finish},
+
+	{"xfrm_output_resume", 		&ax8netfilter_xfrm_output_resume},
+
+	{NULL, 				0},
+};
+
+struct cfg_value_map2 {
+	const char* name;
+	void ** new_func;
+};
+
+static const struct cfg_value_map2 field_mapping_table[] = {
+	{"arp_process", 	(void**) &ax8netfilter_arp_process },
+
+	{"ip_finish_output2", 	(void**) &ax8netfilter_ip_finish_output2},
+
+	{"xfrm_output", 	(void**) &ax8netfilter_xfrm_output},
+
+	{"xfrm_output2",	(void**) &ax8netfilter_xfrm_output2},
+
+	{NULL,			0},
 };
 
 static int hijack_functions(int check_only)
@@ -85,7 +132,7 @@ static int hijack_functions(int check_only)
 		func = kallsyms_lookup_name_ax(t->name);
 		if(check_only)
 		{
-			if(!func && t->required)
+			if(!func)
 			{
 				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s not found!!!\n", t->name);	
 				ret = 0;
@@ -105,6 +152,35 @@ static int hijack_functions(int check_only)
 	return ret;
 }
 
+static int hijack_fields(int check_only)
+{	
+	const struct cfg_value_map2 * t = field_mapping_table;
+	int func;
+	int ret = 1;
+
+	while (t->name) {
+		func = kallsyms_lookup_name_ax(t->name);
+		if(check_only)
+		{
+			if(!func)
+			{
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s not found!!!\n", t->name);	
+				ret = 0;
+			}
+		}
+		else
+			if(func)
+			{
+				*(t->new_func) = (void *)func;
+				printk(KERN_ERR AX_MODULE_NAME ": Field %s hijacked\n", t->name);	
+			}
+			else
+				ret = 0;
+		t++;
+	}
+
+	return ret;
+}
 
 /* inits of netfilters */
 int ipv4_netfilter_init(void);
@@ -131,10 +207,10 @@ static int __init ax8netfilter_init(void)
 	kallsyms_lookup_name_ax = (void*) OFS_KALLSYMS_LOOKUP_NAME;
 
 	if(!hijack_functions(1))
-	{
 		goto eof;
-	}
 
+	if(!hijack_fields(1))
+		goto eof;
 
 	netfilter_init();
 
@@ -154,6 +230,7 @@ static int __init ax8netfilter_init(void)
 		goto eof;
 	}
 	
+	hijack_fields(0);
 	hijack_functions(0);
 
 
