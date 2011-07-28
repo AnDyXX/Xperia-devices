@@ -41,6 +41,8 @@
 #include <net/xfrm.h>
 #include <net/icmp.h>
 
+#include "ax8netfilter.h"
+
 static int ax8netfilter_raw_rcv_skb(struct sock * sk, struct sk_buff * skb)
 {
 	/* Charge it to the socket. */

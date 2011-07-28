@@ -136,14 +136,14 @@ static int ax8netfilter_ip_local_deliver_finish(struct sk_buff *skb)
 	{
 		int protocol = ip_hdr(skb)->protocol;
 		int hash, raw;
-		struct net_protocol *ipprot;
-		struct net_protocol * ax8netfilter_inet_protos_ = *ax8netfilter_inet_protos;
+		struct net_protocol * ipprot;
+		struct net_protocol ** ax8netfilter_inet_protos_ = *ax8netfilter_inet_protos;
 
 	resubmit:
 		raw = ax8netfilter_raw_local_deliver(skb, protocol);
 
 		hash = protocol & (MAX_INET_PROTOS - 1);
-		ipprot = rcu_dereference(&(ax8netfilter_inet_protos_[hash]));
+		ipprot = rcu_dereference(ax8netfilter_inet_protos_[hash]);
 		if (ipprot != NULL) {
 			int ret;
 
