@@ -71,7 +71,7 @@ static int ax8netfilter_xfrm_output_one(struct sk_buff *skb, int err)
 				goto error;
 			}
 			if (xfrm_aevent_is_on(net))
-				xfrm_replay_notify(x, XFRM_REPLAY_UPDATE);
+				ax8netfilter_xfrm_replay_notify(x, XFRM_REPLAY_UPDATE);
 		}
 
 		x->curlft.bytes += skb->len;

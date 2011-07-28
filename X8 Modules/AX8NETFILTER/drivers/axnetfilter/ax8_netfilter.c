@@ -6,7 +6,8 @@
  *  Free Software Foundation;  either version 2 of the  License, or (at your
  *  option) any later version.
  *
- *  This module contains code from kernel required to initialise netfilter.  
+ *  This module contains code from kernel required to initialise and execute 
+ *  netfilter.  
  */
 #include <linux/delay.h>
 #include <linux/init.h>
@@ -54,6 +55,7 @@ ax8netfilter_arp_processtype ax8netfilter_arp_process;
 ax8netfilter_ip_finish_output2_type ax8netfilter_ip_finish_output2;
 ax8netfilter_xfrm_output_type ax8netfilter_xfrm_output;
 ax8netfilter_xfrm_output2_type ax8netfilter_xfrm_output2;
+struct net_protocol **ax8netfilter_inet_protos;
 
 static void patch(unsigned int addr, unsigned int value) {
 	*(unsigned int*)addr = value;
@@ -118,6 +120,8 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"xfrm_output", 	(void**) &ax8netfilter_xfrm_output},
 
 	{"xfrm_output2",	(void**) &ax8netfilter_xfrm_output2},
+
+	{"inet_protos",		(void**) &ax8netfilter_inet_protos},
 
 	{NULL,			0},
 };

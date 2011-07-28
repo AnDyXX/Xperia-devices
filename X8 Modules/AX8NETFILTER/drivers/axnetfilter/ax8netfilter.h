@@ -4,6 +4,14 @@
 #include <linux/inetdevice.h>
 #include <net/inet_sock.h>
 #include <net/ip.h>
+#include <net/protocol.h>
+
+extern const __u8 ax8netfilter_ip_tos2prio[16];
+
+static inline char ax8netfilter_rt_tos2priority(u8 tos)
+{
+	return ax8netfilter_ip_tos2prio[IPTOS_TOS(tos)>>1];
+}
 
 void ax8netfilter_skb_release_head_state(struct sk_buff *skb);
 void ax8netfilter___copy_skb_header(struct sk_buff *new, const struct sk_buff *old);
@@ -49,5 +57,9 @@ extern ax8netfilter_xfrm_output_type ax8netfilter_xfrm_output;
 int ax8netfilter_xfrm_output_resume(struct sk_buff *skb, int err);
 typedef int (*ax8netfilter_xfrm_output2_type)(struct sk_buff *skb);
 extern ax8netfilter_xfrm_output2_type ax8netfilter_xfrm_output2;
+
+extern struct net_protocol ** ax8netfilter_inet_protos;
+
+typedef ip_forward_options(struct sk_buff *skb);
 
 #endif

@@ -305,7 +305,7 @@ int ax8netfilter_ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *
 				iph->tot_len = htons(frag->len);
 				ax8netfilter_ip_copy_metadata(frag, skb);
 				if (offset == 0)
-					ip_options_fragment(frag);
+					ax8netfilter_ip_options_fragment(frag);
 				offset += skb->len - hlen;
 				iph->frag_off = htons(offset>>3);
 				if (frag->next != NULL)

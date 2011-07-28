@@ -38,6 +38,9 @@
 #include <net/route.h>
 #include <net/xfrm.h>
 
+
+#include "ax8netfilter.h"
+
 static int ax8netfilter_ip_forward_finish(struct sk_buff *skb)
 {
 	struct ip_options * opt	= &(IPCB(skb)->opt);
@@ -45,7 +48,7 @@ static int ax8netfilter_ip_forward_finish(struct sk_buff *skb)
 	IP_INC_STATS_BH(dev_net(skb->dst->dev), IPSTATS_MIB_OUTFORWDATAGRAMS);
 
 	if (unlikely(opt->optlen))
-		ip_forward_options(skb);
+		ax8netfilter_ip_forward_options(skb);
 
 	return dst_output(skb);
 }
@@ -62,7 +65,7 @@ int ax8netfilter_ip_forward(struct sk_buff *skb)
 	if (!xfrm4_policy_check(NULL, XFRM_POLICY_FWD, skb))
 		goto drop;
 
-	if (IPCB(skb)->opt.router_alert && ip_call_ra_chain(skb))
+	if (IPCB(skb)->opt.router_alert && ax8netfilter_ip_call_ra_chain(skb))
 		return NET_RX_SUCCESS;
 
 	if (skb->pkt_type != PACKET_HOST)
@@ -107,9 +110,9 @@ int ax8netfilter_ip_forward(struct sk_buff *skb)
 	 *	we calculated.
 	 */
 	if (rt->rt_flags&RTCF_DOREDIRECT && !opt->srr && !skb_sec_path(skb))
-		ip_rt_send_redirect(skb);
+		ax8netfilter_ip_rt_send_redirect(skb);
 
-	skb->priority = rt_tos2priority(iph->tos);
+	skb->priority = ax8netfilter_rt_tos2priority(iph->tos);
 
 	return NF_HOOK(PF_INET, NF_INET_FORWARD, skb, skb->dev, rt->u.dst.dev,
 		       ax8netfilter_ip_forward_finish);

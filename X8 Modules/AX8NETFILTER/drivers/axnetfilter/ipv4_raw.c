@@ -81,7 +81,7 @@ static int ax8netfilter_raw_send_hdrinc(struct sock *sk, void *from, size_t leng
 	int err;
 
 	if (length > rt->u.dst.dev->mtu) {
-		ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport,
+		ax8netfilter_ip_local_error(sk, EMSGSIZE, rt->rt_dst, inet->dport,
 			       rt->u.dst.dev->mtu);
 		return -EMSGSIZE;
 	}
@@ -123,7 +123,7 @@ static int ax8netfilter_raw_send_hdrinc(struct sock *sk, void *from, size_t leng
 		iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
 	}
 	if (iph->protocol == IPPROTO_ICMP)
-		icmp_out_count(net, ((struct icmphdr *)
+		ax8netfilter_icmp_out_count(net, ((struct icmphdr *)
 			skb_transport_header(skb))->type);
 
 	err = NF_HOOK(PF_INET, NF_INET_LOCAL_OUT, skb, NULL, rt->u.dst.dev,
@@ -250,7 +250,7 @@ int ax8netfilter_raw_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr 
 	ipc.oif = sk->sk_bound_dev_if;
 
 	if (msg->msg_controllen) {
-		err = ip_cmsg_send(sock_net(sk), msg, &ipc);
+		err = ax8netfilter_ip_cmsg_send(sock_net(sk), msg, &ipc);
 		if (err)
 			goto out;
 		if (ipc.opt)
@@ -325,12 +325,12 @@ back_from_confirm:
 		if (!ipc.addr)
 			ipc.addr = rt->rt_dst;
 		lock_sock(sk);
-		err = ip_append_data(sk, ip_generic_getfrag, msg->msg_iov, len, 0,
+		err = ax8netfilter_ip_append_data(sk, ip_generic_getfrag, msg->msg_iov, len, 0,
 					&ipc, &rt, msg->msg_flags);
 		if (err)
-			ip_flush_pending_frames(sk);
+			ax8netfilter_ip_flush_pending_frames(sk);
 		else if (!(msg->msg_flags & MSG_MORE))
-			err = ip_push_pending_frames(sk);
+			err = ax8netfilter_ip_push_pending_frames(sk);
 		release_sock(sk);
 	}
 done:

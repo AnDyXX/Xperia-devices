@@ -55,11 +55,6 @@ const __u8 ax8netfilter_ip_tos2prio[16] = {
 	ECN_OR_COST(INTERACTIVE_BULK)
 };
 
-static inline char ax8netfilter_rt_tos2priority(u8 tos)
-{
-	return ax8netfilter_ip_tos2prio[IPTOS_TOS(tos)>>1];
-}
-
 /*
  *	Socket option code for IP. This is the end of the line after any TCP,UDP etc options on
  *	an IP socket.
@@ -107,7 +102,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		struct ip_options * opt = NULL;
 		if (optlen > 40 || optlen < 0)
 			goto e_inval;
-		err = ip_options_get_from_user(sock_net(sk), &opt,
+		err = ax8netfilter_ip_options_get_from_user(sock_net(sk), &opt,
 					       optval, optlen);
 		if (err)
 			break;
@@ -302,12 +297,12 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		if (optname == IP_ADD_MEMBERSHIP)
 			err = ip_mc_join_group(sk, &mreq);
 		else
-			err = ip_mc_leave_group(sk, &mreq);
+			err = ax8netfilter_ip_mc_leave_group(sk, &mreq);
 		break;
 	}
 	case IP_MSFILTER:
 	{
-		extern int sysctl_igmp_max_msf;
+		extern int *ax8netfilter_sysctl_igmp_max_msf;
 		struct ip_msfilter *msf;
 
 		if (optlen < IP_MSFILTER_SIZE(0))
@@ -328,7 +323,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		}
 		/* numsrc >= (1G-4) overflow in 32 bits */
 		if (msf->imsf_numsrc >= 0x3ffffffcU ||
-		    msf->imsf_numsrc > sysctl_igmp_max_msf) {
+		    msf->imsf_numsrc > (*ax8netfilter_sysctl_igmp_max_msf)) {
 			kfree(msf);
 			err = -ENOBUFS;
 			break;
@@ -338,7 +333,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			err = -EINVAL;
 			break;
 		}
-		err = ip_mc_msfilter(sk, msf, 0);
+		err = ax8netfilter_ip_mc_msfilter(sk, msf, 0);
 		kfree(msf);
 		break;
 	}
@@ -377,7 +372,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			omode = MCAST_INCLUDE;
 			add = 0;
 		}
-		err = ip_mc_source(add, omode, sk, &mreqs, 0);
+		err = ax8netfilter_ip_mc_source(add, omode, sk, &mreqs, 0);
 		break;
 	}
 	case MCAST_JOIN_GROUP:
@@ -455,13 +450,13 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 			omode = MCAST_INCLUDE;
 			add = 0;
 		}
-		err = ip_mc_source(add, omode, sk, &mreqs,
+		err = ax8netfilter_ip_mc_source(add, omode, sk, &mreqs,
 				   greqs.gsr_interface);
 		break;
 	}
 	case MCAST_MSFILTER:
 	{
-		extern int sysctl_igmp_max_msf;
+		extern int * ax8netfilter_sysctl_igmp_max_msf;
 		struct sockaddr_in *psin;
 		struct ip_msfilter *msf = NULL;
 		struct group_filter *gsf = NULL;
@@ -484,7 +479,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		}
 		/* numsrc >= (4G-140)/128 overflow in 32 bits */
 		if (gsf->gf_numsrc >= 0x1ffffff ||
-		    gsf->gf_numsrc > sysctl_igmp_max_msf) {
+		    gsf->gf_numsrc > (*ax8netfilter_sysctl_igmp_max_msf)) {
 			err = -ENOBUFS;
 			goto mc_msf_out;
 		}
@@ -519,14 +514,14 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		kfree(gsf);
 		gsf = NULL;
 
-		err = ip_mc_msfilter(sk, msf, ifindex);
+		err = ax8netfilter_ip_mc_msfilter(sk, msf, ifindex);
 	mc_msf_out:
 		kfree(msf);
 		kfree(gsf);
 		break;
 	}
 	case IP_ROUTER_ALERT:
-		err = ip_ra_control(sk, val ? 1 : 0, NULL);
+		err = ax8netfilter_ip_ra_control(sk, val ? 1 : 0, NULL);
 		break;
 
 	case IP_FREEBIND:
@@ -628,7 +623,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 		if (opt->optlen == 0)
 			return put_user(0, optlen);
 
-		ip_options_undo(opt);
+		ax8netfilter_ip_options_undo(opt);
 
 		len = min_t(unsigned int, len, opt->optlen);
 		if (put_user(len, optlen))
@@ -663,7 +658,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 		break;
 	case IP_TTL:
 		val = (inet->uc_ttl == -1 ?
-		       sysctl_ip_default_ttl :
+		       *ax8netfilter_sysctl_ip_default_ttl :
 		       inet->uc_ttl);
 		break;
 	case IP_HDRINCL:
@@ -722,7 +717,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 			release_sock(sk);
 			return -EFAULT;
 		}
-		err = ip_mc_msfget(sk, &msf,
+		err = ax8netfilter_ip_mc_msfget(sk, &msf,
 				   (struct ip_msfilter __user *)optval, optlen);
 		release_sock(sk);
 		return err;
@@ -740,7 +735,7 @@ static int ax8netfilter_do_ip_getsockopt(struct sock *sk, int level, int optname
 			release_sock(sk);
 			return -EFAULT;
 		}
-		err = ip_mc_gsfget(sk, &gsf,
+		err = ax8netfilter_ip_mc_gsfget(sk, &gsf,
 				   (struct group_filter __user *)optval, optlen);
 		release_sock(sk);
 		return err;
