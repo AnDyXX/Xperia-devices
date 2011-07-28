@@ -397,7 +397,7 @@ static int ax8netfilter_do_ip_setsockopt(struct sock *sk, int level,
 		if (optname == MCAST_JOIN_GROUP)
 			err = ip_mc_join_group(sk, &mreq);
 		else
-			err = ip_mc_leave_group(sk, &mreq);
+			err = ax8netfilter_ip_mc_leave_group(sk, &mreq);
 		break;
 	}
 	case MCAST_JOIN_SOURCE_GROUP:

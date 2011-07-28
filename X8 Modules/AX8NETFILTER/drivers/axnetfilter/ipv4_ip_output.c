@@ -426,7 +426,7 @@ slow_path:
 		 * will inherit fixed options.
 		 */
 		if (offset == 0)
-			ip_options_fragment(skb);
+			ax8netfilter_ip_options_fragment(skb);
 
 		/*
 		 *	Added AC : If we are fragmenting a fragment that's not the

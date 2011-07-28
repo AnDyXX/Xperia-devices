@@ -134,4 +134,6 @@ extern ax8netfilter_ip_flush_pending_frames_type ax8netfilter_ip_flush_pending_f
 typedef void (*ax8netfilter_xfrm_replay_notify_type)(struct xfrm_state *x, int event);
 extern ax8netfilter_xfrm_replay_notify_type ax8netfilter_xfrm_replay_notify;
 
+extern int * ax8netfilter_sysctl_igmp_max_msf;
+
 #endif

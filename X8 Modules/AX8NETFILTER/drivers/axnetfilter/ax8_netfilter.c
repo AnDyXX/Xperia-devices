@@ -52,6 +52,7 @@ static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
 
 struct net_protocol *** ax8netfilter_inet_protos;
 int * ax8netfilter_sysctl_ip_default_ttl;
+int * ax8netfilter_sysctl_igmp_max_msf;
 
 ax8netfilter_arp_processtype ax8netfilter_arp_process;
 ax8netfilter_ip_finish_output2_type ax8netfilter_ip_finish_output2;
@@ -150,6 +151,7 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"ip_push_pending_frames", 	(void**) &ax8netfilter_ip_push_pending_frames},
 	{"ip_flush_pending_frames", 	(void**) &ax8netfilter_ip_flush_pending_frames},
 	{"xfrm_replay_notify", 		(void**) &ax8netfilter_xfrm_replay_notify},
+	{"sysctl_igmp_max_msf", 	(void**) &ax8netfilter_sysctl_igmp_max_msf},
 	{NULL,				0},
 };
 
