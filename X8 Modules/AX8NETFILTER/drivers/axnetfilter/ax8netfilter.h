@@ -58,7 +58,8 @@ int ax8netfilter_xfrm_output_resume(struct sk_buff *skb, int err);
 typedef int (*ax8netfilter_xfrm_output2_type)(struct sk_buff *skb);
 extern ax8netfilter_xfrm_output2_type ax8netfilter_xfrm_output2;
 
-extern struct net_protocol *** ax8netfilter_inet_protos;
+//extern struct net_protocol *** ax8netfilter_inet_protos;
+extern struct net_protocol ** ax8netfilter_inet_protos ____cacheline_aligned_in_smp;  
 
 typedef void (*ax8netfilter_ip_forward_options_type)(struct sk_buff *skb);
 extern ax8netfilter_ip_forward_options_type ax8netfilter_ip_forward_options;

@@ -50,7 +50,9 @@ EXPORT_SYMBOL(init_ax8netfilter_net);
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
 static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
 
-struct net_protocol *** ax8netfilter_inet_protos;
+//struct net_protocol *** ax8netfilter_inet_protos;
+struct net_protocol ** ax8netfilter_inet_protos ____cacheline_aligned_in_smp; 
+
 int * ax8netfilter_sysctl_ip_default_ttl;
 int * ax8netfilter_sysctl_igmp_max_msf;
 
