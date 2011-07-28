@@ -1,0 +1,11 @@
+<4>[ 3629.098548] ax8netfilter: Unknown symbol ip_mc_msfget
+<4>[ 3629.101409] ax8netfilter: Unknown symbol ip_mc_source
+<4>[ 3629.107812] ax8netfilter: Unknown symbol sysctl_igmp_max_msf
+<4>[ 3629.118249] ax8netfilter: Unknown symbol ip_tos2prio
+<4>[ 3629.138371] ax8netfilter: Unknown symbol sysctl_ip_default_ttl
+<4>[ 3629.143311] ax8netfilter: Unknown symbol ip_options_get_from_user
+<4>[ 3629.157031] ax8netfilter: Unknown symbol ip_options_undo
+<4>[ 3629.161944] ax8netfilter: Unknown symbol ip_ra_control
+<4>[ 3629.167522] ax8netfilter: Unknown symbol ip_mc_leave_group
+<4>[ 3629.172516] ax8netfilter: Unknown symbol ip_mc_gsfget
+<4>[ 3629.182195] ax8netfilter: Unknown symbol ip_mc_msfilter
