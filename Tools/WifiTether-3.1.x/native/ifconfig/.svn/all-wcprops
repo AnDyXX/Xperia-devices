@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/402/trunk/native/ifconfig
+END
+ifconfig.c
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/402/trunk/native/ifconfig/ifconfig.c
+END
+Android.mk
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/402/trunk/native/ifconfig/Android.mk
+END

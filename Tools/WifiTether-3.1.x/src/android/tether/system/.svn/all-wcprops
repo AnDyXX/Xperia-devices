@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/524/trunk/src/android/tether/system
+END
+WebserviceTask.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/498/trunk/src/android/tether/system/WebserviceTask.java
+END
+BluetoothService_cupcake.java
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/365/trunk/src/android/tether/system/BluetoothService_cupcake.java
+END
+BluetoothService_eclair.java
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/365/trunk/src/android/tether/system/BluetoothService_eclair.java
+END
+BluetoothService.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/365/trunk/src/android/tether/system/BluetoothService.java
+END
+Configuration.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/524/trunk/src/android/tether/system/Configuration.java
+END
+NativeTask.java
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/459/trunk/src/android/tether/system/NativeTask.java
+END
+CoreTask.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/524/trunk/src/android/tether/system/CoreTask.java
+END

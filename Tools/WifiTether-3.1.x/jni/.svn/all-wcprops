@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 27
+/svn/!svn/ver/503/trunk/jni
+END
+Android.mk
+K 25
+svn:wc:ra_dav:version-url
+V 38
+/svn/!svn/ver/503/trunk/jni/Android.mk
+END
+android_tether_system_NativeTask.c
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/503/trunk/jni/android_tether_system_NativeTask.c
+END
+android_tether_system_NativeTask.h
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/503/trunk/jni/android_tether_system_NativeTask.h
+END

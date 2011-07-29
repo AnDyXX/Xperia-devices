@@ -1,0 +1,89 @@
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/svn/!svn/ver/509/trunk/res/drawable
+END
+seclow.png
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/62/trunk/res/drawable/seclow.png
+END
+start.png
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/svn/!svn/ver/430/trunk/res/drawable/start.png
+END
+wifi.png
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/309/trunk/res/drawable/wifi.png
+END
+start_notification.png
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/430/trunk/res/drawable/start_notification.png
+END
+stop.png
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/430/trunk/res/drawable/stop.png
+END
+bluetooth.png
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/309/trunk/res/drawable/bluetooth.png
+END
+lock.png
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/509/trunk/res/drawable/lock.png
+END
+icon.png
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/430/trunk/res/drawable/icon.png
+END
+lock_open.png
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/509/trunk/res/drawable/lock_open.png
+END
+battery.png
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/430/trunk/res/drawable/battery.png
+END
+sechigh.png
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/62/trunk/res/drawable/sechigh.png
+END
+background.jpg
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/438/trunk/res/drawable/background.jpg
+END
+lockcheckbox.xml
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/498/trunk/res/drawable/lockcheckbox.xml
+END
+secmedium.png
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/62/trunk/res/drawable/secmedium.png
+END

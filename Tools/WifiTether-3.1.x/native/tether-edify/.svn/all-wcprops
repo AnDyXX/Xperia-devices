@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/468/trunk/native/tether-edify
+END
+tether.h
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/316/trunk/native/tether-edify/tether.h
+END
+Android.mk
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/468/trunk/native/tether-edify/Android.mk
+END
+install.c
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/468/trunk/native/tether-edify/install.c
+END
+install.h
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/316/trunk/native/tether-edify/install.h
+END
+tether.c
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/316/trunk/native/tether-edify/tether.c
+END

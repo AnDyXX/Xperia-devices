@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 34
+/svn/!svn/ver/520/trunk/res/layout
+END
+main.xml
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/509/trunk/res/layout/main.xml
+END
+nonetfilterview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/461/trunk/res/layout/nonetfilterview.xml
+END
+donateview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/513/trunk/res/layout/donateview.xml
+END
+aboutview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/520/trunk/res/layout/aboutview.xml
+END
+btwarningview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/512/trunk/res/layout/btwarningview.xml
+END
+clientrow.xml
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/502/trunk/res/layout/clientrow.xml
+END
+txpowerwarningview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/512/trunk/res/layout/txpowerwarningview.xml
+END
+noaccesscontrolview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/461/trunk/res/layout/noaccesscontrolview.xml
+END
+setupview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/509/trunk/res/layout/setupview.xml
+END
+norootview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/461/trunk/res/layout/norootview.xml
+END
+logview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/74/trunk/res/layout/logview.xml
+END
+accesscontrolview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/502/trunk/res/layout/accesscontrolview.xml
+END
+updateview.xml
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/461/trunk/res/layout/updateview.xml
+END

@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/524/trunk/src/android/tether
+END
+TetherApplication.java
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/520/trunk/src/android/tether/TetherApplication.java
+END
+AccessControlActivity.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/498/trunk/src/android/tether/AccessControlActivity.java
+END
+MainActivity.java
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/520/trunk/src/android/tether/MainActivity.java
+END
+SetupActivity.java
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/520/trunk/src/android/tether/SetupActivity.java
+END
+LogActivity.java
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/svn/!svn/ver/498/trunk/src/android/tether/LogActivity.java
+END
