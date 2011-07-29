@@ -1,0 +1,89 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/451/branches/2.0.x/res/raw
+END
+tether_conf
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/451/branches/2.0.x/res/raw/tether_conf
+END
+libnativetask_so
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/451/branches/2.0.x/res/raw/libnativetask_so
+END
+pand
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/451/branches/2.0.x/res/raw/pand
+END
+iptables
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/451/branches/2.0.x/res/raw/iptables
+END
+ifconfig
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/451/branches/2.0.x/res/raw/ifconfig
+END
+iwconfig
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/!svn/ver/451/branches/2.0.x/res/raw/iwconfig
+END
+blue_up_sh
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/451/branches/2.0.x/res/raw/blue_up_sh
+END
+dnsmasq
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/!svn/ver/451/branches/2.0.x/res/raw/dnsmasq
+END
+blue_down_sh
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/451/branches/2.0.x/res/raw/blue_down_sh
+END
+dnsmasq_conf
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/451/branches/2.0.x/res/raw/dnsmasq_conf
+END
+tether_edify
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/!svn/ver/451/branches/2.0.x/res/raw/tether_edify
+END
+tether
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/451/branches/2.0.x/res/raw/tether
+END
+tiwlan_ini
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/451/branches/2.0.x/res/raw/tiwlan_ini
+END
+wpa_supplicant_conf
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/451/branches/2.0.x/res/raw/wpa_supplicant_conf
+END

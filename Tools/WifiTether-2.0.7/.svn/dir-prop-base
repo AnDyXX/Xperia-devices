@@ -1,0 +1,10 @@
+K 10
+svn:ignore
+V 5
+bin
+
+K 13
+svn:mergeinfo
+V 23
+/branches/bluey:121-124
+END

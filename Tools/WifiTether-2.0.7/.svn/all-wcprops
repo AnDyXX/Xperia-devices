@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 32
+/svn/!svn/ver/451/branches/2.0.x
+END
+default.properties
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/451/branches/2.0.x/default.properties
+END
+.classpath
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/451/branches/2.0.x/.classpath
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/451/branches/2.0.x/.project
+END
+AndroidManifest.xml
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/451/branches/2.0.x/AndroidManifest.xml
+END
+GPLV3.TXT
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/451/branches/2.0.x/GPLV3.TXT
+END
+README.TXT
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/!svn/ver/451/branches/2.0.x/README.TXT
+END
