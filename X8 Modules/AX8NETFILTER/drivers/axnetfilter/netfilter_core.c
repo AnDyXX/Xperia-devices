@@ -70,9 +70,11 @@ int nf_register_hook(struct nf_hook_ops *reg)
 				break;
 		}
 		list_add_rcu(&reg->list, elem->list.prev);
+		pr_debug("nf_register_hook: non-empty HACK  [%d][%d]\n", reg->pf,reg->hooknum);
 	}
 	else
 	{
+		pr_debug("nf_register_hook: empty HACK  [%d][%d]\n", reg->pf,reg->hooknum);
 		list_add_rcu(&reg->list, &nf_hooks[reg->pf][reg->hooknum]);
 	}	
 	

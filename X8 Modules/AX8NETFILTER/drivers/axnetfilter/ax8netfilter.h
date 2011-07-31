@@ -4,6 +4,7 @@
 #include <linux/inetdevice.h>
 #include <net/inet_sock.h>
 #include <net/ip.h>
+#include <net/tcp.h>
 #include <net/protocol.h>
 
 extern const __u8 ax8netfilter_ip_tos2prio[16];
@@ -136,5 +137,36 @@ typedef void (*ax8netfilter_xfrm_replay_notify_type)(struct xfrm_state *x, int e
 extern ax8netfilter_xfrm_replay_notify_type ax8netfilter_xfrm_replay_notify;
 
 extern int * ax8netfilter_sysctl_igmp_max_msf;
+
+typedef void (*ax8netfilter_tcp_v4_send_reset_type)(struct sock *sk, struct sk_buff *skb);
+extern ax8netfilter_tcp_v4_send_reset_type ax8netfilter_tcp_v4_send_reset;
+
+int ax8netfilter_tcp_v4_rcv(struct sk_buff *skb);
+
+typedef void (*ax8netfilter_tcp_v4_send_ack_type)(struct sk_buff *skb, u32 seq, u32 ack,
+			    u32 win, u32 ts, int oif,
+			    struct tcp_md5sig_key *key,
+			    int reply_flags);
+
+extern ax8netfilter_tcp_v4_send_ack_type ax8netfilter_tcp_v4_send_ack;
+
+int ax8netfilter_udp_queue_rcv_skb(struct sock * sk, struct sk_buff *skb);
+
+typedef int (*ax8netfilter___udp_queue_rcv_skb_type)(struct sock *sk, struct sk_buff *skb);
+extern ax8netfilter___udp_queue_rcv_skb_type ax8netfilter___udp_queue_rcv_skb;
+
+int ax8netfilter_packet_rcv_spkt(struct sk_buff *skb, struct net_device *dev,  struct packet_type *pt, struct net_device *orig_dev);
+int ax8netfilter_xfrm_input(struct sk_buff *skb, int nexthdr, __be32 spi, int encap_type);
+
+typedef int (*ax8netfilter_xfrm_parse_spi_type) (struct sk_buff *skb, u8 nexthdr, __be32 *spi, __be32 *seq); 
+extern ax8netfilter_xfrm_parse_spi_type ax8netfilter_xfrm_parse_spi;
+
+typedef  int (*ax8netfilter_xfrm_replay_check_type)(struct xfrm_state *x,
+			     struct sk_buff *skb, __be32 seq);
+extern ax8netfilter_xfrm_replay_check_type ax8netfilter_xfrm_replay_check;
+
+typedef void (*ax8netfilter_xfrm_replay_advance_type)(struct xfrm_state *x, __be32 seq); 
+extern ax8netfilter_xfrm_replay_advance_type ax8netfilter_xfrm_replay_advance;
+
 
 #endif
