@@ -198,7 +198,188 @@ int ax8netfilter_ip_local_deliver(struct sk_buff *skb)
 		if (ip_defrag(skb, IP_DEFRAG_LOCAL_DELIVER))
 			return 0;
 	}
-
+	pr_debug("ax8netfilter_ip_local_deliver\n");
 	return NF_HOOK(PF_INET, NF_INET_LOCAL_IN, skb, skb->dev, NULL,
 		       ax8netfilter_ip_local_deliver_finish);
+}
+
+static inline int ax8netfilter_ip_rcv_options(struct sk_buff *skb)
+{
+	struct ip_options *opt;
+	struct iphdr *iph;
+	struct net_device *dev = skb->dev;
+
+	/* It looks as overkill, because not all
+	   IP options require packet mangling.
+	   But it is the easiest for now, especially taking
+	   into account that combination of IP options
+	   and running sniffer is extremely rare condition.
+					      --ANK (980813)
+	*/
+	if (skb_cow(skb, skb_headroom(skb))) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INDISCARDS);
+		goto drop;
+	}
+
+	iph = ip_hdr(skb);
+	opt = &(IPCB(skb)->opt);
+	opt->optlen = iph->ihl*4 - sizeof(struct iphdr);
+
+	if (ax8netfilter_ip_options_compile(dev_net(dev), opt, skb)) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INHDRERRORS);
+		goto drop;
+	}
+
+	if (unlikely(opt->srr)) {
+		struct in_device *in_dev = in_dev_get(dev);
+		if (in_dev) {
+			if (!IN_DEV_SOURCE_ROUTE(in_dev)) {
+				if (IN_DEV_LOG_MARTIANS(in_dev) &&
+				    net_ratelimit())
+					printk(KERN_INFO "source route option %pI4 -> %pI4\n",
+					       &iph->saddr, &iph->daddr);
+				in_dev_put(in_dev);
+				goto drop;
+			}
+
+			in_dev_put(in_dev);
+		}
+
+		if (ax8netfilter_ip_options_rcv_srr(skb))
+			goto drop;
+	}
+
+	return 0;
+drop:
+	return -1;
+}
+
+static int ax8netfilter_ip_rcv_finish(struct sk_buff *skb)
+{
+	const struct iphdr *iph = ip_hdr(skb);
+	struct rtable *rt;
+
+	/*
+	 *	Initialise the virtual path cache for the packet. It describes
+	 *	how the packet travels inside Linux networking.
+	 */
+	if (skb->dst == NULL) {
+		int err = ip_route_input(skb, iph->daddr, iph->saddr, iph->tos,
+					 skb->dev);
+		if (unlikely(err)) {
+			if (err == -EHOSTUNREACH)
+				IP_INC_STATS_BH(dev_net(skb->dev),
+						IPSTATS_MIB_INADDRERRORS);
+			else if (err == -ENETUNREACH)
+				IP_INC_STATS_BH(dev_net(skb->dev),
+						IPSTATS_MIB_INNOROUTES);
+			goto drop;
+		}
+	}
+
+#ifdef CONFIG_NET_CLS_ROUTE__
+	if (unlikely(skb->dst->tclassid)) {
+		struct ip_rt_acct *st = per_cpu_ptr(ip_rt_acct, smp_processor_id());
+		u32 idx = skb->dst->tclassid;
+		st[idx&0xFF].o_packets++;
+		st[idx&0xFF].o_bytes += skb->len;
+		st[(idx>>16)&0xFF].i_packets++;
+		st[(idx>>16)&0xFF].i_bytes += skb->len;
+	}
+#endif
+
+	if (iph->ihl > 5 && ax8netfilter_ip_rcv_options(skb))
+		goto drop;
+
+	rt = skb->rtable;
+	if (rt->rt_type == RTN_MULTICAST)
+		IP_INC_STATS_BH(dev_net(rt->u.dst.dev), IPSTATS_MIB_INMCASTPKTS);
+	else if (rt->rt_type == RTN_BROADCAST)
+		IP_INC_STATS_BH(dev_net(rt->u.dst.dev), IPSTATS_MIB_INBCASTPKTS);
+
+	return dst_input(skb);
+
+drop:
+	kfree_skb(skb);
+	return NET_RX_DROP;
+}
+
+/*
+ * 	Main IP Receive routine.
+ */
+int ax8netfilter_ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
+{
+	struct iphdr *iph;
+	u32 len;
+
+	/* When the interface is in promisc. mode, drop all the crap
+	 * that it receives, do not try to analyse it.
+	 */
+	if (skb->pkt_type == PACKET_OTHERHOST)
+		goto drop;
+
+	IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INRECEIVES);
+
+	if ((skb = skb_share_check(skb, GFP_ATOMIC)) == NULL) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INDISCARDS);
+		goto out;
+	}
+
+	if (!pskb_may_pull(skb, sizeof(struct iphdr)))
+		goto inhdr_error;
+
+	iph = ip_hdr(skb);
+
+	/*
+	 *	RFC1122: 3.2.1.2 MUST silently discard any IP frame that fails the checksum.
+	 *
+	 *	Is the datagram acceptable?
+	 *
+	 *	1.	Length at least the size of an ip header
+	 *	2.	Version of 4
+	 *	3.	Checksums correctly. [Speed optimisation for later, skip loopback checksums]
+	 *	4.	Doesn't have a bogus length
+	 */
+
+	if (iph->ihl < 5 || iph->version != 4)
+		goto inhdr_error;
+
+	if (!pskb_may_pull(skb, iph->ihl*4))
+		goto inhdr_error;
+
+	iph = ip_hdr(skb);
+
+	if (unlikely(ip_fast_csum((u8 *)iph, iph->ihl)))
+		goto inhdr_error;
+
+	len = ntohs(iph->tot_len);
+	if (skb->len < len) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INTRUNCATEDPKTS);
+		goto drop;
+	} else if (len < (iph->ihl*4))
+		goto inhdr_error;
+
+	/* Our transport medium may have padded the buffer out. Now we know it
+	 * is IP we can trim to the true length of the frame.
+	 * Note this now means skb->len holds ntohs(iph->tot_len).
+	 */
+	if (pskb_trim_rcsum(skb, len)) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INDISCARDS);
+		goto drop;
+	}
+
+	/* Remove any debris in the socket control block */
+	memset(IPCB(skb), 0, sizeof(struct inet_skb_parm));
+	
+	pr_debug("ax8netfilter_ip_rcv\n");
+
+	return NF_HOOK(PF_INET, NF_INET_PRE_ROUTING, skb, dev, NULL,
+		       ax8netfilter_ip_rcv_finish);
+
+inhdr_error:
+	IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INHDRERRORS);
+drop:
+	kfree_skb(skb);
+out:
+	return NET_RX_DROP;
 }

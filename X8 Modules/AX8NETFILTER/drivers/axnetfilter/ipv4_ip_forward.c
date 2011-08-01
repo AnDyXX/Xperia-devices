@@ -113,7 +113,7 @@ int ax8netfilter_ip_forward(struct sk_buff *skb)
 		ax8netfilter_ip_rt_send_redirect(skb);
 
 	skb->priority = ax8netfilter_rt_tos2priority(iph->tos);
-
+	pr_debug("ax8netfilter_ip_forward\n");
 	return NF_HOOK(PF_INET, NF_INET_FORWARD, skb, skb->dev, rt->u.dst.dev,
 		       ax8netfilter_ip_forward_finish);
 

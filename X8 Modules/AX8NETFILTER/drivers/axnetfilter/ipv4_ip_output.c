@@ -57,6 +57,7 @@ int ax8netfilter___ip_local_out(struct sk_buff *skb)
 
 	iph->tot_len = htons(skb->len);
 	ip_send_check(iph);
+	pr_debug("ax8netfilter___ip_local_out\n");
 	return nf_hook(PF_INET, NF_INET_LOCAL_OUT, skb, NULL, skb->dst->dev,
 		       dst_output);
 }
@@ -113,7 +114,8 @@ int ax8netfilter_ip_mc_output(struct sk_buff *skb)
 	/*
 	 *	Multicasts are looped back for other local users
 	 */
-
+	pr_debug("ax8netfilter_ip_mc_output\n");
+	
 	if (rt->rt_flags&RTCF_MULTICAST) {
 		if ((!sk || inet_sk(sk)->mc_loop)
 #ifdef CONFIG_IP_MROUTE
@@ -163,6 +165,8 @@ int ax8netfilter_ip_output(struct sk_buff *skb)
 
 	skb->dev = dev;
 	skb->protocol = htons(ETH_P_IP);
+
+	pr_debug("ax8netfilter_ip_output\n");
 
 	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb, NULL, dev,
 			    ax8netfilter_ip_finish_output,

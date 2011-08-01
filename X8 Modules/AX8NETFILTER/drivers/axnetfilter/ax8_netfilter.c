@@ -20,7 +20,7 @@
 #include "ax8netfilter.h"
 
 #define AX_MODULE_NAME 			"ax8netfilter"
-#define AX_MODULE_VER			"v003"
+#define AX_MODULE_VER			"v001"
 
 #define X8
 #define X10M_
@@ -80,12 +80,9 @@ ax8netfilter_ip_append_data_type ax8netfilter_ip_append_data;
 ax8netfilter_ip_push_pending_frames_type ax8netfilter_ip_push_pending_frames;
 ax8netfilter_ip_flush_pending_frames_type ax8netfilter_ip_flush_pending_frames;
 ax8netfilter_xfrm_replay_notify_type ax8netfilter_xfrm_replay_notify;
-ax8netfilter_tcp_v4_send_reset_type ax8netfilter_tcp_v4_send_reset;
-ax8netfilter_tcp_v4_send_ack_type ax8netfilter_tcp_v4_send_ack;
-ax8netfilter___udp_queue_rcv_skb_type ax8netfilter___udp_queue_rcv_skb;
-ax8netfilter_xfrm_parse_spi_type ax8netfilter_xfrm_parse_spi;
-ax8netfilter_xfrm_replay_check_type ax8netfilter_xfrm_replay_check;
-ax8netfilter_xfrm_replay_advance_type ax8netfilter_xfrm_replay_advance;
+ax8netfilter_ip_options_compile_type ax8netfilter_ip_options_compile;
+ax8netfilter_ip_options_rcv_srr_type ax8netfilter_ip_options_rcv_srr;
+
 
 static void patch(unsigned int addr, unsigned int value) {
 	*(unsigned int*)addr = value;
@@ -124,10 +121,7 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"raw_rcv",			&ax8netfilter_raw_rcv},
 	{"xfrm4_transport_finish",	&ax8netfilter_xfrm4_transport_finish},
 	{"xfrm_output_resume", 		&ax8netfilter_xfrm_output_resume},
-	{"tcp_v4_rcv", 			&ax8netfilter_tcp_v4_rcv},
-	{"udp_queue_rcv_skb", 		&ax8netfilter_udp_queue_rcv_skb},
-	{"packet_rcv_spkt", 		&ax8netfilter_packet_rcv_spkt},
-	{"xfrm_input",			&ax8netfilter_xfrm_input},
+	{"ip_rcv", 			&ax8netfilter_ip_rcv},
 	{NULL, 				0},
 };
 
@@ -164,12 +158,8 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"ip_flush_pending_frames", 	(void**) &ax8netfilter_ip_flush_pending_frames},
 	{"xfrm_replay_notify", 		(void**) &ax8netfilter_xfrm_replay_notify},
 	{"sysctl_igmp_max_msf", 	(void**) &ax8netfilter_sysctl_igmp_max_msf},
-	{"tcp_v4_send_reset", 		(void**) &ax8netfilter_tcp_v4_send_reset},
-	{"tcp_v4_send_ack", 		(void**) &ax8netfilter_tcp_v4_send_ack},
-	{"__udp_queue_rcv_skb", 	(void**) &ax8netfilter___udp_queue_rcv_skb},
-	{"xfrm_parse_spi", 		(void**) &ax8netfilter_xfrm_parse_spi},
-	{"xfrm_replay_check", 		(void**) &ax8netfilter_xfrm_replay_check},
-	{"xfrm_replay_advance", 	(void**) &ax8netfilter_xfrm_replay_advance},
+	{"ip_options_compile", 		(void**) &ax8netfilter_ip_options_compile},
+	{"ip_options_rcv_srr", 		(void**) &ax8netfilter_ip_options_rcv_srr},
 	{NULL,				0},
 };
 
