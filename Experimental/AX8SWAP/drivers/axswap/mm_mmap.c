@@ -33,6 +33,7 @@
 #include <asm/tlb.h>
 #include <asm/mmu_context.h>
 
+#include "hijacked_types.h"
 
 /*
  * Check that a process has enough memory to allocate a new virtual
@@ -137,3 +138,71 @@ error:
 
 	return -ENOMEM;
 }
+
+/*
+ * Close a vm structure and free it, returning the next.
+ */
+static struct vm_area_struct *ax8swap_remove_vma(struct vm_area_struct *vma)
+{
+	struct vm_area_struct *next = vma->vm_next;
+
+	might_sleep();
+	if (vma->vm_ops && vma->vm_ops->close)
+		vma->vm_ops->close(vma);
+	if (vma->vm_file) {
+		fput(vma->vm_file);
+		if (vma->vm_flags & VM_EXECUTABLE)
+			removed_exe_file_vma(vma->vm_mm);
+	}
+	mpol_put(vma_policy(vma));
+	kmem_cache_free(vm_area_cachep, vma);
+	return next;
+} 
+
+/* Release all mmaps. */
+void ax8swap_exit_mmap(struct mm_struct *mm)
+{
+	struct mmu_gather *tlb;
+	struct vm_area_struct *vma;
+	unsigned long nr_accounted = 0;
+	unsigned long end;
+
+	/* mm's last user has gone, and its about to be pulled down */
+	mmu_notifier_release(mm);
+
+	if (mm->locked_vm) {
+		vma = mm->mmap;
+		while (vma) {
+			if (vma->vm_flags & VM_LOCKED)
+				ax8swap_munlock_vma_pages_all(vma);
+			vma = vma->vm_next;
+		}
+	}
+
+	arch_exit_mmap(mm);
+
+	vma = mm->mmap;
+	if (!vma)	/* Can happen if dup_mmap() received an OOM */
+		return;
+
+	lru_add_drain();
+	flush_cache_mm(mm);
+	tlb = tlb_gather_mmu(mm, 1);
+	/* update_hiwater_rss(mm) here? but nobody should be looking */
+	/* Use -1 here to ensure all VMAs in the mm are unmapped */
+	end = unmap_vmas(&tlb, vma, 0, -1, &nr_accounted, NULL);
+	vm_unacct_memory(nr_accounted);
+	ax8swap_free_pgtables(tlb, vma, FIRST_USER_ADDRESS, 0);
+	tlb_finish_mmu(tlb, 0, end);
+
+	/*
+	 * Walk the list again, actually closing and freeing it,
+	 * with preemption enabled, without holding any MM locks.
+	 */
+	while (vma)
+		vma = ax8swap_remove_vma(vma);
+
+	BUG_ON(mm->nr_ptes > (FIRST_USER_ADDRESS+PMD_SIZE-1)>>PMD_SHIFT);
+} 
+
+

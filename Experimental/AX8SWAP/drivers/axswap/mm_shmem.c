@@ -786,7 +786,7 @@ int ax8swap_shmem_notify_change(struct dentry *dentry, struct iattr *attr)
 {
 	struct shmem_inode_info *info = SHMEM_I(inode);
 
-	if (inode->i_op->truncate == ax8swap_shmem_truncate) {
+	if (inode->i_op->truncate == ax8swap_shmem_truncate || inode->i_op->truncate == *ax8swap_shmem_truncate_address_only) {
 		truncate_inode_pages(inode->i_mapping, 0);
 		ax8swap_shmem_unacct_size(info->flags, inode->i_size);
 		inode->i_size = 0;

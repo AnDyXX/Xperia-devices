@@ -220,4 +220,62 @@ do {						\
 } while(0)
 #endif 
 
+unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
+		struct vm_area_struct *vma, unsigned long start_addr,
+		unsigned long end_addr, unsigned long *nr_accounted,
+		struct zap_details *details);
+unsigned long ax8swap_zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details *details);
+
+
+void ax8swap_exit_mmap(struct mm_struct *mm);
+
+typedef void (*ax8swap_munlock_vma_pages_range_type)(struct vm_area_struct *vma,
+			   unsigned long start, unsigned long end) ;
+
+extern ax8swap_munlock_vma_pages_range_type ax8swap_munlock_vma_pages_range;
+
+static inline void ax8swap_munlock_vma_pages_all(struct vm_area_struct *vma)
+{
+	ax8swap_munlock_vma_pages_range(vma, vma->vm_start, vma->vm_end);
+} 
+
+typedef void (*ax8swap_free_pgtables_type)(struct mmu_gather *tlb, struct vm_area_struct *start_vma,
+		unsigned long floor, unsigned long ceiling); 
+
+extern ax8swap_free_pgtables_type ax8swap_free_pgtables;
+
+void ax8swap_show_free_areas(void);
+
+asmlinkage long sys_ax8swap_remap_file_pages(unsigned long start, unsigned long size,
+			unsigned long prot, unsigned long pgoff,
+			unsigned long flags); 
+
+int ax8swap_copy_page_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		struct vm_area_struct *vma);
+
+int ax8swap_try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
+				int migration);
+
+void ax8swap_mmput(struct mm_struct *mm);
+
+int ax8swap_page_referenced_one(struct page *page,
+	struct vm_area_struct *vma, unsigned int *mapcount);
+
+unsigned long ax8swap_try_to_free_pages(struct zonelist *zonelist, int order,
+								gfp_t gfp_mask);
+
+typedef unsigned long (*ax8swap_isolate_pages_global_type)(unsigned long nr,
+					struct list_head *dst,
+					unsigned long *scanned, int order,
+					int mode, struct zone *z,
+					struct mem_cgroup *mem_cont,
+					int active, int file);
+
+extern ax8swap_isolate_pages_global_type ax8swap_isolate_pages_global;
+
+
+typedef void (*ax8swap_shmem_truncate_address_only_type)(struct inode *inode);
+extern ax8swap_shmem_truncate_address_only_type ax8swap_shmem_truncate_address_only;
+
 #endif

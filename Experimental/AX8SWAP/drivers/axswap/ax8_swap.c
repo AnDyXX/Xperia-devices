@@ -44,6 +44,10 @@ ax8swap_shrink_list_type ax8swap_shrink_list;
  ax8swap___do_fault_type ax8swap___do_fault;
 ax8swap_print_bad_pte_type ax8swap_print_bad_pte;
 ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
+ax8swap_munlock_vma_pages_range_type ax8swap_munlock_vma_pages_range;
+ax8swap_free_pgtables_type ax8swap_free_pgtables;
+ax8swap_isolate_pages_global_type ax8swap_isolate_pages_global;
+ax8swap_shmem_truncate_address_only_type ax8swap_shmem_truncate_address_only;
 
 
 // for get proc address
@@ -116,6 +120,16 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"shrink_zone",			&ax8swap_shrink_zone},
 	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
 	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
+	{"unmap_vmas", 			&ax8swap_unmap_vmas},
+	{"zap_page_range", 		&ax8swap_zap_page_range},
+	{"exit_mmap", 			&ax8swap_exit_mmap},
+	{"show_free_areas", 		&ax8swap_show_free_areas},
+	{"sys_remap_file_pages", 	&sys_ax8swap_remap_file_pages},
+	{"copy_page_range", 		&ax8swap_copy_page_range},
+	{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
+	{"mmput", 			&ax8swap_mmput},
+	{"page_referenced_one", 	&ax8swap_page_referenced_one},
+	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},
 	{NULL, 				0},
 };
 
@@ -129,6 +143,10 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"__do_fault", 			(void**) &ax8swap___do_fault},
 	{"print_bad_pte", 		(void**) &ax8swap_print_bad_pte},
 	{"get_vmalloc_info", 		(void**) &ax8swap_get_vmalloc_info},
+	{"munlock_vma_pages_range", 	(void**) &ax8swap_munlock_vma_pages_range},
+	{"free_pgtables", 		(void**) &ax8swap_free_pgtables},
+	{"isolate_pages_global", 	(void**) &ax8swap_isolate_pages_global},
+	{"shmem_truncate", 		(void**) &ax8swap_shmem_truncate_address_only},
 	{NULL,				0},
 };
 
@@ -217,6 +235,9 @@ static int __init ax8swap_init(void)
 		printk(KERN_INFO AX_MODULE_NAME ": procswaps_init() failed\n");
 		goto eof;
 	}
+
+	hijack_fields(0);
+	hijack_functions(0);
 
 	bdi_init(swapper_space.backing_dev_info);
 

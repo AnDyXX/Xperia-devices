@@ -496,3 +496,134 @@ void ax8swap_free_hot_cold_page(struct page *page, int cold)
 	local_irq_restore(flags);
 	put_cpu();
 }
+
+static inline void show_node(struct zone *zone)
+{
+	if (NUMA_BUILD)
+		printk("Node %d ", zone_to_nid(zone));
+} 
+
+#define K(x) ((x) << (PAGE_SHIFT-10))
+
+/*
+ * Show free area list (used inside shift_scroll-lock stuff)
+ * We also calculate the percentage fragmentation. We do this by counting the
+ * memory on each free list with the exception of the first item on the list.
+ */
+void ax8swap_show_free_areas(void)
+{
+	int cpu;
+	struct zone *zone;
+
+	for_each_zone(zone) {
+		if (!populated_zone(zone))
+			continue;
+
+		show_node(zone);
+		printk("%s per-cpu:\n", zone->name);
+
+		for_each_online_cpu(cpu) {
+			struct per_cpu_pageset *pageset;
+
+			pageset = zone_pcp(zone, cpu);
+
+			printk("CPU %4d: hi:%5d, btch:%4d usd:%4d\n",
+			       cpu, pageset->pcp.high,
+			       pageset->pcp.batch, pageset->pcp.count);
+		}
+	}
+
+	printk("Active_anon:%lu active_file:%lu inactive_anon:%lu\n"
+		" inactive_file:%lu"
+//TODO:  check/adjust line lengths
+#ifdef CONFIG_UNEVICTABLE_LRU
+		" unevictable:%lu"
+#endif
+		" dirty:%lu writeback:%lu unstable:%lu\n"
+		" free:%lu slab:%lu mapped:%lu pagetables:%lu bounce:%lu\n",
+		global_page_state(NR_ACTIVE_ANON),
+		global_page_state(NR_ACTIVE_FILE),
+		global_page_state(NR_INACTIVE_ANON),
+		global_page_state(NR_INACTIVE_FILE),
+#ifdef CONFIG_UNEVICTABLE_LRU
+		global_page_state(NR_UNEVICTABLE),
+#endif
+		global_page_state(NR_FILE_DIRTY),
+		global_page_state(NR_WRITEBACK),
+		global_page_state(NR_UNSTABLE_NFS),
+		global_page_state(NR_FREE_PAGES),
+		global_page_state(NR_SLAB_RECLAIMABLE) +
+			global_page_state(NR_SLAB_UNRECLAIMABLE),
+		global_page_state(NR_FILE_MAPPED),
+		global_page_state(NR_PAGETABLE),
+		global_page_state(NR_BOUNCE));
+
+	for_each_zone(zone) {
+		int i;
+
+		if (!populated_zone(zone))
+			continue;
+
+		show_node(zone);
+		printk("%s"
+			" free:%lukB"
+			" min:%lukB"
+			" low:%lukB"
+			" high:%lukB"
+			" active_anon:%lukB"
+			" inactive_anon:%lukB"
+			" active_file:%lukB"
+			" inactive_file:%lukB"
+#ifdef CONFIG_UNEVICTABLE_LRU
+			" unevictable:%lukB"
+#endif
+			" present:%lukB"
+			" pages_scanned:%lu"
+			" all_unreclaimable? %s"
+			"\n",
+			zone->name,
+			K(zone_page_state(zone, NR_FREE_PAGES)),
+			K(zone->pages_min),
+			K(zone->pages_low),
+			K(zone->pages_high),
+			K(zone_page_state(zone, NR_ACTIVE_ANON)),
+			K(zone_page_state(zone, NR_INACTIVE_ANON)),
+			K(zone_page_state(zone, NR_ACTIVE_FILE)),
+			K(zone_page_state(zone, NR_INACTIVE_FILE)),
+#ifdef CONFIG_UNEVICTABLE_LRU
+			K(zone_page_state(zone, NR_UNEVICTABLE)),
+#endif
+			K(zone->present_pages),
+			zone->pages_scanned,
+			(zone_is_all_unreclaimable(zone) ? "yes" : "no")
+			);
+		printk("lowmem_reserve[]:");
+		for (i = 0; i < MAX_NR_ZONES; i++)
+			printk(" %lu", zone->lowmem_reserve[i]);
+		printk("\n");
+	}
+
+	for_each_zone(zone) {
+ 		unsigned long nr[MAX_ORDER], flags, order, total = 0;
+
+		if (!populated_zone(zone))
+			continue;
+
+		show_node(zone);
+		printk("%s: ", zone->name);
+
+		spin_lock_irqsave(&zone->lock, flags);
+		for (order = 0; order < MAX_ORDER; order++) {
+			nr[order] = zone->free_area[order].nr_free;
+			total += nr[order] << order;
+		}
+		spin_unlock_irqrestore(&zone->lock, flags);
+		for (order = 0; order < MAX_ORDER; order++)
+			printk("%lu*%lukB ", nr[order], K(1UL) << order);
+		printk("= %lukB\n", K(total));
+	}
+
+	printk("%ld total pagecache pages\n", global_page_state(NR_FILE_PAGES));
+
+	show_swap_cache_info();
+} 

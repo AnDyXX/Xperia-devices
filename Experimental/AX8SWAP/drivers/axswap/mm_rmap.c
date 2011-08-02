@@ -141,3 +141,155 @@ int ax8swap_page_mkclean(struct page *page)
 
 	return ret;
 }
+
+
+/*
+ * Subfunctions of try_to_unmap: try_to_unmap_one called
+ * repeatedly from either try_to_unmap_anon or try_to_unmap_file.
+ */
+int ax8swap_try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
+				int migration)
+{
+	struct mm_struct *mm = vma->vm_mm;
+	unsigned long address;
+	pte_t *pte;
+	pte_t pteval;
+	spinlock_t *ptl;
+	int ret = SWAP_AGAIN;
+
+	address = ax8swap_vma_address(page, vma);
+	if (address == -EFAULT)
+		goto out;
+
+	pte = page_check_address(page, mm, address, &ptl, 0);
+	if (!pte)
+		goto out;
+
+	/*
+	 * If the page is mlock()d, we cannot swap it out.
+	 * If it's recently referenced (perhaps page_referenced
+	 * skipped over this mm) then we should reactivate it.
+	 */
+	if (!migration) {
+		if (vma->vm_flags & VM_LOCKED) {
+			ret = SWAP_MLOCK;
+			goto out_unmap;
+		}
+		if (ptep_clear_flush_young_notify(vma, address, pte)) {
+			ret = SWAP_FAIL;
+			goto out_unmap;
+		}
+  	}
+
+	/* Nuke the page table entry. */
+	flush_cache_page(vma, address, page_to_pfn(page));
+	pteval = ptep_clear_flush_notify(vma, address, pte);
+
+	/* Move the dirty bit to the physical page now the pte is gone. */
+	if (pte_dirty(pteval))
+		set_page_dirty(page);
+
+	/* Update high watermark before we lower rss */
+	update_hiwater_rss(mm);
+
+	if (PageAnon(page)) {
+		swp_entry_t entry = { .val = page_private(page) };
+
+		if (PageSwapCache(page)) {
+			/*
+			 * Store the swap location in the pte.
+			 * See handle_pte_fault() ...
+			 */
+			swap_duplicate(entry);
+			if (list_empty(&mm->mmlist)) {
+				spin_lock(&mmlist_lock);
+				if (list_empty(&mm->mmlist))
+					list_add(&mm->mmlist, &init_mm.mmlist);
+				spin_unlock(&mmlist_lock);
+			}
+			dec_mm_counter(mm, anon_rss);
+		} else if (PAGE_MIGRATION) {
+			/*
+			 * Store the pfn of the page in a special migration
+			 * pte. do_swap_page() will wait until the migration
+			 * pte is removed and then restart fault handling.
+			 */
+			BUG_ON(!migration);
+			entry = make_migration_entry(page, pte_write(pteval));
+		}
+		set_pte_at(mm, address, pte, swp_entry_to_pte(entry));
+		BUG_ON(pte_file(*pte));
+	} else if (PAGE_MIGRATION && migration) {
+		/* Establish migration entry for a file page */
+		swp_entry_t entry;
+		entry = make_migration_entry(page, pte_write(pteval));
+		set_pte_at(mm, address, pte, swp_entry_to_pte(entry));
+	} else
+		dec_mm_counter(mm, file_rss);
+
+
+	page_remove_rmap(page);
+	page_cache_release(page);
+
+out_unmap:
+	pte_unmap_unlock(pte, ptl);
+out:
+	return ret;
+} 
+
+
+/*
+ * Subfunctions of page_referenced: page_referenced_one called
+ * repeatedly from either page_referenced_anon or page_referenced_file.
+ */
+int ax8swap_page_referenced_one(struct page *page,
+	struct vm_area_struct *vma, unsigned int *mapcount)
+{
+	struct mm_struct *mm = vma->vm_mm;
+	unsigned long address;
+	pte_t *pte;
+	spinlock_t *ptl;
+	int referenced = 0;
+
+	address = ax8swap_vma_address(page, vma);
+	if (address == -EFAULT)
+		goto out;
+
+	pte = page_check_address(page, mm, address, &ptl, 0);
+	if (!pte)
+		goto out;
+
+	/*
+	 * Don't want to elevate referenced for mlocked page that gets this far,
+	 * in order that it progresses to try_to_unmap and is moved to the
+	 * unevictable list.
+	 */
+	if (vma->vm_flags & VM_LOCKED) {
+		*mapcount = 1;	/* break early from loop */
+		goto out_unmap;
+	}
+
+	if (ptep_clear_flush_young_notify(vma, address, pte)) {
+		/*
+		 * Don't treat a reference through a sequentially read
+		 * mapping as such.  If the page has been used in
+		 * another mapping, we will catch it; if this other
+		 * mapping is already gone, the unmap path will have
+		 * set PG_referenced or activated the page.
+		 */
+		if (likely(!VM_SequentialReadHint(vma)))
+			referenced++;
+	}
+
+	/* Pretend the page is referenced if the task has the
+	   swap token and is in the middle of a page fault. */
+	if (mm != current->mm && has_swap_token(mm) &&
+			rwsem_is_locked(&mm->mmap_sem))
+		referenced++;
+
+out_unmap:
+	(*mapcount)--;
+	pte_unmap_unlock(pte, ptl);
+out:
+	return referenced;
+} 

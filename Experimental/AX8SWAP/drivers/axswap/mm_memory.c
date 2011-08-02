@@ -66,6 +66,550 @@
 
 #include "hijacked_types.h"
 
+static inline void ax8swap_add_mm_rss(struct mm_struct *mm, int file_rss, int anon_rss)
+{
+	if (file_rss)
+		add_mm_counter(mm, file_rss, file_rss);
+	if (anon_rss)
+		add_mm_counter(mm, anon_rss, anon_rss);
+} 
+
+/*
+ * copy one vm_area from one task to the other. Assumes the page tables
+ * already present in the new task to be cleared in the whole range
+ * covered by this vma.
+ */
+static inline int is_cow_mapping(unsigned int flags)
+{
+	return (flags & (VM_SHARED | VM_MAYWRITE)) == VM_MAYWRITE;
+} 
+
+static inline void
+ax8swap_copy_one_pte(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		pte_t *dst_pte, pte_t *src_pte, struct vm_area_struct *vma,
+		unsigned long addr, int *rss)
+{
+	unsigned long vm_flags = vma->vm_flags;
+	pte_t pte = *src_pte;
+	struct page *page;
+
+	/* pte contains position in swap or file, so copy. */
+	if (unlikely(!pte_present(pte))) {
+		if (!pte_file(pte)) {
+			swp_entry_t entry = pte_to_swp_entry(pte);
+
+			swap_duplicate(entry);
+			/* make sure dst_mm is on swapoff's mmlist. */
+			if (unlikely(list_empty(&dst_mm->mmlist))) {
+				spin_lock(&mmlist_lock);
+				if (list_empty(&dst_mm->mmlist))
+					list_add(&dst_mm->mmlist,
+						 &src_mm->mmlist);
+				spin_unlock(&mmlist_lock);
+			}
+			if (is_write_migration_entry(entry) &&
+					is_cow_mapping(vm_flags)) {
+				/*
+				 * COW mappings require pages in both parent
+				 * and child to be set to read.
+				 */
+				make_migration_entry_read(&entry);
+				pte = swp_entry_to_pte(entry);
+				set_pte_at(src_mm, addr, src_pte, pte);
+			}
+		}
+		goto out_set_pte;
+	}
+
+	/*
+	 * If it's a COW mapping, write protect it both
+	 * in the parent and the child
+	 */
+	if (is_cow_mapping(vm_flags)) {
+		ptep_set_wrprotect(src_mm, addr, src_pte);
+		pte = pte_wrprotect(pte);
+	}
+
+	/*
+	 * If it's a shared mapping, mark it clean in
+	 * the child
+	 */
+	if (vm_flags & VM_SHARED)
+		pte = pte_mkclean(pte);
+	pte = pte_mkold(pte);
+
+	page = vm_normal_page(vma, addr, pte);
+	if (page) {
+		get_page(page);
+		page_dup_rmap(page, vma, addr);
+		rss[!!PageAnon(page)]++;
+	}
+
+out_set_pte:
+	set_pte_at(dst_mm, addr, dst_pte, pte);
+}
+
+static int ax8swap_copy_pte_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		pmd_t *dst_pmd, pmd_t *src_pmd, struct vm_area_struct *vma,
+		unsigned long addr, unsigned long end)
+{
+	pte_t *src_pte, *dst_pte;
+	spinlock_t *src_ptl, *dst_ptl;
+	int progress = 0;
+	int rss[2];
+
+again:
+	rss[1] = rss[0] = 0;
+	dst_pte = pte_alloc_map_lock(dst_mm, dst_pmd, addr, &dst_ptl);
+	if (!dst_pte)
+		return -ENOMEM;
+	src_pte = pte_offset_map_nested(src_pmd, addr);
+	src_ptl = pte_lockptr(src_mm, src_pmd);
+	spin_lock_nested(src_ptl, SINGLE_DEPTH_NESTING);
+	arch_enter_lazy_mmu_mode();
+
+	do {
+		/*
+		 * We are holding two locks at this point - either of them
+		 * could generate latencies in another task on another CPU.
+		 */
+		if (progress >= 32) {
+			progress = 0;
+			if (need_resched() ||
+			    spin_needbreak(src_ptl) || spin_needbreak(dst_ptl))
+				break;
+		}
+		if (pte_none(*src_pte)) {
+			progress++;
+			continue;
+		}
+		ax8swap_copy_one_pte(dst_mm, src_mm, dst_pte, src_pte, vma, addr, rss);
+		progress += 8;
+	} while (dst_pte++, src_pte++, addr += PAGE_SIZE, addr != end);
+
+	arch_leave_lazy_mmu_mode();
+	spin_unlock(src_ptl);
+	pte_unmap_nested(src_pte - 1);
+	ax8swap_add_mm_rss(dst_mm, rss[0], rss[1]);
+	pte_unmap_unlock(dst_pte - 1, dst_ptl);
+	cond_resched();
+	if (addr != end)
+		goto again;
+	return 0;
+}
+
+static inline int ax8swap_copy_pmd_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		pud_t *dst_pud, pud_t *src_pud, struct vm_area_struct *vma,
+		unsigned long addr, unsigned long end)
+{
+	pmd_t *src_pmd, *dst_pmd;
+	unsigned long next;
+
+	dst_pmd = pmd_alloc(dst_mm, dst_pud, addr);
+	if (!dst_pmd)
+		return -ENOMEM;
+	src_pmd = pmd_offset(src_pud, addr);
+	do {
+		next = pmd_addr_end(addr, end);
+		if (pmd_none_or_clear_bad(src_pmd))
+			continue;
+		if (ax8swap_copy_pte_range(dst_mm, src_mm, dst_pmd, src_pmd,
+						vma, addr, next))
+			return -ENOMEM;
+	} while (dst_pmd++, src_pmd++, addr = next, addr != end);
+	return 0;
+}
+
+static inline int ax8swap_copy_pud_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		pgd_t *dst_pgd, pgd_t *src_pgd, struct vm_area_struct *vma,
+		unsigned long addr, unsigned long end)
+{
+	pud_t *src_pud, *dst_pud;
+	unsigned long next;
+
+	dst_pud = pud_alloc(dst_mm, dst_pgd, addr);
+	if (!dst_pud)
+		return -ENOMEM;
+	src_pud = pud_offset(src_pgd, addr);
+	do {
+		next = pud_addr_end(addr, end);
+		if (pud_none_or_clear_bad(src_pud))
+			continue;
+		if (ax8swap_copy_pmd_range(dst_mm, src_mm, dst_pud, src_pud,
+						vma, addr, next))
+			return -ENOMEM;
+	} while (dst_pud++, src_pud++, addr = next, addr != end);
+	return 0;
+}
+
+int ax8swap_copy_page_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		struct vm_area_struct *vma)
+{
+	pgd_t *src_pgd, *dst_pgd;
+	unsigned long next;
+	unsigned long addr = vma->vm_start;
+	unsigned long end = vma->vm_end;
+	int ret;
+
+	/*
+	 * Don't copy ptes where a page fault will fill them correctly.
+	 * Fork becomes much lighter when there are big shared or private
+	 * readonly mappings. The tradeoff is that copy_page_range is more
+	 * efficient than faulting.
+	 */
+	if (!(vma->vm_flags & (VM_HUGETLB|VM_NONLINEAR|VM_PFNMAP|VM_INSERTPAGE))) {
+		if (!vma->anon_vma)
+			return 0;
+	}
+
+	if (is_vm_hugetlb_page(vma))
+		return copy_hugetlb_page_range(dst_mm, src_mm, vma);
+
+	if (unlikely(is_pfn_mapping(vma))) {
+		/*
+		 * We do not free on error cases below as remove_vma
+		 * gets called on error from higher level routine
+		 */
+		ret = track_pfn_vma_copy(vma);
+		if (ret)
+			return ret;
+	}
+
+	/*
+	 * We need to invalidate the secondary MMU mappings only when
+	 * there could be a permission downgrade on the ptes of the
+	 * parent mm. And a permission downgrade will only happen if
+	 * is_cow_mapping() returns true.
+	 */
+	if (is_cow_mapping(vma->vm_flags))
+		mmu_notifier_invalidate_range_start(src_mm, addr, end);
+
+	ret = 0;
+	dst_pgd = pgd_offset(dst_mm, addr);
+	src_pgd = pgd_offset(src_mm, addr);
+	do {
+		next = pgd_addr_end(addr, end);
+		if (pgd_none_or_clear_bad(src_pgd))
+			continue;
+		if (unlikely(ax8swap_copy_pud_range(dst_mm, src_mm, dst_pgd, src_pgd,
+					    vma, addr, next))) {
+			ret = -ENOMEM;
+			break;
+		}
+	} while (dst_pgd++, src_pgd++, addr = next, addr != end);
+
+	if (is_cow_mapping(vma->vm_flags))
+		mmu_notifier_invalidate_range_end(src_mm,
+						  vma->vm_start, end);
+	return ret;
+} 
+
+static unsigned long ax8swap_zap_pte_range(struct mmu_gather *tlb,
+				struct vm_area_struct *vma, pmd_t *pmd,
+				unsigned long addr, unsigned long end,
+				long *zap_work, struct zap_details *details)
+{
+	struct mm_struct *mm = tlb->mm;
+	pte_t *pte;
+	spinlock_t *ptl;
+	int file_rss = 0;
+	int anon_rss = 0;
+
+	pte = pte_offset_map_lock(mm, pmd, addr, &ptl);
+	arch_enter_lazy_mmu_mode();
+	do {
+		pte_t ptent = *pte;
+		if (pte_none(ptent)) {
+			(*zap_work)--;
+			continue;
+		}
+
+		(*zap_work) -= PAGE_SIZE;
+
+		if (pte_present(ptent)) {
+			struct page *page;
+
+			page = vm_normal_page(vma, addr, ptent);
+			if (unlikely(details) && page) {
+				/*
+				 * unmap_shared_mapping_pages() wants to
+				 * invalidate cache without truncating:
+				 * unmap shared but keep private pages.
+				 */
+				if (details->check_mapping &&
+				    details->check_mapping != page->mapping)
+					continue;
+				/*
+				 * Each page->index must be checked when
+				 * invalidating or truncating nonlinear.
+				 */
+				if (details->nonlinear_vma &&
+				    (page->index < details->first_index ||
+				     page->index > details->last_index))
+					continue;
+			}
+			ptent = ptep_get_and_clear_full(mm, addr, pte,
+							tlb->fullmm);
+			tlb_remove_tlb_entry(tlb, pte, addr);
+			if (unlikely(!page))
+				continue;
+			if (unlikely(details) && details->nonlinear_vma
+			    && linear_page_index(details->nonlinear_vma,
+						addr) != page->index)
+				set_pte_at(mm, addr, pte,
+					   pgoff_to_pte(page->index));
+			if (PageAnon(page))
+				anon_rss--;
+			else {
+				if (pte_dirty(ptent))
+					set_page_dirty(page);
+				if (pte_young(ptent) &&
+				    likely(!VM_SequentialReadHint(vma)))
+					mark_page_accessed(page);
+				file_rss--;
+			}
+			page_remove_rmap(page);
+			if (unlikely(page_mapcount(page) < 0))
+				ax8swap_print_bad_pte(vma, addr, ptent, page);
+			tlb_remove_page(tlb, page);
+			continue;
+		}
+		/*
+		 * If details->check_mapping, we leave swap entries;
+		 * if details->nonlinear_vma, we leave file entries.
+		 */
+		if (unlikely(details))
+			continue;
+		if (pte_file(ptent)) {
+			if (unlikely(!(vma->vm_flags & VM_NONLINEAR)))
+				ax8swap_print_bad_pte(vma, addr, ptent, NULL);
+		} else if
+		  (unlikely(!free_swap_and_cache(pte_to_swp_entry(ptent))))
+			ax8swap_print_bad_pte(vma, addr, ptent, NULL);
+		pte_clear_not_present_full(mm, addr, pte, tlb->fullmm);
+	} while (pte++, addr += PAGE_SIZE, (addr != end && *zap_work > 0));
+
+	ax8swap_add_mm_rss(mm, file_rss, anon_rss);
+	arch_leave_lazy_mmu_mode();
+	pte_unmap_unlock(pte - 1, ptl);
+
+	return addr;
+}
+
+static inline unsigned long ax8swap_zap_pmd_range(struct mmu_gather *tlb,
+				struct vm_area_struct *vma, pud_t *pud,
+				unsigned long addr, unsigned long end,
+				long *zap_work, struct zap_details *details)
+{
+	pmd_t *pmd;
+	unsigned long next;
+
+	pmd = pmd_offset(pud, addr);
+	do {
+		next = pmd_addr_end(addr, end);
+		if (pmd_none_or_clear_bad(pmd)) {
+			(*zap_work)--;
+			continue;
+		}
+		next = ax8swap_zap_pte_range(tlb, vma, pmd, addr, next,
+						zap_work, details);
+	} while (pmd++, addr = next, (addr != end && *zap_work > 0));
+
+	return addr;
+}
+
+static inline unsigned long ax8swap_zap_pud_range(struct mmu_gather *tlb,
+				struct vm_area_struct *vma, pgd_t *pgd,
+				unsigned long addr, unsigned long end,
+				long *zap_work, struct zap_details *details)
+{
+	pud_t *pud;
+	unsigned long next;
+
+	pud = pud_offset(pgd, addr);
+	do {
+		next = pud_addr_end(addr, end);
+		if (pud_none_or_clear_bad(pud)) {
+			(*zap_work)--;
+			continue;
+		}
+		next = ax8swap_zap_pmd_range(tlb, vma, pud, addr, next,
+						zap_work, details);
+	} while (pud++, addr = next, (addr != end && *zap_work > 0));
+
+	return addr;
+}
+
+static unsigned long ax8swap_unmap_page_range(struct mmu_gather *tlb,
+				struct vm_area_struct *vma,
+				unsigned long addr, unsigned long end,
+				long *zap_work, struct zap_details *details)
+{
+	pgd_t *pgd;
+	unsigned long next;
+
+	if (details && !details->check_mapping && !details->nonlinear_vma)
+		details = NULL;
+
+	BUG_ON(addr >= end);
+	tlb_start_vma(tlb, vma);
+	pgd = pgd_offset(vma->vm_mm, addr);
+	do {
+		next = pgd_addr_end(addr, end);
+		if (pgd_none_or_clear_bad(pgd)) {
+			(*zap_work)--;
+			continue;
+		}
+		next = ax8swap_zap_pud_range(tlb, vma, pgd, addr, next,
+						zap_work, details);
+	} while (pgd++, addr = next, (addr != end && *zap_work > 0));
+	tlb_end_vma(tlb, vma);
+
+	return addr;
+}
+
+#ifdef CONFIG_PREEMPT
+# define ZAP_BLOCK_SIZE	(8 * PAGE_SIZE)
+#else
+/* No preempt: go for improved straight-line efficiency */
+# define ZAP_BLOCK_SIZE	(1024 * PAGE_SIZE)
+#endif
+
+/**
+ * unmap_vmas - unmap a range of memory covered by a list of vma's
+ * @tlbp: address of the caller's struct mmu_gather
+ * @vma: the starting vma
+ * @start_addr: virtual address at which to start unmapping
+ * @end_addr: virtual address at which to end unmapping
+ * @nr_accounted: Place number of unmapped pages in vm-accountable vma's here
+ * @details: details of nonlinear truncation or shared cache invalidation
+ *
+ * Returns the end address of the unmapping (restart addr if interrupted).
+ *
+ * Unmap all pages in the vma list.
+ *
+ * We aim to not hold locks for too long (for scheduling latency reasons).
+ * So zap pages in ZAP_BLOCK_SIZE bytecounts.  This means we need to
+ * return the ending mmu_gather to the caller.
+ *
+ * Only addresses between `start' and `end' will be unmapped.
+ *
+ * The VMA list must be sorted in ascending virtual address order.
+ *
+ * unmap_vmas() assumes that the caller will flush the whole unmapped address
+ * range after unmap_vmas() returns.  So the only responsibility here is to
+ * ensure that any thus-far unmapped pages are flushed before unmap_vmas()
+ * drops the lock and schedules.
+ */
+unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
+		struct vm_area_struct *vma, unsigned long start_addr,
+		unsigned long end_addr, unsigned long *nr_accounted,
+		struct zap_details *details)
+{
+	long zap_work = ZAP_BLOCK_SIZE;
+	unsigned long tlb_start = 0;	/* For tlb_finish_mmu */
+	int tlb_start_valid = 0;
+	unsigned long start = start_addr;
+	spinlock_t *i_mmap_lock = details? details->i_mmap_lock: NULL;
+	int fullmm = (*tlbp)->fullmm;
+	struct mm_struct *mm = vma->vm_mm;
+
+	mmu_notifier_invalidate_range_start(mm, start_addr, end_addr);
+	for ( ; vma && vma->vm_start < end_addr; vma = vma->vm_next) {
+		unsigned long end;
+
+		start = max(vma->vm_start, start_addr);
+		if (start >= vma->vm_end)
+			continue;
+		end = min(vma->vm_end, end_addr);
+		if (end <= vma->vm_start)
+			continue;
+
+		if (vma->vm_flags & VM_ACCOUNT)
+			*nr_accounted += (end - start) >> PAGE_SHIFT;
+
+		if (unlikely(is_pfn_mapping(vma)))
+			untrack_pfn_vma(vma, 0, 0);
+
+		while (start != end) {
+			if (!tlb_start_valid) {
+				tlb_start = start;
+				tlb_start_valid = 1;
+			}
+
+			if (unlikely(is_vm_hugetlb_page(vma))) {
+				/*
+				 * It is undesirable to test vma->vm_file as it
+				 * should be non-null for valid hugetlb area.
+				 * However, vm_file will be NULL in the error
+				 * cleanup path of do_mmap_pgoff. When
+				 * hugetlbfs ->mmap method fails,
+				 * do_mmap_pgoff() nullifies vma->vm_file
+				 * before calling this function to clean up.
+				 * Since no pte has actually been setup, it is
+				 * safe to do nothing in this case.
+				 */
+				if (vma->vm_file) {
+					unmap_hugepage_range(vma, start, end, NULL);
+					zap_work -= (end - start) /
+					pages_per_huge_page(hstate_vma(vma));
+				}
+
+				start = end;
+			} else
+				start = ax8swap_unmap_page_range(*tlbp, vma,
+						start, end, &zap_work, details);
+
+			if (zap_work > 0) {
+				BUG_ON(start != end);
+				break;
+			}
+
+			tlb_finish_mmu(*tlbp, tlb_start, start);
+
+			if (need_resched() ||
+				(i_mmap_lock && spin_needbreak(i_mmap_lock))) {
+				if (i_mmap_lock) {
+					*tlbp = NULL;
+					goto out;
+				}
+				cond_resched();
+			}
+
+			*tlbp = tlb_gather_mmu(vma->vm_mm, fullmm);
+			tlb_start_valid = 0;
+			zap_work = ZAP_BLOCK_SIZE;
+		}
+	}
+out:
+	mmu_notifier_invalidate_range_end(mm, start_addr, end_addr);
+	return start;	/* which is now the end (or restart) address */
+} 
+
+/**
+ * zap_page_range - remove user pages in a given range
+ * @vma: vm_area_struct holding the applicable pages
+ * @address: starting address of pages to zap
+ * @size: number of bytes to zap
+ * @details: details of nonlinear truncation or shared cache invalidation
+ */
+unsigned long ax8swap_zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details *details)
+{
+	struct mm_struct *mm = vma->vm_mm;
+	struct mmu_gather *tlb;
+	unsigned long end = address + size;
+	unsigned long nr_accounted = 0;
+
+	lru_add_drain();
+	tlb = tlb_gather_mmu(mm, 0);
+	update_hiwater_rss(mm);
+	end = ax8swap_unmap_vmas(&tlb, vma, address, end, &nr_accounted, details);
+	if (tlb)
+		tlb_finish_mmu(tlb, address, end);
+	return end;
+} 
+
 /*
  * handle_pte_fault chooses page fault handler according to an entry
  * which was read non-atomically.  Before making any commitment, on

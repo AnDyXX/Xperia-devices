@@ -887,3 +887,200 @@ void ax8swap_shrink_zone(int priority, struct zone *zone,
 
 	throttle_vm_writeout(sc->gfp_mask);
 }
+
+/*
+ * We are about to scan this zone at a certain priority level.  If that priority
+ * level is smaller (ie: more urgent) than the previous priority, then note
+ * that priority level within the zone.  This is done so that when the next
+ * process comes in to scan this zone, it will immediately start out at this
+ * priority level rather than having to build up its own scanning priority.
+ * Here, this priority affects only the reclaim-mapped threshold.
+ */
+static inline void note_zone_scanning_priority(struct zone *zone, int priority)
+{
+	if (priority < zone->prev_priority)
+		zone->prev_priority = priority;
+} 
+
+/*
+ * This is the direct reclaim path, for page-allocating processes.  We only
+ * try to reclaim pages from zones which will satisfy the caller's allocation
+ * request.
+ *
+ * We reclaim from a zone even if that zone is over pages_high.  Because:
+ * a) The caller may be trying to free *extra* pages to satisfy a higher-order
+ *    allocation or
+ * b) The zones may be over pages_high but they must go *over* pages_high to
+ *    satisfy the `incremental min' zone defense algorithm.
+ *
+ * If a zone is deemed to be full of pinned pages then just give it a light
+ * scan then give up on it.
+ */
+static void ax8swap_shrink_zones(int priority, struct zonelist *zonelist,
+					struct scan_control *sc)
+{
+	enum zone_type high_zoneidx = gfp_zone(sc->gfp_mask);
+	struct zoneref *z;
+	struct zone *zone;
+
+	sc->all_unreclaimable = 1;
+	for_each_zone_zonelist(zone, z, zonelist, high_zoneidx) {
+		if (!populated_zone(zone))
+			continue;
+		/*
+		 * Take care memory controller reclaiming has small influence
+		 * to global LRU.
+		 */
+		if (scanning_global_lru(sc)) {
+			if (!cpuset_zone_allowed_hardwall(zone, GFP_KERNEL))
+				continue;
+			note_zone_scanning_priority(zone, priority);
+
+			if (zone_is_all_unreclaimable(zone) &&
+						priority != DEF_PRIORITY)
+				continue;	/* Let kswapd poll it */
+			sc->all_unreclaimable = 0;
+		} else {
+			/*
+			 * Ignore cpuset limitation here. We just want to reduce
+			 * # of used pages by us regardless of memory shortage.
+			 */
+			sc->all_unreclaimable = 0;
+			mem_cgroup_note_reclaim_priority(sc->mem_cgroup,
+							priority);
+		}
+
+		ax8swap_shrink_zone(priority, zone, sc);
+	}
+} 
+
+/*
+ * This is the main entry point to direct page reclaim.
+ *
+ * If a full scan of the inactive list fails to free enough memory then we
+ * are "out of memory" and something needs to be killed.
+ *
+ * If the caller is !__GFP_FS then the probability of a failure is reasonably
+ * high - the zone may be full of dirty or under-writeback pages, which this
+ * caller can't do much about.  We kick pdflush and take explicit naps in the
+ * hope that some of these pages can be written.  But if the allocating task
+ * holds filesystem locks which prevent writeout this might not work, and the
+ * allocation attempt will fail.
+ *
+ * returns:	0, if no pages reclaimed
+ * 		else, the number of pages reclaimed
+ */
+static unsigned long ax8swap_do_try_to_free_pages(struct zonelist *zonelist,
+					struct scan_control *sc)
+{
+	int priority;
+	unsigned long ret = 0;
+	unsigned long total_scanned = 0;
+	struct reclaim_state *reclaim_state = current->reclaim_state;
+	unsigned long lru_pages = 0;
+	struct zoneref *z;
+	struct zone *zone;
+	enum zone_type high_zoneidx = gfp_zone(sc->gfp_mask);
+
+	delayacct_freepages_start();
+
+	if (scanning_global_lru(sc))
+		count_vm_event(ALLOCSTALL);
+	/*
+	 * mem_cgroup will not do shrink_slab.
+	 */
+	if (scanning_global_lru(sc)) {
+		for_each_zone_zonelist(zone, z, zonelist, high_zoneidx) {
+
+			if (!cpuset_zone_allowed_hardwall(zone, GFP_KERNEL))
+				continue;
+
+			lru_pages += zone_lru_pages(zone);
+		}
+	}
+
+	for (priority = DEF_PRIORITY; priority >= 0; priority--) {
+		sc->nr_scanned = 0;
+		if (!priority)
+			disable_swap_token();
+		ax8swap_shrink_zones(priority, zonelist, sc);
+		/*
+		 * Don't shrink slabs when reclaiming memory from
+		 * over limit cgroups
+		 */
+		if (scanning_global_lru(sc)) {
+			shrink_slab(sc->nr_scanned, sc->gfp_mask, lru_pages);
+			if (reclaim_state) {
+				sc->nr_reclaimed += reclaim_state->reclaimed_slab;
+				reclaim_state->reclaimed_slab = 0;
+			}
+		}
+		total_scanned += sc->nr_scanned;
+		if (sc->nr_reclaimed >= sc->swap_cluster_max) {
+			ret = sc->nr_reclaimed;
+			goto out;
+		}
+
+		/*
+		 * Try to write back as many pages as we just scanned.  This
+		 * tends to cause slow streaming writers to write data to the
+		 * disk smoothly, at the dirtying rate, which is nice.   But
+		 * that's undesirable in laptop mode, where we *want* lumpy
+		 * writeout.  So in laptop mode, write out the whole world.
+		 */
+		if (total_scanned > sc->swap_cluster_max +
+					sc->swap_cluster_max / 2) {
+			wakeup_pdflush(laptop_mode ? 0 : total_scanned);
+			sc->may_writepage = 1;
+		}
+
+		/* Take a nap, wait for some writeback to complete */
+		if (sc->nr_scanned && priority < DEF_PRIORITY - 2)
+			congestion_wait(WRITE, HZ/10);
+	}
+	/* top priority shrink_zones still had more to do? don't OOM, then */
+	if (!sc->all_unreclaimable && scanning_global_lru(sc))
+		ret = sc->nr_reclaimed;
+out:
+	/*
+	 * Now that we've scanned all the zones at this priority level, note
+	 * that level within the zone so that the next thread which performs
+	 * scanning of this zone will immediately start out at this priority
+	 * level.  This affects only the decision whether or not to bring
+	 * mapped pages onto the inactive list.
+	 */
+	if (priority < 0)
+		priority = 0;
+
+	if (scanning_global_lru(sc)) {
+		for_each_zone_zonelist(zone, z, zonelist, high_zoneidx) {
+
+			if (!cpuset_zone_allowed_hardwall(zone, GFP_KERNEL))
+				continue;
+
+			zone->prev_priority = priority;
+		}
+	} else
+		mem_cgroup_record_reclaim_priority(sc->mem_cgroup, priority);
+
+	delayacct_freepages_end();
+
+	return ret;
+}
+
+unsigned long ax8swap_try_to_free_pages(struct zonelist *zonelist, int order,
+								gfp_t gfp_mask)
+{
+	struct scan_control sc = {
+		.gfp_mask = gfp_mask,
+		.may_writepage = !laptop_mode,
+		.swap_cluster_max = SWAP_CLUSTER_MAX,
+		.may_swap = 1,
+		.swappiness = vm_swappiness,
+		.order = order,
+		.mem_cgroup = NULL,
+		.isolate_pages = ax8swap_isolate_pages_global,
+	};
+
+	return ax8swap_do_try_to_free_pages(zonelist, &sc);
+} 
