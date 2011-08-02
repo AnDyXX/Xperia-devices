@@ -96,7 +96,7 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"adjust_pte", 			(void**) &ax8swap_adjust_pte},
 	{"__set_page_dirty",		(void**) &ax8swap___set_page_dirty},
 	{"vm_completions", 		(void**) &ax8swap_vm_completions},
-	{"putback_lru_page", 	(void**) &ax8swap_putback_lru_page},
+	{"putback_lru_page", 		(void**) &ax8swap_putback_lru_page},
 	{NULL,				0},
 };
 

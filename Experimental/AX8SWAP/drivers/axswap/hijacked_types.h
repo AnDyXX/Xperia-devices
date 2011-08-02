@@ -4,6 +4,8 @@
 #include <linux/pipe_fs_i.h>
 #include <linux/mmdebug.h>
 #include <linux/mm.h>
+#include <linux/cgroup.h>
+#include <linux/shmem_fs.h>
 
 /* Request for sync pageout. */
 enum pageout_io {
@@ -22,6 +24,14 @@ typedef enum {
 	/* page is clean and locked */
 	PAGE_CLEAN,
 } pageout_t;
+
+/* Flag allocation requirements to shmem_getpage and shmem_swp_alloc */
+enum sgp_type {
+	SGP_READ,	/* don't exceed i_size, don't allocate page */
+	SGP_CACHE,	/* don't exceed i_size, may allocate page */
+	SGP_DIRTY,	/* like SGP_CACHE, but set new page dirty */
+	SGP_WRITE,	/* may exceed i_size, may allocate page */
+};
 
 struct scan_control {
 	/* Incremented by the number of inactive pages that were scanned */
@@ -132,4 +142,9 @@ static inline int ax8swap_is_mlocked_vma(struct vm_area_struct *v, struct page *
 	return 0;
 }
 #endif
+
+
+void ax8swap_show_mem(void);
+
+
 #endif
