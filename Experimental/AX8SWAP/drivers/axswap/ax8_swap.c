@@ -40,6 +40,7 @@ ax8swap_adjust_pte_type ax8swap_adjust_pte;
 ax8swap_putback_lru_page_type ax8swap_putback_lru_page;
 struct mutex * ax8swap_shmem_swaplist_mutex;
 struct list_head * ax8swap_shmem_swaplist;
+ax8swap_shrink_list_type ax8swap_shrink_list;
 
 
 // for get proc address
@@ -108,6 +109,8 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"__free_pages_ok",		&ax8swap___free_pages_ok},
 	{"free_hot_cold_page",		&ax8swap_free_hot_cold_page},
 	{"bad_page",			&ax8swap_bad_page},
+	{"__vm_enough_memory",		&ax8swap___vm_enough_memory},
+	{"shrink_zone",			&ax8swap_shrink_zone},
 	{NULL, 				0},
 };
 
@@ -117,7 +120,7 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"putback_lru_page", 		(void**) &ax8swap_putback_lru_page},
 	{"shmem_swaplist_mutex", 	(void**) &ax8swap_shmem_swaplist_mutex},
 	{"shmem_swaplist", 		(void**) &ax8swap_shmem_swaplist},
-	{"bad_page", 			(void**) &ax8swap_bad_page},
+	{"shrink_list", 		(void**) &ax8swap_shrink_list},
 	{NULL,				0},
 };
 

@@ -175,10 +175,13 @@ void ax8swap_free_hot_cold_page(struct page *page, int cold);
 
 void ax8swap_bad_page(struct page *page);
 
+int ax8swap___vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin);
 
+void ax8swap_shrink_zone(int priority, struct zone *zone,
+				struct scan_control *sc);
 
-
-
-
+typedef unsigned long (*ax8swap_shrink_list_type)(enum lru_list lru, unsigned long nr_to_scan,
+	struct zone *zone, struct scan_control *sc, int priority);
+extern ax8swap_shrink_list_type ax8swap_shrink_list;
 
 #endif

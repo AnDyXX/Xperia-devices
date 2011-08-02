@@ -99,6 +99,15 @@ static struct zone_reclaim_stat *ax8swap_get_reclaim_stat(struct zone *zone,
 	return &zone->reclaim_stat;
 }
 
+static unsigned long ax8swap_zone_nr_pages(struct zone *zone, struct scan_control *sc,
+				   enum lru_list lru)
+{
+	if (!scanning_global_lru(sc))
+		return mem_cgroup_zone_nr_pages(sc->mem_cgroup, zone, lru);
+
+	return zone_page_state(zone, NR_LRU_BASE + lru);
+}
+
 /* Called without lock on whether page is mapped, so answer is unstable */
 static inline int ax8swap_page_mapping_inuse(struct page *page)
 {
@@ -716,4 +725,165 @@ int ax8swap_page_evictable(struct page *page, struct vm_area_struct *vma)
 		return 0;
 
 	return 1;
+}
+
+
+/*
+ * Determine how aggressively the anon and file LRU lists should be
+ * scanned.  The relative value of each set of LRU lists is determined
+ * by looking at the fraction of the pages scanned we did rotate back
+ * onto the active list instead of evict.
+ *
+ * percent[0] specifies how much pressure to put on ram/swap backed
+ * memory, while percent[1] determines pressure on the file LRUs.
+ */
+static void ax8swap_get_scan_ratio(struct zone *zone, struct scan_control *sc,
+					unsigned long *percent)
+{
+	unsigned long anon, file, free;
+	unsigned long anon_prio, file_prio;
+	unsigned long ap, fp;
+	struct zone_reclaim_stat *reclaim_stat = ax8swap_get_reclaim_stat(zone, sc);
+
+	/* If we have no swap space, do not bother scanning anon pages. */
+	if (nr_swap_pages <= 0) {
+		percent[0] = 0;
+		percent[1] = 100;
+		return;
+	}
+
+	anon  = ax8swap_zone_nr_pages(zone, sc, LRU_ACTIVE_ANON) +
+		ax8swap_zone_nr_pages(zone, sc, LRU_INACTIVE_ANON);
+	file  = ax8swap_zone_nr_pages(zone, sc, LRU_ACTIVE_FILE) +
+		ax8swap_zone_nr_pages(zone, sc, LRU_INACTIVE_FILE);
+
+	if (scanning_global_lru(sc)) {
+		free  = zone_page_state(zone, NR_FREE_PAGES);
+		/* If we have very few page cache pages,
+		   force-scan anon pages. */
+		if (unlikely(file + free <= zone->pages_high)) {
+			percent[0] = 100;
+			percent[1] = 0;
+			return;
+		}
+	}
+
+	/*
+	 * OK, so we have swap space and a fair amount of page cache
+	 * pages.  We use the recently rotated / recently scanned
+	 * ratios to determine how valuable each cache is.
+	 *
+	 * Because workloads change over time (and to avoid overflow)
+	 * we keep these statistics as a floating average, which ends
+	 * up weighing recent references more than old ones.
+	 *
+	 * anon in [0], file in [1]
+	 */
+	if (unlikely(reclaim_stat->recent_scanned[0] > anon / 4)) {
+		spin_lock_irq(&zone->lru_lock);
+		reclaim_stat->recent_scanned[0] /= 2;
+		reclaim_stat->recent_rotated[0] /= 2;
+		spin_unlock_irq(&zone->lru_lock);
+	}
+
+	if (unlikely(reclaim_stat->recent_scanned[1] > file / 4)) {
+		spin_lock_irq(&zone->lru_lock);
+		reclaim_stat->recent_scanned[1] /= 2;
+		reclaim_stat->recent_rotated[1] /= 2;
+		spin_unlock_irq(&zone->lru_lock);
+	}
+
+	/*
+	 * With swappiness at 100, anonymous and file have the same priority.
+	 * This scanning priority is essentially the inverse of IO cost.
+	 */
+	anon_prio = sc->swappiness;
+	file_prio = 200 - sc->swappiness;
+
+	/*
+	 * The amount of pressure on anon vs file pages is inversely
+	 * proportional to the fraction of recently scanned pages on
+	 * each list that were recently referenced and in active use.
+	 */
+	ap = (anon_prio + 1) * (reclaim_stat->recent_scanned[0] + 1);
+	ap /= reclaim_stat->recent_rotated[0] + 1;
+
+	fp = (file_prio + 1) * (reclaim_stat->recent_scanned[1] + 1);
+	fp /= reclaim_stat->recent_rotated[1] + 1;
+
+	/* Normalize to percentages */
+	percent[0] = 100 * ap / (ap + fp + 1);
+	percent[1] = 100 - percent[0];
+}
+
+
+/*
+ * This is a basic per-zone page freer.  Used by both kswapd and direct reclaim.
+ */
+void ax8swap_shrink_zone(int priority, struct zone *zone,
+				struct scan_control *sc)
+{
+	unsigned long nr[NR_LRU_LISTS];
+	unsigned long nr_to_scan;
+	unsigned long percent[2];	/* anon @ 0; file @ 1 */
+	enum lru_list l;
+	unsigned long nr_reclaimed = sc->nr_reclaimed;
+	unsigned long swap_cluster_max = sc->swap_cluster_max;
+
+	ax8swap_get_scan_ratio(zone, sc, percent);
+
+	for_each_evictable_lru(l) {
+		int file = is_file_lru(l);
+		int scan;
+
+		scan = ax8swap_zone_nr_pages(zone, sc, l);
+		if (priority) {
+			scan >>= priority;
+			scan = (scan * percent[file]) / 100;
+		}
+		if (scanning_global_lru(sc)) {
+			zone->lru[l].nr_scan += scan;
+			nr[l] = zone->lru[l].nr_scan;
+			if (nr[l] >= swap_cluster_max)
+				zone->lru[l].nr_scan = 0;
+			else
+				nr[l] = 0;
+		} else
+			nr[l] = scan;
+	}
+
+	while (nr[LRU_INACTIVE_ANON] || nr[LRU_ACTIVE_FILE] ||
+					nr[LRU_INACTIVE_FILE]) {
+		for_each_evictable_lru(l) {
+			if (nr[l]) {
+				nr_to_scan = min(nr[l], swap_cluster_max);
+				nr[l] -= nr_to_scan;
+
+				nr_reclaimed += ax8swap_shrink_list(l, nr_to_scan,
+							    zone, sc, priority);
+			}
+		}
+		/*
+		 * On large memory systems, scan >> priority can become
+		 * really large. This is fine for the starting priority;
+		 * we want to put equal scanning pressure on each zone.
+		 * However, if the VM has a harder time of freeing pages,
+		 * with multiple processes reclaiming pages, the total
+		 * freeing target can get unreasonably large.
+		 */
+		if (nr_reclaimed > swap_cluster_max &&
+			priority < DEF_PRIORITY && !current_is_kswapd())
+			break;
+	}
+
+	sc->nr_reclaimed = nr_reclaimed;
+
+	/*
+	 * Even if we did not try to evict anon pages at all, we want to
+	 * rebalance the anon lru active/inactive ratio.
+	 */
+	if (ax8swap_inactive_anon_is_low(zone, sc))
+		ax8swap_shrink_active_list(SWAP_CLUSTER_MAX, zone, sc, priority, 0);
+
+	throttle_vm_writeout(sc->gfp_mask);
 }
