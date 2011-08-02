@@ -27,6 +27,8 @@ static int __init ax8swap_init(void)
 	// our 'GetProcAddress' :D
 	kallsyms_lookup_name_ax = (void*) OFS_KALLSYMS_LOOKUP_NAME;
 
+	//int procswaps_init(void)
+
 	return ret;
 }
 
