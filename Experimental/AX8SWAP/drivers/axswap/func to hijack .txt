@@ -1,0 +1,96 @@
+func to find:
+
+static inline struct address_space *page_mapping(struct page *page);
+
+#ifdef CONFIG_SWAP
+
+PAGEFLAG(SwapCache, swapcache)
+
+#else
+
+PAGEFLAG_FALSE(SwapCache)
+	
+SETPAGEFLAG_NOOP(SwapCache) 
+CLEARPAGEFLAG_NOOP(SwapCache)
+
+#endif
+
+#define nr_swap_pages				0L
+#define total_swap_pages			0L
+#define total_swapcache_pages			0UL
+
+#define si_swapinfo(val) \
+	do { (val)->freeswap = (val)->totalswap = 0; } while (0)
+/* only sparc can not include linux/pagemap.h in this file
+ * so leave page_cache_release and release_pages undeclared... */
+#define free_page_and_swap_cache(page) \
+	page_cache_release(page)
+#define free_pages_and_swap_cache(pages, nr) \
+	release_pages((pages), (nr), 0);
+
+static inline void show_swap_cache_info(void)
+{
+}
+
+#define free_swap_and_cache(swp)	is_migration_entry(swp)
+#define swap_duplicate(swp)		is_migration_entry(swp)
+
+static inline void swap_free(swp_entry_t swp)
+{
+}
+
+static inline struct page *swapin_readahead(swp_entry_t swp, gfp_t gfp_mask,
+			struct vm_area_struct *vma, unsigned long addr)
+{
+	return NULL;
+}
+
+static inline struct page *lookup_swap_cache(swp_entry_t swp)
+{
+	return NULL;
+}
+
+static inline int add_to_swap(struct page *page)
+{
+	return 0;
+}
+
+static inline int add_to_swap_cache(struct page *page, swp_entry_t entry,
+							gfp_t gfp_mask)
+{
+	return -1;
+}
+
+static inline void __delete_from_swap_cache(struct page *page)
+{
+}
+
+static inline void delete_from_swap_cache(struct page *page)
+{
+}
+
+#define reuse_swap_page(page)	(page_mapcount(page) == 1)
+
+static inline int try_to_free_swap(struct page *page)
+{
+	return 0;
+}
+
+static inline swp_entry_t get_swap_page(void)
+{
+	swp_entry_t entry;
+	entry.val = 0;
+	return entry;
+}
+
+/* linux/mm/thrash.c */
+#define put_swap_token(x) do { } while(0)
+#define grab_swap_token()  do { } while(0)
+#define has_swap_token(x) 0
+#define disable_swap_token() do { } while(0)
+
+static inline int mem_cgroup_cache_charge_swapin(struct page *page,
+			struct mm_struct *mm, gfp_t mask, bool locked)
+{
+	return 0;
+}
