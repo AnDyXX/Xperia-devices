@@ -1,4 +1,0 @@
-<4>[23015.634887] ax8swap: Unknown symbol __lru_cache_add
-<4>[23015.641354] ax8swap: Unknown symbol pmd_clear_bad
-<4>[23015.642420] ax8swap: Unknown symbol cap_vm_enough_memory
-<4>[23015.648465] ax8swap: Unknown symbol vm_committed_space

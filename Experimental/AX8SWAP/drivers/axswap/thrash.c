@@ -17,14 +17,10 @@
  * some progress in its execution.
  */
 
-#define CONFIG_SWAP
-#include <linux/swap.h>
-#undef CONFIG_SWAP
-
 #include <linux/jiffies.h>
 #include <linux/mm.h>
 #include <linux/sched.h>
-
+#include <linux/swap.h>
 
 static DEFINE_SPINLOCK(swap_token_lock);
 struct mm_struct *swap_token_mm;

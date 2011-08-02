@@ -5,17 +5,12 @@
  *  Swap reorganised 29.12.95, Stephen Tweedie
  */
 
-#define CONFIG_SWAP
-#include <linux/swap.h>
-#undef CONFIG_SWAP
-
-
 #include <linux/mm.h>
 #include <linux/hugetlb.h>
 #include <linux/mman.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
-
+#include <linux/swap.h>
 #include <linux/vmalloc.h>
 #include <linux/pagemap.h>
 #include <linux/namei.h>
@@ -39,8 +34,6 @@
 #include <asm/tlbflush.h>
 #include <linux/swapops.h>
 #include <linux/page_cgroup.h>
-
-#include "hijacked_types.h"
 
 static DEFINE_SPINLOCK(swap_lock);
 static unsigned int nr_swapfiles;
@@ -722,14 +715,14 @@ static int unuse_pte(struct vm_area_struct *vma, pmd_t *pmd,
 	get_page(page);
 	set_pte_at(vma->vm_mm, addr, pte,
 		   pte_mkold(mk_pte(page, vma->vm_page_prot)));
-	ax8swap_page_add_anon_rmap(page, vma, addr);
+	page_add_anon_rmap(page, vma, addr);
 	mem_cgroup_commit_charge_swapin(page, ptr);
 	swap_free(entry);
 	/*
 	 * Move the page to the active list so it is not
 	 * immediately swapped out again after swapon.
 	 */
-	ax8swap_activate_page(page);
+	activate_page(page);
 out:
 	pte_unmap_unlock(pte, ptl);
 out_nolock:
@@ -783,7 +776,7 @@ static inline int unuse_pmd_range(struct vm_area_struct *vma, pud_t *pud,
 	pmd = pmd_offset(pud, addr);
 	do {
 		next = pmd_addr_end(addr, end);
-		if (ax8swap_pmd_none_or_clear_bad(pmd))
+		if (pmd_none_or_clear_bad(pmd))
 			continue;
 		ret = unuse_pte_range(vma, pmd, addr, next, entry, page);
 		if (ret)
@@ -820,7 +813,7 @@ static int unuse_vma(struct vm_area_struct *vma,
 	int ret;
 
 	if (page->mapping) {
-		addr = ax8swap_page_address_in_vma(page, vma);
+		addr = page_address_in_vma(page, vma);
 		if (addr == -EFAULT)
 			return 0;
 		else
@@ -853,7 +846,7 @@ static int unuse_mm(struct mm_struct *mm,
 		 * Activate page so shrink_inactive_list is unlikely to unmap
 		 * its ptes while lock is dropped, so swapoff can make progress.
 		 */
-		ax8swap_activate_page(page);
+		activate_page(page);
 		unlock_page(page);
 		down_read(&mm->mmap_sem);
 		lock_page(page);
@@ -1004,7 +997,7 @@ static int try_to_unuse(unsigned int type)
 		swcount = *swap_map;
 		if (swcount > 1) {
 			if (start_mm == &init_mm)
-				shmem = ax8swap_shmem_unuse(entry, page);
+				shmem = shmem_unuse(entry, page);
 			else
 				retval = unuse_mm(start_mm, entry, page);
 		}
@@ -1034,7 +1027,7 @@ static int try_to_unuse(unsigned int type)
 					;
 				else if (mm == &init_mm) {
 					set_start_mm = 1;
-					shmem = ax8swap_shmem_unuse(entry, page);
+					shmem = shmem_unuse(entry, page);
 				} else
 					retval = unuse_mm(mm, entry, page);
 				if (set_start_mm && *swap_map < swcount) {
@@ -1428,8 +1421,8 @@ SYSCALL_DEFINE1(swapoff, const char __user *, specialfile)
 		spin_unlock(&swap_lock);
 		goto out_dput;
 	}
-	if (!ax8swap_security_vm_enough_memory(p->pages))
-		ax8swap_vm_unacct_memory(p->pages);
+	if (!security_vm_enough_memory(p->pages))
+		vm_unacct_memory(p->pages);
 	else {
 		err = -ENOMEM;
 		spin_unlock(&swap_lock);
@@ -1529,7 +1522,6 @@ out:
 	return err;
 }
 
-//TODO:  init proc fs
 #ifdef CONFIG_PROC_FS
 /* iterator */
 static void *swap_start(struct seq_file *swap, loff_t *pos)
@@ -1622,14 +1614,12 @@ static const struct file_operations proc_swaps_operations = {
 	.release	= seq_release,
 };
 
-//static int __init procswaps_init(void)
-//{
-//	proc_create("swaps", 0, NULL, &proc_swaps_operations);
-//	return 0;
-//}
-//TODO: check what should happened
-
-//__initcall(procswaps_init);
+static int __init procswaps_init(void)
+{
+	proc_create("swaps", 0, NULL, &proc_swaps_operations);
+	return 0;
+}
+__initcall(procswaps_init);
 #endif /* CONFIG_PROC_FS */
 
 #ifdef MAX_SWAPFILES_CHECK
@@ -2002,7 +1992,7 @@ get_swap_info_struct(unsigned type)
 int valid_swaphandles(swp_entry_t entry, unsigned long *offset)
 {
 	struct swap_info_struct *si;
-	int our_page_cluster = *ax8swap_page_cluster;
+	int our_page_cluster = page_cluster;
 	pgoff_t target, toff;
 	pgoff_t base, end;
 	int nr_pages = 0;

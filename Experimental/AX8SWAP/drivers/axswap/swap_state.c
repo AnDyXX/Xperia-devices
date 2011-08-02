@@ -6,15 +6,10 @@
  *
  *  Rewritten to use page cache, (C) 1998 Stephen Tweedie
  */
-
-#define CONFIG_SWAP
-#include <linux/swap.h>
-#undef CONFIG_SWAP
-
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/kernel_stat.h>
-
+#include <linux/swap.h>
 #include <linux/swapops.h>
 #include <linux/init.h>
 #include <linux/pagemap.h>
@@ -25,8 +20,6 @@
 #include <linux/page_cgroup.h>
 
 #include <asm/pgtable.h>
-
-#include "hijacked_types.h"
 
 /*
  * swapper_space is a fiction, retained to simplify the path through
@@ -236,14 +229,14 @@ void free_pages_and_swap_cache(struct page **pages, int nr)
 {
 	struct page **pagep = pages;
 
-	ax8swap_lru_add_drain();
+	lru_add_drain();
 	while (nr) {
 		int todo = min(nr, PAGEVEC_SIZE);
 		int i;
 
 		for (i = 0; i < todo; i++)
 			free_swap_cache(pagep[i]);
-		ax8swap_release_pages(pagep, todo, 0);
+		release_pages(pagep, todo, 0);
 		pagep += todo;
 		nr -= todo;
 	}
@@ -320,7 +313,7 @@ struct page *read_swap_cache_async(swp_entry_t entry, gfp_t gfp_mask,
 			/*
 			 * Initiate read into locked page and return.
 			 */
-			ax8swap_lru_cache_add_anon(new_page);
+			lru_cache_add_anon(new_page);
 			swap_readpage(NULL, new_page);
 			return new_page;
 		}
@@ -377,6 +370,6 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 			break;
 		page_cache_release(page);
 	}
-	ax8swap_lru_add_drain();	/* Push any new pages onto the LRU now */
+	lru_add_drain();	/* Push any new pages onto the LRU now */
 	return read_swap_cache_async(entry, gfp_mask, vma, addr);
 }

@@ -10,18 +10,14 @@
  *  Always use brw_page, life becomes simpler. 12 May 1998 Eric Biederman
  */
 
-#define CONFIG_SWAP
-#include <linux/swap.h>
-#undef CONFIG_SWAP
-
 #include <linux/mm.h>
 #include <linux/kernel_stat.h>
 #include <linux/pagemap.h>
+#include <linux/swap.h>
 #include <linux/bio.h>
 #include <linux/swapops.h>
 #include <linux/writeback.h>
 #include <asm/pgtable.h>
-
 
 static struct bio *get_swap_bio(gfp_t gfp_flags, pgoff_t index,
 				struct page *page, bio_end_io_t end_io)
