@@ -71,6 +71,11 @@ struct scan_control {
 			int active, int file);
 };
 
+struct vmalloc_info {
+	unsigned long	used;
+	unsigned long	largest_chunk;
+}; 
+
 asmlinkage long sys_ax8swap_mincore(unsigned long start, size_t len,
 				unsigned char __user * vec);
 
@@ -183,5 +188,36 @@ void ax8swap_shrink_zone(int priority, struct zone *zone,
 typedef unsigned long (*ax8swap_shrink_list_type)(enum lru_list lru, unsigned long nr_to_scan,
 	struct zone *zone, struct scan_control *sc, int priority);
 extern ax8swap_shrink_list_type ax8swap_shrink_list;
+
+typedef int (*ax8swap___do_fault_type)(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, pmd_t *pmd,
+		pgoff_t pgoff, unsigned int flags, pte_t orig_pte);
+
+extern ax8swap___do_fault_type ax8swap___do_fault;
+
+typedef void (*ax8swap_print_bad_pte_type)(struct vm_area_struct *vma, unsigned long addr,
+			  pte_t pte, struct page *page); 
+extern ax8swap_print_bad_pte_type ax8swap_print_bad_pte;
+
+int ax8swap_handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, int write_access);
+
+int ax8swap_meminfo_proc_show(struct seq_file *m, void *v);
+
+typedef void (*ax8swap_get_vmalloc_info_type)(struct vmalloc_info *vmi);
+extern ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
+
+#ifdef CONFIG_MMU
+#define VMALLOC_TOTAL (VMALLOC_END - VMALLOC_START)
+extern void get_vmalloc_info(struct vmalloc_info *vmi);
+#else
+
+#define VMALLOC_TOTAL 0UL
+#define get_vmalloc_info(vmi)			\
+do {						\
+	(vmi)->used = 0;			\
+	(vmi)->largest_chunk = 0;		\
+} while(0)
+#endif 
 
 #endif

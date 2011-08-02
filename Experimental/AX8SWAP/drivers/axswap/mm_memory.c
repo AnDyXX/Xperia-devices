@@ -64,6 +64,8 @@
 
 #include "../../mm/internal.h"
 
+#include "hijacked_types.h"
+
 /*
  * handle_pte_fault chooses page fault handler according to an entry
  * which was read non-atomically.  Before making any commitment, on
@@ -73,7 +75,7 @@
  * (but do_wp_page is only called after already making such a check;
  * and do_anonymous_page and do_no_page can safely check later on).
  */
-static inline int pte_unmap_same(struct mm_struct *mm, pmd_t *pmd,
+static inline int ax8swap_pte_unmap_same(struct mm_struct *mm, pmd_t *pmd,
 				pte_t *page_table, pte_t orig_pte)
 {
 	int same = 1;
@@ -95,14 +97,14 @@ static inline int pte_unmap_same(struct mm_struct *mm, pmd_t *pmd,
  * pte_mkwrite.  But get_user_pages can cause write faults for mappings
  * that do not have writing enabled, when used by access_process_vm.
  */
-static inline pte_t maybe_mkwrite(pte_t pte, struct vm_area_struct *vma)
+static inline pte_t ax8swap_maybe_mkwrite(pte_t pte, struct vm_area_struct *vma)
 {
 	if (likely(vma->vm_flags & VM_WRITE))
 		pte = pte_mkwrite(pte);
 	return pte;
 }
 
-static inline void cow_user_page(struct page *dst, struct page *src, unsigned long va, struct vm_area_struct *vma)
+static inline void ax8swap_cow_user_page(struct page *dst, struct page *src, unsigned long va, struct vm_area_struct *vma)
 {
 	/*
 	 * If the source page was a PFN mapping, we don't have
@@ -146,7 +148,7 @@ static inline void cow_user_page(struct page *dst, struct page *src, unsigned lo
  * but allow concurrent faults), with pte both mapped and locked.
  * We return with mmap_sem still held, but pte unmapped and unlocked.
  */
-static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
+static int ax8swap_do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		unsigned long address, pte_t *page_table, pmd_t *pmd,
 		spinlock_t *ptl, pte_t orig_pte)
 {
@@ -236,7 +238,7 @@ static int do_wp_page(struct mm_struct *mm, struct vm_area_struct *vma,
 reuse:
 		flush_cache_page(vma, address, pte_pfn(orig_pte));
 		entry = pte_mkyoung(orig_pte);
-		entry = maybe_mkwrite(pte_mkdirty(entry), vma);
+		entry = ax8swap_maybe_mkwrite(pte_mkdirty(entry), vma);
 		if (ptep_set_access_flags(vma, address, page_table, entry,1))
 			update_mmu_cache(vma, address, entry);
 		ret |= VM_FAULT_WRITE;
@@ -265,7 +267,7 @@ gotten:
 		clear_page_mlock(old_page);
 		unlock_page(old_page);
 	}
-	cow_user_page(new_page, old_page, address, vma);
+	ax8swap_cow_user_page(new_page, old_page, address, vma);
 	__SetPageUptodate(new_page);
 
 	if (mem_cgroup_newpage_charge(new_page, mm, GFP_KERNEL))
@@ -285,7 +287,7 @@ gotten:
 			inc_mm_counter(mm, anon_rss);
 		flush_cache_page(vma, address, pte_pfn(orig_pte));
 		entry = mk_pte(new_page, vma->vm_page_prot);
-		entry = maybe_mkwrite(pte_mkdirty(entry), vma);
+		entry = ax8swap_maybe_mkwrite(pte_mkdirty(entry), vma);
 		/*
 		 * Clear the pte entry and flush it first, before updating the
 		 * pte with the new entry. This will avoid a race condition
@@ -368,6 +370,57 @@ unwritable_page:
  * but allow concurrent faults), and pte mapped but not yet locked.
  * We return with mmap_sem still held, but pte unmapped and unlocked.
  */
+static int ax8swap_do_anonymous_page(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, pte_t *page_table, pmd_t *pmd,
+		int write_access)
+{
+	struct page *page;
+	spinlock_t *ptl;
+	pte_t entry;
+
+	/* Allocate our own private page. */
+	pte_unmap(page_table);
+
+	if (unlikely(anon_vma_prepare(vma)))
+		goto oom;
+	page = alloc_zeroed_user_highpage_movable(vma, address);
+	if (!page)
+		goto oom;
+	__SetPageUptodate(page);
+
+	if (mem_cgroup_newpage_charge(page, mm, GFP_KERNEL))
+		goto oom_free_page;
+
+	entry = mk_pte(page, vma->vm_page_prot);
+	entry = ax8swap_maybe_mkwrite(pte_mkdirty(entry), vma);
+
+	page_table = pte_offset_map_lock(mm, pmd, address, &ptl);
+	if (!pte_none(*page_table))
+		goto release;
+	inc_mm_counter(mm, anon_rss);
+	page_add_new_anon_rmap(page, vma, address);
+	set_pte_at(mm, address, page_table, entry);
+
+	/* No need to invalidate - it was non-present before */
+	update_mmu_cache(vma, address, entry);
+unlock:
+	pte_unmap_unlock(page_table, ptl);
+	return 0;
+release:
+	mem_cgroup_uncharge_page(page);
+	page_cache_release(page);
+	goto unlock;
+oom_free_page:
+	page_cache_release(page);
+oom:
+	return VM_FAULT_OOM;
+} 
+
+/*
+ * We enter with non-exclusive mmap_sem (to exclude vma changes,
+ * but allow concurrent faults), and pte mapped but not yet locked.
+ * We return with mmap_sem still held, but pte unmapped and unlocked.
+ */
 static int ax8swap_do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 		unsigned long address, pte_t *page_table, pmd_t *pmd,
 		int write_access, pte_t orig_pte)
@@ -379,7 +432,7 @@ static int ax8swap_do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma
 	struct mem_cgroup *ptr = NULL;
 	int ret = 0;
 
-	if (!pte_unmap_same(mm, pmd, page_table, orig_pte))
+	if (!ax8swap_pte_unmap_same(mm, pmd, page_table, orig_pte))
 		goto out;
 
 	entry = pte_to_swp_entry(orig_pte);
@@ -450,7 +503,7 @@ static int ax8swap_do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma
 	inc_mm_counter(mm, anon_rss);
 	pte = mk_pte(page, vma->vm_page_prot);
 	if (write_access && reuse_swap_page(page)) {
-		pte = maybe_mkwrite(pte_mkdirty(pte), vma);
+		pte = ax8swap_maybe_mkwrite(pte_mkdirty(pte), vma);
 		write_access = 0;
 	}
 	flush_icache_page(vma, page);
@@ -465,7 +518,7 @@ static int ax8swap_do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma
 	unlock_page(page);
 
 	if (write_access) {
-		ret |= do_wp_page(mm, vma, address, page_table, pmd, ptl, pte);
+		ret |= ax8swap_do_wp_page(mm, vma, address, page_table, pmd, ptl, pte);
 		if (ret & VM_FAULT_ERROR)
 			ret &= VM_FAULT_ERROR;
 		goto out;
@@ -485,7 +538,49 @@ out_nomap:
 	return ret;
 }
 
+static int ax8swap_do_linear_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, pte_t *page_table, pmd_t *pmd,
+		int write_access, pte_t orig_pte)
+{
+	pgoff_t pgoff = (((address & PAGE_MASK)
+			- vma->vm_start) >> PAGE_SHIFT) + vma->vm_pgoff;
+	unsigned int flags = (write_access ? FAULT_FLAG_WRITE : 0);
 
+	pte_unmap(page_table);
+	return ax8swap___do_fault(mm, vma, address, pmd, pgoff, flags, orig_pte);
+}
+
+/*
+ * Fault of a previously existing named mapping. Repopulate the pte
+ * from the encoded file_pte if possible. This enables swappable
+ * nonlinear vmas.
+ *
+ * We enter with non-exclusive mmap_sem (to exclude vma changes,
+ * but allow concurrent faults), and pte mapped but not yet locked.
+ * We return with mmap_sem still held, but pte unmapped and unlocked.
+ */
+static int ax8swap_do_nonlinear_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, pte_t *page_table, pmd_t *pmd,
+		int write_access, pte_t orig_pte)
+{
+	unsigned int flags = FAULT_FLAG_NONLINEAR |
+				(write_access ? FAULT_FLAG_WRITE : 0);
+	pgoff_t pgoff;
+
+	if (!ax8swap_pte_unmap_same(mm, pmd, page_table, orig_pte))
+		return 0;
+
+	if (unlikely(!(vma->vm_flags & VM_NONLINEAR))) {
+		/*
+		 * Page table corrupted: show pte and kill process.
+		 */
+		ax8swap_print_bad_pte(vma, address, orig_pte, NULL);
+		return VM_FAULT_OOM;
+	}
+
+	pgoff = pte_to_pgoff(orig_pte);
+	return ax8swap___do_fault(mm, vma, address, pmd, pgoff, flags, orig_pte);
+} 
 
 
 /*
@@ -501,7 +596,7 @@ out_nomap:
  * but allow concurrent faults), and pte mapped but not yet locked.
  * We return with mmap_sem still held, but pte unmapped and unlocked.
  */
-static inline int handle_pte_fault(struct mm_struct *mm,
+static inline int ax8swap_handle_pte_fault(struct mm_struct *mm,
 		struct vm_area_struct *vma, unsigned long address,
 		pte_t *pte, pmd_t *pmd, int write_access)
 {
@@ -513,14 +608,14 @@ static inline int handle_pte_fault(struct mm_struct *mm,
 		if (pte_none(entry)) {
 			if (vma->vm_ops) {
 				if (likely(vma->vm_ops->fault))
-					return do_linear_fault(mm, vma, address,
+					return ax8swap_do_linear_fault(mm, vma, address,
 						pte, pmd, write_access, entry);
 			}
-			return do_anonymous_page(mm, vma, address,
+			return ax8swap_do_anonymous_page(mm, vma, address,
 						 pte, pmd, write_access);
 		}
 		if (pte_file(entry))
-			return do_nonlinear_fault(mm, vma, address,
+			return ax8swap_do_nonlinear_fault(mm, vma, address,
 					pte, pmd, write_access, entry);
 		return ax8swap_do_swap_page(mm, vma, address,
 					pte, pmd, write_access, entry);
@@ -532,7 +627,7 @@ static inline int handle_pte_fault(struct mm_struct *mm,
 		goto unlock;
 	if (write_access) {
 		if (!pte_write(entry))
-			return do_wp_page(mm, vma, address,
+			return ax8swap_do_wp_page(mm, vma, address,
 					pte, pmd, ptl, entry);
 		entry = pte_mkdirty(entry);
 	}
@@ -558,7 +653,7 @@ unlock:
 /*
  * By the time we get here, we already hold the mm semaphore
  */
-int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+int ax8swap_handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 		unsigned long address, int write_access)
 {
 	pgd_t *pgd;
@@ -584,5 +679,5 @@ int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 	if (!pte)
 		return VM_FAULT_OOM;
 
-	return handle_pte_fault(mm, vma, address, pte, pmd, write_access);
+	return ax8swap_handle_pte_fault(mm, vma, address, pte, pmd, write_access);
 }

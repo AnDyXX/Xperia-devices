@@ -41,6 +41,9 @@ ax8swap_putback_lru_page_type ax8swap_putback_lru_page;
 struct mutex * ax8swap_shmem_swaplist_mutex;
 struct list_head * ax8swap_shmem_swaplist;
 ax8swap_shrink_list_type ax8swap_shrink_list;
+ ax8swap___do_fault_type ax8swap___do_fault;
+ax8swap_print_bad_pte_type ax8swap_print_bad_pte;
+ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
 
 
 // for get proc address
@@ -111,6 +114,8 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"bad_page",			&ax8swap_bad_page},
 	{"__vm_enough_memory",		&ax8swap___vm_enough_memory},
 	{"shrink_zone",			&ax8swap_shrink_zone},
+	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
+	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
 	{NULL, 				0},
 };
 
@@ -121,6 +126,9 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"shmem_swaplist_mutex", 	(void**) &ax8swap_shmem_swaplist_mutex},
 	{"shmem_swaplist", 		(void**) &ax8swap_shmem_swaplist},
 	{"shrink_list", 		(void**) &ax8swap_shrink_list},
+	{"__do_fault", 			(void**) &ax8swap___do_fault},
+	{"print_bad_pte", 		(void**) &ax8swap_print_bad_pte},
+	{"get_vmalloc_info", 		(void**) &ax8swap_get_vmalloc_info},
 	{NULL,				0},
 };
 
