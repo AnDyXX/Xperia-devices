@@ -37,8 +37,10 @@
 struct prop_descriptor * ax8swap_vm_completions;
 
 ax8swap_adjust_pte_type ax8swap_adjust_pte;
-ax8swap___set_page_dirty_type ax8swap___set_page_dirty;
 ax8swap_putback_lru_page_type ax8swap_putback_lru_page;
+struct mutex * ax8swap_shmem_swaplist_mutex;
+struct list_head * ax8swap_shmem_swaplist;
+
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -89,14 +91,33 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"__remove_mapping",		&ax8swap___remove_mapping},
 	{"shrink_active_list",		&ax8swap_shrink_active_list},
 	{"page_evictable",		&ax8swap_page_evictable},
+	{"shmem_swp_entry", 		&ax8swap_shmem_swp_entry},
+	{"shmem_swp_alloc", 		&ax8swap_shmem_swp_alloc},
+	{"shmem_free_swp", 		&ax8swap_shmem_free_swp},
+	{"shmem_truncate_range", 	&ax8swap_shmem_truncate_range},
+	{"shmem_truncate",		&ax8swap_shmem_truncate},
+	{"shmem_notify_change", 	&ax8swap_shmem_notify_change},
+	{"shmem_delete_inode", 		&ax8swap_shmem_delete_inode},
+	{"shmem_unuse", 		&ax8swap_shmem_unuse},
+	{"shmem_writepage", 		&ax8swap_shmem_writepage},
+	{"shmem_getpage", 		&ax8swap_shmem_getpage},
+	{"shmem_fault", 		&ax8swap_shmem_fault},
+	{"shmem_lock", 			&ax8swap_shmem_lock},
+	{"pagevec_swap_free",		&ax8swap_pagevec_swap_free},
+	{"__set_page_dirty", 		&ax8swap___set_page_dirty},
+	{"__free_pages_ok",		&ax8swap___free_pages_ok},
+	{"free_hot_cold_page",		&ax8swap_free_hot_cold_page},
+	{"bad_page",			&ax8swap_bad_page},
 	{NULL, 				0},
 };
 
 static const struct cfg_value_map2 field_mapping_table[] = {
 	{"adjust_pte", 			(void**) &ax8swap_adjust_pte},
-	{"__set_page_dirty",		(void**) &ax8swap___set_page_dirty},
 	{"vm_completions", 		(void**) &ax8swap_vm_completions},
 	{"putback_lru_page", 		(void**) &ax8swap_putback_lru_page},
+	{"shmem_swaplist_mutex", 	(void**) &ax8swap_shmem_swaplist_mutex},
+	{"shmem_swaplist", 		(void**) &ax8swap_shmem_swaplist},
+	{"bad_page", 			(void**) &ax8swap_bad_page},
 	{NULL,				0},
 };
 

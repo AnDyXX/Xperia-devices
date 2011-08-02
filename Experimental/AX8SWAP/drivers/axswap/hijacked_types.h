@@ -6,6 +6,7 @@
 #include <linux/mm.h>
 #include <linux/cgroup.h>
 #include <linux/shmem_fs.h>
+#include <linux/pagevec.h>
 
 /* Request for sync pageout. */
 enum pageout_io {
@@ -81,9 +82,8 @@ extern ax8swap_adjust_pte_type ax8swap_adjust_pte;
 void ax8swap_flush_dcache_page(struct page *page);
 int ax8swap___set_page_dirty_buffers(struct page *page);
 
-typedef void (*ax8swap___set_page_dirty_type)(struct page *page,
+void ax8swap___set_page_dirty(struct page *page,
 		struct address_space *mapping, int warn);
-extern ax8swap___set_page_dirty_type ax8swap___set_page_dirty;
 
 int ax8swap_page_cache_pipe_buf_steal(struct pipe_inode_info *pipe,
 				     struct pipe_buffer *buf);
@@ -145,6 +145,40 @@ static inline int ax8swap_is_mlocked_vma(struct vm_area_struct *v, struct page *
 
 
 void ax8swap_show_mem(void);
+
+extern struct mutex * ax8swap_shmem_swaplist_mutex;
+extern struct list_head * ax8swap_shmem_swaplist;
+
+swp_entry_t *ax8swap_shmem_swp_entry(struct shmem_inode_info *info, unsigned long index, struct page **page);
+swp_entry_t *ax8swap_shmem_swp_alloc(struct shmem_inode_info *info, unsigned long index, enum sgp_type sgp);
+int ax8swap_shmem_free_swp(swp_entry_t *dir, swp_entry_t *edir,
+						spinlock_t *punch_lock);
+void ax8swap_shmem_truncate_range(struct inode *inode, loff_t start, loff_t end);
+void ax8swap_shmem_truncate(struct inode *inode);
+int ax8swap_shmem_notify_change(struct dentry *dentry, struct iattr *attr);
+void ax8swap_shmem_delete_inode(struct inode *inode);
+int ax8swap_shmem_unuse(swp_entry_t entry, struct page *page);
+int ax8swap_shmem_writepage(struct page *page, struct writeback_control *wbc);
+
+int ax8swap_shmem_getpage(struct inode *inode, unsigned long idx,
+			struct page **pagep, enum sgp_type sgp, int *type);
+
+int ax8swap_shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
+
+int ax8swap_shmem_lock(struct file *file, int lock, struct user_struct *user);
+
+void ax8swap_pagevec_swap_free(struct pagevec *pvec);
+
+
+void ax8swap___free_pages_ok(struct page *page, unsigned int order);
+void ax8swap_free_hot_cold_page(struct page *page, int cold);
+
+void ax8swap_bad_page(struct page *page);
+
+
+
+
+
 
 
 #endif
