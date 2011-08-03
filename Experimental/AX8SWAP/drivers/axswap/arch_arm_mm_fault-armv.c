@@ -8,6 +8,8 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/module.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
@@ -93,7 +95,7 @@ void ax8swap_update_mmu_cache(struct vm_area_struct *vma, unsigned long addr, pt
 		int dirty = test_and_clear_bit(PG_dcache_dirty, &page->flags);
 
 		if (dirty)
-			__flush_dcache_page(mapping, page);
+			ax8swap___flush_dcache_page(mapping, page);
 #endif
 
 		if (cache_is_vivt())

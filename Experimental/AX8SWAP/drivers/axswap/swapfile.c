@@ -35,6 +35,8 @@
 #include <linux/swapops.h>
 #include <linux/page_cgroup.h>
 
+#include "hijacked_types.h"
+
 static DEFINE_SPINLOCK(swap_lock);
 static unsigned int nr_swapfiles;
 long nr_swap_pages;
@@ -1993,7 +1995,7 @@ get_swap_info_struct(unsigned type)
 int valid_swaphandles(swp_entry_t entry, unsigned long *offset)
 {
 	struct swap_info_struct *si;
-	int our_page_cluster = page_cluster;
+	int our_page_cluster = *ax8swap_page_cluster;
 	pgoff_t target, toff;
 	pgoff_t base, end;
 	int nr_pages = 0;

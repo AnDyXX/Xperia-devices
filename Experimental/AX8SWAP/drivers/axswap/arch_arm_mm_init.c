@@ -7,6 +7,8 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/swap.h>
@@ -29,15 +31,16 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 
+#include "hijacked_types.h"
 
 void ax8swap_show_mem(void)
 {
 	int free = 0, total = 0, reserved = 0;
 	int shared = 0, cached = 0, slab = 0, node, i;
-	struct meminfo * mi = &meminfo;
+	struct meminfo * mi = ax8swap_meminfo;
 
 	printk("Mem-info:\n");
-	show_free_areas();
+	ax8swap_show_free_areas();
 	for_each_online_node(node) {
 		pg_data_t *n = NODE_DATA(node);
 		struct page *map = pgdat_page_nr(n, 0) - n->node_start_pfn;

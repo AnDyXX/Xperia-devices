@@ -17,6 +17,7 @@
  *
  * async buffer flushing, 1999 Andrea Arcangeli <andrea@suse.de>
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/kernel.h>
 #include <linux/syscalls.h>

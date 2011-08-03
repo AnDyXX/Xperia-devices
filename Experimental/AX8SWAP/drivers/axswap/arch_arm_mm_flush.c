@@ -7,6 +7,8 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/pagemap.h>
@@ -16,8 +18,7 @@
 #include <asm/system.h>
 #include <asm/tlbflush.h>
 
-
-
+#include "hijacked_types.h"
 
 static void ax8swap___flush_dcache_aliases(struct address_space *mapping, struct page *page)
 {
@@ -83,7 +84,7 @@ void ax8swap_flush_dcache_page(struct page *page)
 	else
 #endif
 	{
-		__flush_dcache_page(mapping, page);
+		ax8swap___flush_dcache_page(mapping, page);
 		if (mapping && cache_is_vivt())
 			ax8swap___flush_dcache_aliases(mapping, page);
 		else if (mapping)

@@ -11,6 +11,8 @@
  * management can be a bitch. See 'mm/memory.c': 'copy_page_range()'
  */
 
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/unistd.h>
@@ -69,7 +71,7 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h> 
 
-
+#include "hijacked_types.h"
 
 /*
  * Decrement the use count and release all resources for an mm.
@@ -79,9 +81,9 @@ void ax8swap_mmput(struct mm_struct *mm)
 	might_sleep();
 
 	if (atomic_dec_and_test(&mm->mm_users)) {
-		exit_aio(mm);
+		ax8swap_exit_aio(mm);
 		exit_mmap(mm);
-		set_mm_exe_file(mm, NULL);
+		ax8swap_set_mm_exe_file(mm, NULL);
 		if (!list_empty(&mm->mmlist)) {
 			spin_lock(&mmlist_lock);
 			list_del(&mm->mmlist);

@@ -17,6 +17,9 @@
  * Copyright (C) 2006 Ingo Molnar <mingo@elte.hu>
  *
  */
+
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <linux/pagemap.h>
@@ -31,6 +34,7 @@
 #include <linux/uio.h>
 #include <linux/security.h>
 
+#include "hijacked_types.h"
 
 /*
  * Attempt to steal a page from a pipe buffer. This should perhaps go into

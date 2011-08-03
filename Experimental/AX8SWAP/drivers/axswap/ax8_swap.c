@@ -1,3 +1,16 @@
+/*
+ * Author: AnDyX <AnDyX at xda-developers>
+ *
+ *  This program is free software; you can redistribute  it and/or modify it
+ *  under  the terms of  the GNU General  Public License as published by the
+ *  Free Software Foundation;  either version 2 of the  License, or (at your
+ *  option) any later version.
+ *
+ *  This module contains code from kernel required to initialise and execute 
+ *  netfilter.  
+ */
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/types.h>
 #include <linux/kthread.h>
 #include <linux/device.h>
@@ -10,7 +23,7 @@
 #include "hijacked_types.h"
 
 
-#define AX_MODULE_VER			"v001"
+#define AX_MODULE_VER			"v001 alpha"
 #define AX_MODULE_NAME			"ax8swap"
 
 #define X8
@@ -34,21 +47,28 @@
 #define OFS_KALLSYMS_LOOKUP_NAME	0xC00B09F0			// kallsyms_lookup_name
 #endif
 
-struct prop_descriptor * ax8swap_vm_completions;
 
 ax8swap_adjust_pte_type ax8swap_adjust_pte;
-ax8swap_putback_lru_page_type ax8swap_putback_lru_page;
+ax8swap___flush_dcache_page_type ax8swap___flush_dcache_page;
+struct meminfo * ax8swap_meminfo;
+long * ax8swap_total_swap_pages;
+ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
+long * ax8swap_nr_swap_pages;
+int * ax8swap_vm_swappiness;
+long * ax8swap_vm_total_pages;
+int * ax8swap_sysctl_overcommit_memory;
+int * ax8swap_sysctl_overcommit_ratio;
+atomic_long_t * ax8swap_vm_committed_space;
+ax8swap_munlock_vma_pages_range_type ax8swap_munlock_vma_pages_range;
 struct mutex * ax8swap_shmem_swaplist_mutex;
 struct list_head * ax8swap_shmem_swaplist;
-ax8swap_shrink_list_type ax8swap_shrink_list;
- ax8swap___do_fault_type ax8swap___do_fault;
-ax8swap_print_bad_pte_type ax8swap_print_bad_pte;
-ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
-ax8swap_munlock_vma_pages_range_type ax8swap_munlock_vma_pages_range;
-ax8swap_free_pgtables_type ax8swap_free_pgtables;
-ax8swap_isolate_pages_global_type ax8swap_isolate_pages_global;
 ax8swap_shmem_truncate_address_only_type ax8swap_shmem_truncate_address_only;
-
+ax8swap_vma_prio_tree_remove_type ax8swap_vma_prio_tree_remove;
+ax8swap_user_shm_unlock_type ax8swap_user_shm_unlock;
+ax8swap_cap_vm_enough_memory_type ax8swap_cap_vm_enough_memory;
+ax8swap_exit_aio_type ax8swap_exit_aio;
+ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
+ax8swap_user_shm_lock_type ax8swap_user_shm_lock;
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -80,25 +100,17 @@ struct cfg_value_map2 {
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
-	{"sys_mincore", 		&sys_ax8swap_mincore},
-	{"update_mmu_cache", 		&ax8swap_update_mmu_cache},
+	{"_update_mmu_cache", 		&ax8swap_update_mmu_cache},
 	{"flush_dcache_page",		&ax8swap_flush_dcache_page},
-	{"__set_page_dirty_buffers",	&ax8swap___set_page_dirty_buffers},
-	{"page_cache_pipe_buf_steal", 	&ax8swap_page_cache_pipe_buf_steal},
-	{"sync_page",			&ax8swap_sync_page},
-	{"mark_buffer_dirty", 		&ax8swap_mark_buffer_dirty},
+	{"show_mem", 			&ax8swap_show_mem},
 	{"block_sync_page",		&ax8swap_block_sync_page},
-	{"set_page_dirty_balance", 	&ax8swap_set_page_dirty_balance},
-	{"__set_page_dirty_nobuffers", 	&ax8swap___set_page_dirty_nobuffers},
-	{"set_page_dirty", 		&ax8swap_set_page_dirty},
-	{"clear_page_dirty_for_io", 	&ax8swap_clear_page_dirty_for_io},
-	{"test_clear_page_writeback", 	&ax8swap_test_clear_page_writeback},
-	{"test_set_page_writeback", 	&ax8swap_test_set_page_writeback},
-	{"page_mkclean", 		&ax8swap_page_mkclean},
-	{"shrink_page_list",		&ax8swap_shrink_page_list},
-	{"__remove_mapping",		&ax8swap___remove_mapping},
-	{"shrink_active_list",		&ax8swap_shrink_active_list},
-	{"page_evictable",		&ax8swap_page_evictable},
+	{"mark_buffer_dirty", 		&ax8swap_mark_buffer_dirty},
+	{"__set_page_dirty_buffers",	&ax8swap___set_page_dirty_buffers},
+	{"__set_page_dirty", 		&ax8swap___set_page_dirty},
+	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
+	{"page_cache_pipe_buf_steal", 	&ax8swap_page_cache_pipe_buf_steal},
+	{"sys_mincore", 		&sys_ax8swap_mincore},
+	{"sys_remap_file_pages", 	&sys_ax8swap_remap_file_pages},
 	{"shmem_swp_entry", 		&ax8swap_shmem_swp_entry},
 	{"shmem_swp_alloc", 		&ax8swap_shmem_swp_alloc},
 	{"shmem_free_swp", 		&ax8swap_shmem_free_swp},
@@ -111,42 +123,35 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"shmem_getpage", 		&ax8swap_shmem_getpage},
 	{"shmem_fault", 		&ax8swap_shmem_fault},
 	{"shmem_lock", 			&ax8swap_shmem_lock},
-	{"pagevec_swap_free",		&ax8swap_pagevec_swap_free},
-	{"__set_page_dirty", 		&ax8swap___set_page_dirty},
-	{"__free_pages_ok",		&ax8swap___free_pages_ok},
-	{"free_hot_cold_page",		&ax8swap_free_hot_cold_page},
-	{"bad_page",			&ax8swap_bad_page},
-	{"__vm_enough_memory",		&ax8swap___vm_enough_memory},
-	{"shrink_zone",			&ax8swap_shrink_zone},
-	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
-	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
-	{"unmap_vmas", 			&ax8swap_unmap_vmas},
-	{"zap_page_range", 		&ax8swap_zap_page_range},
-	{"exit_mmap", 			&ax8swap_exit_mmap},
-	{"show_free_areas", 		&ax8swap_show_free_areas},
-	{"sys_remap_file_pages", 	&sys_ax8swap_remap_file_pages},
-	{"copy_page_range", 		&ax8swap_copy_page_range},
-	{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
+	{"shmem_free_blocks", 		&ax8swap_shmem_free_blocks},
+	{"shmem_reserve_inode", 	&ax8swap_shmem_reserve_inode},
+	{"shmem_free_inode", 		&ax8swap_shmem_free_inode},
 	{"mmput", 			&ax8swap_mmput},
-	{"page_referenced_one", 	&ax8swap_page_referenced_one},
-	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},
 	{NULL, 				0},
 };
 
 static const struct cfg_value_map2 field_mapping_table[] = {
 	{"adjust_pte", 			(void**) &ax8swap_adjust_pte},
-	{"vm_completions", 		(void**) &ax8swap_vm_completions},
-	{"putback_lru_page", 		(void**) &ax8swap_putback_lru_page},
+	{"__flush_dcache_page", 	(void**) &ax8swap___flush_dcache_page},
+	{"meminfo", 			(void**) &ax8swap_meminfo},
+	{"total_swap_pages", 		(void**) &ax8swap_total_swap_pages},
+	{"get_vmalloc_info", 		(void**) &ax8swap_get_vmalloc_info},
+	{"nr_swap_pages", 		(void**) &ax8swap_nr_swap_pages},
+	{"vm_swappiness", 		(void**) &ax8swap_vm_swappiness},
+	{"vm_total_pages", 		(void**) &ax8swap_vm_total_pages},
+	{"sysctl_overcommit_memory", 	(void**) &ax8swap_sysctl_overcommit_memory},
+	{"sysctl_overcommit_ratio", 	(void**) &ax8swap_sysctl_overcommit_ratio},
+	{"vm_committed_space", 		(void**) &ax8swap_vm_committed_space},
+	{"munlock_vma_pages_range", 	(void**) &ax8swap_munlock_vma_pages_range},
 	{"shmem_swaplist_mutex", 	(void**) &ax8swap_shmem_swaplist_mutex},
 	{"shmem_swaplist", 		(void**) &ax8swap_shmem_swaplist},
-	{"shrink_list", 		(void**) &ax8swap_shrink_list},
-	{"__do_fault", 			(void**) &ax8swap___do_fault},
-	{"print_bad_pte", 		(void**) &ax8swap_print_bad_pte},
-	{"get_vmalloc_info", 		(void**) &ax8swap_get_vmalloc_info},
-	{"munlock_vma_pages_range", 	(void**) &ax8swap_munlock_vma_pages_range},
-	{"free_pgtables", 		(void**) &ax8swap_free_pgtables},
-	{"isolate_pages_global", 	(void**) &ax8swap_isolate_pages_global},
 	{"shmem_truncate", 		(void**) &ax8swap_shmem_truncate_address_only},
+	{"vma_prio_tree_remove", 	(void**) &ax8swap_vma_prio_tree_remove},
+	{"user_shm_unlock", 		(void**) &ax8swap_user_shm_unlock},
+	{"cap_vm_enough_memory", 	(void**) &ax8swap_cap_vm_enough_memory},
+	{"exit_aio", 			(void**) &ax8swap_exit_aio},
+	{"set_mm_exe_file",		(void**) &ax8swap_set_mm_exe_file},
+	{"user_shm_lock", 		(void**) &ax8swap_user_shm_lock},
 	{NULL,				0},
 };
 
@@ -166,14 +171,13 @@ static int hijack_functions(int check_only)
 				ret = 0;
 			}
 		}
+		else if(func)
+		{
+			patch_to_jmp(func, t->new_func);
+			printk(KERN_ERR AX_MODULE_NAME ": Function %s hijacked\n", t->name);	
+		}
 		else
-			if(func)
-			{
-				patch_to_jmp(func, t->new_func);
-				printk(KERN_ERR AX_MODULE_NAME ": Function %s hijacked\n", t->name);	
-			}
-			else
-				ret = 0;
+			ret = 0;
 		t++;
 	}
 
@@ -195,15 +199,13 @@ static int hijack_fields(int check_only)
 				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s not found!!!\n", t->name);	
 				ret = 0;
 			}
+		} else if(func)
+		{
+			*(t->new_func) = (void *)func;
+			printk(KERN_ERR AX_MODULE_NAME ": Field %s set\n", t->name);	
 		}
 		else
-			if(func)
-			{
-				*(t->new_func) = (void *)func;
-				printk(KERN_ERR AX_MODULE_NAME ": Field %s set\n", t->name);	
-			}
-			else
-				ret = 0;
+			ret = 0;
 		t++;
 	}
 
@@ -226,9 +228,9 @@ static int __init ax8swap_init(void)
 	if(!hijack_fields(1))
 		goto eof;
 
-	hijack_fields(0);
+	//hijack_fields(0);
 
-	ret = procswaps_init();
+	//ret = procswaps_init();
 	
 	if(ret < 0)
 	{
@@ -236,14 +238,13 @@ static int __init ax8swap_init(void)
 		goto eof;
 	}
 
-	hijack_fields(0);
-	hijack_functions(0);
+	//hijack_functions(0);
 
-	bdi_init(swapper_space.backing_dev_info);
+	//bdi_init(swapper_space.backing_dev_info);
 
 eof:
 
-	return ret;
+	return ret-100;
 }
 
 module_init(ax8swap_init);

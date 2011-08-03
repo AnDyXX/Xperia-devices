@@ -1,3 +1,5 @@
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/fs.h>
 #include <linux/hugetlb.h>
 #include <linux/init.h>
