@@ -147,4 +147,40 @@ extern ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
 typedef int (*ax8swap_user_shm_lock_type)(size_t, struct user_struct *);
 extern ax8swap_user_shm_lock_type ax8swap_user_shm_lock;
 
+void ax8swap___remove_from_page_cache(struct page *page);
+void ax8swap_remove_from_page_cache(struct page *page);
+
+int ax8swap_sync_page(void *word);
+int ax8swap_sync_page_killable(void *word);
+int ax8swap___filemap_fdatawrite_range(struct address_space *mapping, loff_t start,
+				loff_t end, int sync_mode);
+int ax8swap_filemap_fdatawrite(struct address_space *mapping);
+int ax8swap_filemap_fdatawrite_range(struct address_space *mapping, loff_t start,
+				loff_t end);
+int ax8swap_filemap_flush(struct address_space *mapping);
+int ax8swap_wait_on_page_writeback_range(struct address_space *mapping,
+				pgoff_t start, pgoff_t end);
+int ax8swap_sync_page_range(struct inode *inode, struct address_space *mapping,
+			loff_t pos, loff_t count);
+int ax8swap_sync_page_range_nolock(struct inode *inode, struct address_space *mapping,
+			   loff_t pos, loff_t count);
+int ax8swap_filemap_fdatawait(struct address_space *mapping);
+int ax8swap_filemap_write_and_wait(struct address_space *mapping);
+int ax8swap_filemap_write_and_wait_range(struct address_space *mapping,
+				 loff_t lstart, loff_t lend);
+int ax8swap_add_to_page_cache_locked(struct page *page, struct address_space *mapping,
+		pgoff_t offset, gfp_t gfp_mask);
+int ax8swap_add_to_page_cache_lru(struct page *page, struct address_space *mapping,
+				pgoff_t offset, gfp_t gfp_mask);
+
+
+
+
+
+
+
+
+
+
+
 #endif
