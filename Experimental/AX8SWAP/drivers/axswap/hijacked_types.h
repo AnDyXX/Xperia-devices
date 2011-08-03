@@ -151,36 +151,29 @@ void ax8swap___remove_from_page_cache(struct page *page);
 void ax8swap_remove_from_page_cache(struct page *page);
 
 int ax8swap_sync_page(void *word);
-int ax8swap_sync_page_killable(void *word);
-int ax8swap___filemap_fdatawrite_range(struct address_space *mapping, loff_t start,
-				loff_t end, int sync_mode);
-int ax8swap_filemap_fdatawrite(struct address_space *mapping);
-int ax8swap_filemap_fdatawrite_range(struct address_space *mapping, loff_t start,
-				loff_t end);
-int ax8swap_filemap_flush(struct address_space *mapping);
-int ax8swap_wait_on_page_writeback_range(struct address_space *mapping,
-				pgoff_t start, pgoff_t end);
-int ax8swap_sync_page_range(struct inode *inode, struct address_space *mapping,
-			loff_t pos, loff_t count);
-int ax8swap_sync_page_range_nolock(struct inode *inode, struct address_space *mapping,
-			   loff_t pos, loff_t count);
-int ax8swap_filemap_fdatawait(struct address_space *mapping);
-int ax8swap_filemap_write_and_wait(struct address_space *mapping);
-int ax8swap_filemap_write_and_wait_range(struct address_space *mapping,
-				 loff_t lstart, loff_t lend);
-int ax8swap_add_to_page_cache_locked(struct page *page, struct address_space *mapping,
-		pgoff_t offset, gfp_t gfp_mask);
-int ax8swap_add_to_page_cache_lru(struct page *page, struct address_space *mapping,
-				pgoff_t offset, gfp_t gfp_mask);
+int ax8swap_handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, int write_access);
+int ax8swap_vmtruncate(struct inode * inode, loff_t offset);
+void ax8swap_unmap_mapping_range(struct address_space *mapping,
+		loff_t const holebegin, loff_t const holelen, int even_cows);
 
+int ax8swap_apply_to_page_range(struct mm_struct *mm, unsigned long addr,
+			unsigned long size, pte_fn_t fn, void *data);
+int ax8swap_remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
+		    unsigned long pfn, unsigned long size, pgprot_t prot);
+int ax8swap_vm_insert_mixed(struct vm_area_struct *vma, unsigned long addr,
+			unsigned long pfn);
+int ax8swap_vm_insert_pfn(struct vm_area_struct *vma, unsigned long addr,
+			unsigned long pfn);
 
+int ax8swap_vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
+			struct page *page);
 
+int ax8swap_get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+		unsigned long start, int len, int write, int force,
+		struct page **pages, struct vm_area_struct **vmas);
 
-
-
-
-
-
-
+int ax8swap_zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size);
 
 #endif
