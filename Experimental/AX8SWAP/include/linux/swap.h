@@ -175,11 +175,21 @@ extern unsigned int nr_free_pagecache_pages(void);
 
 
 /* linux/mm/swap.c */
+#ifdef EXTERNAL_SWAP_MODULE
+void ax8swap___lru_cache_add(struct page *, enum lru_list lru);
+#define __lru_cache_add(p,lru) ax8swap___lru_cache_add(p,lru)
+void ax8swap_lru_add_drain(void);
+#define lru_add_drain() ax8swap_lru_add_drain()
+void ax8swap_activate_page(struct page *);
+#define activate_page(p) ax8swap_activate_page(p)
+#else
 extern void __lru_cache_add(struct page *, enum lru_list lru);
-extern void lru_cache_add_lru(struct page *, enum lru_list lru);
-extern void activate_page(struct page *);
-extern void mark_page_accessed(struct page *);
 extern void lru_add_drain(void);
+extern void activate_page(struct page *);
+#endif
+
+extern void lru_cache_add_lru(struct page *, enum lru_list lru);
+extern void mark_page_accessed(struct page *);
 extern int lru_add_drain_all(void);
 extern void rotate_reclaimable_page(struct page *page);
 extern void swap_setup(void);
@@ -211,6 +221,51 @@ static inline void lru_cache_add_active_file(struct page *page)
 }
 
 /* linux/mm/vmscan.c */
+#ifdef EXTERNAL_SWAP_MODULE
+extern int * ax8swap_vm_swappiness;
+#define vm_swappiness (*ax8swap_vm_swappiness)
+extern long * ax8swap_vm_total_pages;
+#define vm_total_pages (*ax8swap_vm_total_pages)
+
+unsigned long ax8swap_try_to_free_pages(struct zonelist *zonelist, int order,
+					gfp_t gfp_mask);
+static inline unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
+					gfp_t gfp_mask)
+{
+	return ax8swap_try_to_free_pages(zonelist, order, gfp_mask);
+}
+
+unsigned long ax8swap_try_to_free_mem_cgroup_pages(struct mem_cgroup *mem,
+						  gfp_t gfp_mask, bool noswap,
+						  unsigned int swappiness);
+static inline unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *mem,
+						  gfp_t gfp_mask, bool noswap,
+						  unsigned int swappiness)
+{
+	return ax8swap_try_to_free_mem_cgroup_pages(mem, gfp_mask, noswap, swappiness);
+}
+
+
+int ax8swap___isolate_lru_page(struct page *page, int mode, int file);
+static inline int __isolate_lru_page(struct page *page, int mode, int file)
+{
+	return ax8swap___isolate_lru_page(page,mode, file);
+}
+
+unsigned long ax8swap_shrink_all_memory(unsigned long nr_pages);
+static inline unsigned long shrink_all_memory(unsigned long nr_pages)
+{
+	return ax8swap_shrink_all_memory(nr_pages);
+}
+
+
+int ax8swap_remove_mapping(struct address_space *mapping, struct page *page);
+static inline int remove_mapping(struct address_space *mapping, struct page *page)
+{
+	return ax8swap_remove_mapping(mapping,page);
+}
+
+#else
 extern unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 					gfp_t gfp_mask);
 extern unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *mem,
@@ -221,6 +276,8 @@ extern unsigned long shrink_all_memory(unsigned long nr_pages);
 extern int vm_swappiness;
 extern int remove_mapping(struct address_space *mapping, struct page *page);
 extern long vm_total_pages;
+
+#endif
 
 #ifdef CONFIG_NUMA
 extern int zone_reclaim_mode;
@@ -237,8 +294,15 @@ static inline int zone_reclaim(struct zone *z, gfp_t mask, unsigned int order)
 
 #ifdef CONFIG_UNEVICTABLE_LRU
 extern int page_evictable(struct page *page, struct vm_area_struct *vma);
+#ifdef EXTERNAL_SWAP_MODULE
+void ax8swap_scan_mapping_unevictable_pages(struct address_space *);
+static inline void scan_mapping_unevictable_pages(struct address_space * a)
+{
+	ax8swap_scan_mapping_unevictable_pages(a);
+}
+#else
 extern void scan_mapping_unevictable_pages(struct address_space *);
-
+#endif
 extern unsigned long scan_unevictable_pages;
 extern int scan_unevictable_handler(struct ctl_table *, int, struct file *,
 					void __user *, size_t *, loff_t *);
@@ -267,12 +331,21 @@ extern int kswapd_run(int nid);
 
 #ifdef CONFIG_MMU
 /* linux/mm/shmem.c */
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_shmem_unuse(swp_entry_t entry, struct page *page);
+#define shmem_unuse(entry, page) ax8swap_shmem_unuse(entry, page)
+#else
 extern int shmem_unuse(swp_entry_t entry, struct page *page);
+#endif
 #endif /* CONFIG_MMU */
 
 extern void swap_unplug_io_fn(struct backing_dev_info *, struct page *);
 
 #if defined(CONFIG_SWAP) || defined(CONFIG_AX8_SWAP_MODULE)
+
+extern long nr_swap_pages;
+extern long total_swap_pages;
+
 /* linux/mm/page_io.c */
 extern int swap_readpage(struct file *, struct page *);
 extern int swap_writepage(struct page *page, struct writeback_control *wbc);
@@ -295,8 +368,6 @@ extern struct page *swapin_readahead(swp_entry_t, gfp_t,
 			struct vm_area_struct *vma, unsigned long addr);
 
 /* linux/mm/swapfile.c */
-extern long nr_swap_pages;
-extern long total_swap_pages;
 extern void si_swapinfo(struct sysinfo *);
 extern swp_entry_t get_swap_page(void);
 extern swp_entry_t get_swap_page_of_type(int);
@@ -348,6 +419,7 @@ extern void mem_cgroup_uncharge_swap(swp_entry_t ent);
 static inline void mem_cgroup_uncharge_swap(swp_entry_t ent)
 {
 }
+
 #endif
 
 #else /* CONFIG_SWAP */

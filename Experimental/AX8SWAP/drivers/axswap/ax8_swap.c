@@ -51,9 +51,7 @@
 ax8swap_adjust_pte_type ax8swap_adjust_pte;
 ax8swap___flush_dcache_page_type ax8swap___flush_dcache_page;
 struct meminfo * ax8swap_meminfo;
-long * ax8swap_total_swap_pages;
 ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
-long * ax8swap_nr_swap_pages;
 int * ax8swap_vm_swappiness;
 long * ax8swap_vm_total_pages;
 int * ax8swap_sysctl_overcommit_memory;
@@ -69,6 +67,7 @@ ax8swap_cap_vm_enough_memory_type ax8swap_cap_vm_enough_memory;
 ax8swap_exit_aio_type ax8swap_exit_aio;
 ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
 ax8swap_user_shm_lock_type ax8swap_user_shm_lock;
+int * axswap_page_cluster;
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -134,9 +133,7 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"adjust_pte", 			(void**) &ax8swap_adjust_pte},
 	{"__flush_dcache_page", 	(void**) &ax8swap___flush_dcache_page},
 	{"meminfo", 			(void**) &ax8swap_meminfo},
-	{"total_swap_pages", 		(void**) &ax8swap_total_swap_pages},
 	{"get_vmalloc_info", 		(void**) &ax8swap_get_vmalloc_info},
-	{"nr_swap_pages", 		(void**) &ax8swap_nr_swap_pages},
 	{"vm_swappiness", 		(void**) &ax8swap_vm_swappiness},
 	{"vm_total_pages", 		(void**) &ax8swap_vm_total_pages},
 	{"sysctl_overcommit_memory", 	(void**) &ax8swap_sysctl_overcommit_memory},
@@ -152,6 +149,7 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"exit_aio", 			(void**) &ax8swap_exit_aio},
 	{"set_mm_exe_file",		(void**) &ax8swap_set_mm_exe_file},
 	{"user_shm_lock", 		(void**) &ax8swap_user_shm_lock},
+	{"page_cluster", 		(void**) &axswap_page_cluster},
 	{NULL,				0},
 };
 

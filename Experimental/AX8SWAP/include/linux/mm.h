@@ -26,7 +26,12 @@ extern unsigned long max_mapnr;
 
 extern unsigned long num_physpages;
 extern void * high_memory;
+#ifdef EXTERNAL_SWAP_MODULE
+extern int * axswap_page_cluster;
+#define page_cluster (*axswap_page_cluster)
+#else
 extern int page_cluster;
+#endif
 
 #ifdef CONFIG_SYSCTL
 extern int sysctl_legacy_va_layout;
@@ -711,7 +716,12 @@ extern void pagefault_out_of_memory(void);
 
 #define offset_in_page(p)	((unsigned long)(p) & ~PAGE_MASK)
 
+#ifdef EXTERNAL_SWAP_MODULE
+extern void ax8swap_show_free_areas(void);
+#else
 extern void show_free_areas(void);
+#endif
+
 
 #ifdef CONFIG_SHMEM
 extern int shmem_lock(struct file *file, int lock, struct user_struct *user);
@@ -751,6 +761,49 @@ struct zap_details {
 	unsigned long truncate_count;		/* Compare vm_truncate_count */
 };
 
+#ifdef EXTERNAL_SWAP_MODULE
+struct page *ax8swap_vm_normal_page(struct vm_area_struct *vma, unsigned long addr,
+		pte_t pte);
+
+int ax8swap_zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size);
+unsigned long ax8swap_zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details *);
+unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlb,
+		struct vm_area_struct *start_vma, unsigned long start_addr,
+		unsigned long end_addr, unsigned long *nr_accounted,
+		struct zap_details *);
+
+static inline struct page *vm_normal_page(struct vm_area_struct *vma, unsigned long addr,
+		pte_t pte)
+{
+	return ax8swap_vm_normal_page(vma, addr,pte);
+}
+
+static inline int zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size)
+{
+	return ax8swap_zap_vma_ptes(vma, address,
+		size);
+}
+
+static inline unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details * d)
+{
+	return ax8swap_zap_page_range(vma,  address, size, d);
+}
+
+static inline unsigned long unmap_vmas(struct mmu_gather **tlb,
+		struct vm_area_struct *start_vma, unsigned long start_addr,
+		unsigned long end_addr, unsigned long *nr_accounted,
+		struct zap_details * z)
+{
+	return ax8swap_unmap_vmas(tlb,
+		start_vma,  start_addr,
+		end_addr, nr_accounted,
+		z);
+}
+#else
 struct page *vm_normal_page(struct vm_area_struct *vma, unsigned long addr,
 		pte_t pte);
 
@@ -762,6 +815,8 @@ unsigned long unmap_vmas(struct mmu_gather **tlb,
 		struct vm_area_struct *start_vma, unsigned long start_addr,
 		unsigned long end_addr, unsigned long *nr_accounted,
 		struct zap_details *);
+
+#endif
 
 /**
  * mm_walk - callbacks for walk_page_range
@@ -819,7 +874,13 @@ static inline int handle_mm_fault(struct mm_struct *mm,
 }
 #endif
 
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_make_pages_present(unsigned long addr, unsigned long end);
+#define make_pages_present(addr, end) ax8swap_make_pages_present(addr, end)
+#else
 extern int make_pages_present(unsigned long addr, unsigned long end);
+#endif
+
 extern int access_process_vm(struct task_struct *tsk, unsigned long addr, void *buf, int len, int write);
 
 int get_user_pages(struct task_struct *tsk, struct mm_struct *mm, unsigned long start,
@@ -888,7 +949,13 @@ extern void unregister_shrinker(struct shrinker *);
 
 int vma_wants_writenotify(struct vm_area_struct *vma);
 
+#ifdef EXTERNAL_SWAP_MODULE
+extern pte_t *ax8swap_get_locked_pte(struct mm_struct *mm, unsigned long addr, spinlock_t **ptl);
+#define get_locked_pte(mm, addr, ptl)  ax8swap_get_locked_pte(mm, addr, ptl)
+#else
 extern pte_t *get_locked_pte(struct mm_struct *mm, unsigned long addr, spinlock_t **ptl);
+#endif
+
 
 #ifdef __PAGETABLE_PUD_FOLDED
 static inline int __pud_alloc(struct mm_struct *mm, pgd_t *pgd,
@@ -1064,7 +1131,15 @@ extern void setup_per_zone_pages_min(void);
 extern void mem_init(void);
 extern void __init mmap_init(void);
 extern void show_mem(void);
+#ifdef EXTERNAL_SWAP_MODULE
+void ax8swap_si_meminfo(struct sysinfo * val);
+void static inline si_meminfo(struct sysinfo * val)
+{
+	ax8swap_si_meminfo(val);
+}
+#else
 extern void si_meminfo(struct sysinfo * val);
+#endif
 extern void si_meminfo_node(struct sysinfo *val, int nid);
 extern int after_bootmem;
 
@@ -1112,7 +1187,12 @@ extern void __vma_link_rb(struct mm_struct *, struct vm_area_struct *,
 extern void unlink_file_vma(struct vm_area_struct *);
 extern struct vm_area_struct *copy_vma(struct vm_area_struct **,
 	unsigned long addr, unsigned long len, pgoff_t pgoff);
+#ifdef EXTERNAL_SWAP_MODULE
+void ax8swap_exit_mmap(struct mm_struct *);
+#define exit_mmap(m) ax8swap_exit_mmap(m)
+#else
 extern void exit_mmap(struct mm_struct *);
+#endif
 
 extern int mm_take_all_locks(struct mm_struct *mm);
 extern void mm_drop_all_locks(struct mm_struct *mm);
@@ -1139,9 +1219,18 @@ extern unsigned long get_unmapped_area(struct file *, unsigned long, unsigned lo
 extern unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long prot,
 	unsigned long flag, unsigned long pgoff);
+
+#ifdef EXTERNAL_SWAP_MODULE
+unsigned long ax8swap_mmap_region(struct file *file, unsigned long addr,
+	unsigned long len, unsigned long flags,
+	unsigned int vm_flags, unsigned long pgoff);
+#define mmap_region(file, addr, len, flags, vm_flags, pgoff) ax8swap_mmap_region(file, addr, len, flags, vm_flags, pgoff)
+
+#else
 extern unsigned long mmap_region(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long flags,
 	unsigned int vm_flags, unsigned long pgoff);
+#endif
 
 static inline unsigned long do_mmap(struct file *file, unsigned long addr,
 	unsigned long len, unsigned long prot,
@@ -1170,8 +1259,26 @@ extern void truncate_inode_pages_range(struct address_space *,
 extern int filemap_fault(struct vm_area_struct *, struct vm_fault *);
 
 /* mm/page-writeback.c */
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_write_one_page(struct page *page, int wait);
+int static inline write_one_page(struct page *page, int wait)
+{
+	return ax8swap_write_one_page(page, wait);
+}
+
+void ax8swap_task_dirty_inc(struct task_struct *tsk);
+void static inline task_dirty_inc(struct task_struct *tsk)
+{
+	ax8swap_task_dirty_inc(tsk);
+}
+
+#else
+
 int write_one_page(struct page *page, int wait);
 void task_dirty_inc(struct task_struct *tsk);
+
+#endif
+
 
 /* readahead.c */
 #define VM_MAX_READAHEAD	128	/* kbytes */

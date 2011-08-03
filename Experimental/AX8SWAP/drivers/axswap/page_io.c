@@ -9,6 +9,7 @@
  *  Add swap of shared pages through the page cache. 20.2.1998. Stephen Tweedie
  *  Always use brw_page, life becomes simpler. 12 May 1998 Eric Biederman
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/mm.h>
 #include <linux/kernel_stat.h>
@@ -18,6 +19,9 @@
 #include <linux/swapops.h>
 #include <linux/writeback.h>
 #include <asm/pgtable.h>
+
+
+#include "hijacked_types.h"
 
 static struct bio *get_swap_bio(gfp_t gfp_flags, pgoff_t index,
 				struct page *page, bio_end_io_t end_io)

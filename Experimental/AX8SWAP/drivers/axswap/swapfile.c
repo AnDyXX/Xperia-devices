@@ -4,6 +4,7 @@
  *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
  *  Swap reorganised 29.12.95, Stephen Tweedie
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/mm.h>
 #include <linux/hugetlb.h>
@@ -1995,7 +1996,7 @@ get_swap_info_struct(unsigned type)
 int valid_swaphandles(swp_entry_t entry, unsigned long *offset)
 {
 	struct swap_info_struct *si;
-	int our_page_cluster = *ax8swap_page_cluster;
+	int our_page_cluster = page_cluster;
 	pgoff_t target, toff;
 	pgoff_t base, end;
 	int nr_pages = 0;
