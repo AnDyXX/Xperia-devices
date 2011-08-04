@@ -4428,7 +4428,7 @@ static void setup_per_zone_inactive_ratio(void)
  * 8192MB:	11584k
  * 16384MB:	16384k
  */
-static int __init init_per_zone_pages_min(void)
+int __init init_per_zone_pages_min(void)
 {
 	unsigned long lowmem_kbytes;
 
@@ -4444,7 +4444,7 @@ static int __init init_per_zone_pages_min(void)
 	setup_per_zone_inactive_ratio();
 	return 0;
 }
-module_init(init_per_zone_pages_min)
+
 
 /*
  * min_free_kbytes_sysctl_handler - just a wrapper around proc_dointvec() so 

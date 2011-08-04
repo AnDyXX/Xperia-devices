@@ -752,7 +752,7 @@ static void shmem_truncate(struct inode *inode)
 	shmem_truncate_range(inode, inode->i_size, (loff_t)-1);
 }
 
-static int shmem_notify_change(struct dentry *dentry, struct iattr *attr)
+int shmem_notify_change(struct dentry *dentry, struct iattr *attr)
 {
 	struct inode *inode = dentry->d_inode;
 	struct page *page = NULL;
@@ -802,7 +802,7 @@ static int shmem_notify_change(struct dentry *dentry, struct iattr *attr)
 	return error;
 }
 
-static void shmem_delete_inode(struct inode *inode)
+void shmem_delete_inode(struct inode *inode)
 {
 	struct shmem_inode_info *info = SHMEM_I(inode);
 
@@ -1008,7 +1008,7 @@ out:	return found;	/* 0 or 1 or -ENOMEM */
 /*
  * Move the page from the page cache to the swap cache.
  */
-static int shmem_writepage(struct page *page, struct writeback_control *wbc)
+int shmem_writepage(struct page *page, struct writeback_control *wbc)
 {
 	struct shmem_inode_info *info;
 	swp_entry_t *entry, swap;
@@ -1447,7 +1447,7 @@ failed:
 	return error;
 }
 
-static int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct inode *inode = vma->vm_file->f_path.dentry->d_inode;
 	int error;
@@ -1507,7 +1507,7 @@ out_nomem:
 	return retval;
 }
 
-static int shmem_mmap(struct file *file, struct vm_area_struct *vma)
+int shmem_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	file_accessed(file);
 	vma->vm_ops = &shmem_vm_ops;
@@ -1581,7 +1581,7 @@ static const struct inode_operations shmem_symlink_inline_operations;
  * but providing them allows a tmpfs file to be used for splice, sendfile, and
  * below the loop driver, in the generic fashion that many filesystems support.
  */
-static int shmem_readpage(struct file *file, struct page *page)
+int shmem_readpage(struct file *file, struct page *page)
 {
 	struct inode *inode = page->mapping->host;
 	int error = shmem_getpage(inode, page->index, &page, SGP_CACHE, NULL);
@@ -1589,7 +1589,7 @@ static int shmem_readpage(struct file *file, struct page *page)
 	return error;
 }
 
-static int
+int
 shmem_write_begin(struct file *file, struct address_space *mapping,
 			loff_t pos, unsigned len, unsigned flags,
 			struct page **pagep, void **fsdata)
@@ -1600,7 +1600,7 @@ shmem_write_begin(struct file *file, struct address_space *mapping,
 	return shmem_getpage(inode, index, pagep, SGP_WRITE, NULL);
 }
 
-static int
+int
 shmem_write_end(struct file *file, struct address_space *mapping,
 			loff_t pos, unsigned len, unsigned copied,
 			struct page *page, void *fsdata)
@@ -1719,7 +1719,7 @@ static void do_shmem_file_read(struct file *filp, loff_t *ppos, read_descriptor_
 	file_accessed(filp);
 }
 
-static ssize_t shmem_file_aio_read(struct kiocb *iocb,
+ssize_t shmem_file_aio_read(struct kiocb *iocb,
 		const struct iovec *iov, unsigned long nr_segs, loff_t pos)
 {
 	struct file *filp = iocb->ki_filp;
@@ -1753,7 +1753,7 @@ static ssize_t shmem_file_aio_read(struct kiocb *iocb,
 	return retval;
 }
 
-static int shmem_statfs(struct dentry *dentry, struct kstatfs *buf)
+int shmem_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
 	struct shmem_sb_info *sbinfo = SHMEM_SB(dentry->d_sb);
 
@@ -1811,7 +1811,7 @@ shmem_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 	return error;
 }
 
-static int shmem_mkdir(struct inode *dir, struct dentry *dentry, int mode)
+int shmem_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 {
 	int error;
 
@@ -1821,7 +1821,7 @@ static int shmem_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	return 0;
 }
 
-static int shmem_create(struct inode *dir, struct dentry *dentry, int mode,
+int shmem_create(struct inode *dir, struct dentry *dentry, int mode,
 		struct nameidata *nd)
 {
 	return shmem_mknod(dir, dentry, mode | S_IFREG, 0);
@@ -1830,7 +1830,7 @@ static int shmem_create(struct inode *dir, struct dentry *dentry, int mode,
 /*
  * Link a file..
  */
-static int shmem_link(struct dentry *old_dentry, struct inode *dir, struct dentry *dentry)
+int shmem_link(struct dentry *old_dentry, struct inode *dir, struct dentry *dentry)
 {
 	struct inode *inode = old_dentry->d_inode;
 	int ret;
@@ -1868,7 +1868,7 @@ static int shmem_unlink(struct inode *dir, struct dentry *dentry)
 	return 0;
 }
 
-static int shmem_rmdir(struct inode *dir, struct dentry *dentry)
+int shmem_rmdir(struct inode *dir, struct dentry *dentry)
 {
 	if (!simple_empty(dentry))
 		return -ENOTEMPTY;
@@ -1884,7 +1884,7 @@ static int shmem_rmdir(struct inode *dir, struct dentry *dentry)
  * it exists so that the VFS layer correctly free's it when it
  * gets overwritten.
  */
-static int shmem_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
+int shmem_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
 	struct inode *inode = old_dentry->d_inode;
 	int they_are_dirs = S_ISDIR(inode->i_mode);
@@ -1909,7 +1909,7 @@ static int shmem_rename(struct inode *old_dir, struct dentry *old_dentry, struct
 	return 0;
 }
 
-static int shmem_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
+int shmem_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 {
 	int error;
 	int len;
@@ -2210,7 +2210,7 @@ bad_val:
 
 }
 
-static int shmem_remount_fs(struct super_block *sb, int *flags, char *data)
+int shmem_remount_fs(struct super_block *sb, int *flags, char *data)
 {
 	struct shmem_sb_info *sbinfo = SHMEM_SB(sb);
 	struct shmem_sb_info config = *sbinfo;
@@ -2252,7 +2252,7 @@ out:
 	return error;
 }
 
-static int shmem_show_options(struct seq_file *seq, struct vfsmount *vfs)
+int shmem_show_options(struct seq_file *seq, struct vfsmount *vfs)
 {
 	struct shmem_sb_info *sbinfo = SHMEM_SB(vfs->mnt_sb);
 
@@ -2354,7 +2354,7 @@ failed:
 
 static struct kmem_cache *shmem_inode_cachep;
 
-static struct inode *shmem_alloc_inode(struct super_block *sb)
+struct inode *shmem_alloc_inode(struct super_block *sb)
 {
 	struct shmem_inode_info *p;
 	p = (struct shmem_inode_info *)kmem_cache_alloc(shmem_inode_cachep, GFP_KERNEL);
@@ -2363,7 +2363,7 @@ static struct inode *shmem_alloc_inode(struct super_block *sb)
 	return &p->vfs_inode;
 }
 
-static void shmem_destroy_inode(struct inode *inode)
+void shmem_destroy_inode(struct inode *inode)
 {
 	if ((inode->i_mode & S_IFMT) == S_IFREG) {
 		/* only struct inode is valid if it's an inline symlink */
@@ -2384,7 +2384,7 @@ static void init_once(void *foo)
 #endif
 }
 
-static int init_inodecache(void)
+int init_inodecache(void)
 {
 	shmem_inode_cachep = kmem_cache_create("shmem_inode_cache",
 				sizeof(struct shmem_inode_info),
@@ -2392,155 +2392,17 @@ static int init_inodecache(void)
 	return 0;
 }
 
-static void destroy_inodecache(void)
+void destroy_inodecache(void)
 {
 	kmem_cache_destroy(shmem_inode_cachep);
 }
 
-static const struct address_space_operations shmem_aops = {
-	.writepage	= shmem_writepage,
-	.set_page_dirty	= __set_page_dirty_no_writeback,
-#ifdef CONFIG_TMPFS
-	.readpage	= shmem_readpage,
-	.write_begin	= shmem_write_begin,
-	.write_end	= shmem_write_end,
-#endif
-	.migratepage	= migrate_page,
-};
-
-static const struct file_operations shmem_file_operations = {
-	.mmap		= shmem_mmap,
-#ifdef CONFIG_TMPFS
-	.llseek		= generic_file_llseek,
-	.read		= do_sync_read,
-	.write		= do_sync_write,
-	.aio_read	= shmem_file_aio_read,
-	.aio_write	= generic_file_aio_write,
-	.fsync		= simple_sync_file,
-	.splice_read	= generic_file_splice_read,
-	.splice_write	= generic_file_splice_write,
-#endif
-};
-
-static const struct inode_operations shmem_inode_operations = {
-	.truncate	= shmem_truncate,
-	.setattr	= shmem_notify_change,
-	.truncate_range	= shmem_truncate_range,
-#ifdef CONFIG_TMPFS_POSIX_ACL
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
-	.listxattr	= generic_listxattr,
-	.removexattr	= generic_removexattr,
-	.permission	= shmem_permission,
-#endif
-
-};
-
-static const struct inode_operations shmem_dir_inode_operations = {
-#ifdef CONFIG_TMPFS
-	.create		= shmem_create,
-	.lookup		= simple_lookup,
-	.link		= shmem_link,
-	.unlink		= shmem_unlink,
-	.symlink	= shmem_symlink,
-	.mkdir		= shmem_mkdir,
-	.rmdir		= shmem_rmdir,
-	.mknod		= shmem_mknod,
-	.rename		= shmem_rename,
-#endif
-#ifdef CONFIG_TMPFS_POSIX_ACL
-	.setattr	= shmem_notify_change,
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
-	.listxattr	= generic_listxattr,
-	.removexattr	= generic_removexattr,
-	.permission	= shmem_permission,
-#endif
-};
-
-static const struct inode_operations shmem_special_inode_operations = {
-#ifdef CONFIG_TMPFS_POSIX_ACL
-	.setattr	= shmem_notify_change,
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
-	.listxattr	= generic_listxattr,
-	.removexattr	= generic_removexattr,
-	.permission	= shmem_permission,
-#endif
-};
-
-static const struct super_operations shmem_ops = {
-	.alloc_inode	= shmem_alloc_inode,
-	.destroy_inode	= shmem_destroy_inode,
-#ifdef CONFIG_TMPFS
-	.statfs		= shmem_statfs,
-	.remount_fs	= shmem_remount_fs,
-	.show_options	= shmem_show_options,
-#endif
-	.delete_inode	= shmem_delete_inode,
-	.drop_inode	= generic_delete_inode,
-	.put_super	= shmem_put_super,
-};
-
-static struct vm_operations_struct shmem_vm_ops = {
-	.fault		= shmem_fault,
-#ifdef CONFIG_NUMA
-	.set_policy     = shmem_set_policy,
-	.get_policy     = shmem_get_policy,
-#endif
-};
-
-
-static int shmem_get_sb(struct file_system_type *fs_type,
+int shmem_get_sb(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data, struct vfsmount *mnt)
 {
 	return get_sb_nodev(fs_type, flags, data, shmem_fill_super, mnt);
 }
 
-static struct file_system_type tmpfs_fs_type = {
-	.owner		= THIS_MODULE,
-	.name		= "tmpfs",
-	.get_sb		= shmem_get_sb,
-	.kill_sb	= kill_litter_super,
-};
-
-static int __init init_tmpfs(void)
-{
-	int error;
-
-	error = bdi_init(&shmem_backing_dev_info);
-	if (error)
-		goto out4;
-
-	error = init_inodecache();
-	if (error)
-		goto out3;
-
-	error = register_filesystem(&tmpfs_fs_type);
-	if (error) {
-		printk(KERN_ERR "Could not register tmpfs\n");
-		goto out2;
-	}
-
-	shm_mnt = vfs_kern_mount(&tmpfs_fs_type, MS_NOUSER,
-				tmpfs_fs_type.name, NULL);
-	if (IS_ERR(shm_mnt)) {
-		error = PTR_ERR(shm_mnt);
-		printk(KERN_ERR "Could not kern_mount tmpfs\n");
-		goto out1;
-	}
-	return 0;
-
-out1:
-	unregister_filesystem(&tmpfs_fs_type);
-out2:
-	destroy_inodecache();
-out3:
-	bdi_destroy(&shmem_backing_dev_info);
-out4:
-	shm_mnt = ERR_PTR(error);
-	return error;
-}
 
 #else /* !CONFIG_SHMEM */
 
@@ -2554,22 +2416,6 @@ out4:
  */
 
 #include <linux/ramfs.h>
-
-static struct file_system_type tmpfs_fs_type = {
-	.name		= "tmpfs",
-	.get_sb		= ramfs_get_sb,
-	.kill_sb	= kill_litter_super,
-};
-
-static int __init init_tmpfs(void)
-{
-	BUG_ON(register_filesystem(&tmpfs_fs_type) != 0);
-
-	shm_mnt = kern_mount(&tmpfs_fs_type);
-	BUG_ON(IS_ERR(shm_mnt));
-
-	return 0;
-}
 
 int shmem_unuse(swp_entry_t entry, struct page *page)
 {
@@ -2677,4 +2523,4 @@ int shmem_zero_setup(struct vm_area_struct *vma)
 	return 0;
 }
 
-module_init(init_tmpfs)
+

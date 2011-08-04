@@ -2218,7 +2218,7 @@ out:
    not required for correctness.  So if the last cpu in a node goes
    away, we get changed to run anywhere: as the first one comes back,
    restore their cpu bindings. */
-static int __devinit cpu_callback(struct notifier_block *nfb,
+ int __devinit cpu_callback(struct notifier_block *nfb,
 				  unsigned long action, void *hcpu)
 {
 	int nid;
@@ -2258,18 +2258,9 @@ int kswapd_run(int nid)
 	return ret;
 }
 
-static int __init kswapd_init(void)
-{
-	int nid;
 
-	swap_setup();
-	for_each_node_state(nid, N_HIGH_MEMORY)
- 		kswapd_run(nid);
-	hotcpu_notifier(cpu_callback, 0);
-	return 0;
-}
 
-module_init(kswapd_init)
+
 
 #ifdef CONFIG_NUMA
 /*

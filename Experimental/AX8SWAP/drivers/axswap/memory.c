@@ -64,48 +64,6 @@
 
 #include "internal.h"
 
-#ifndef CONFIG_NEED_MULTIPLE_NODES
-/* use the per-pgdat data instead for discontigmem - mbligh */
-unsigned long max_mapnr;
-struct page *mem_map;
-
-EXPORT_SYMBOL(max_mapnr);
-EXPORT_SYMBOL(mem_map);
-#endif
-
-unsigned long num_physpages;
-/*
- * A number of key systems in x86 including ioremap() rely on the assumption
- * that high_memory defines the upper bound on direct map memory, then end
- * of ZONE_NORMAL.  Under CONFIG_DISCONTIG this means that max_low_pfn and
- * highstart_pfn must be the same; there must be no gap between ZONE_NORMAL
- * and ZONE_HIGHMEM.
- */
-void * high_memory;
-
-EXPORT_SYMBOL(num_physpages);
-EXPORT_SYMBOL(high_memory);
-
-/*
- * Randomize the address space (stacks, mmaps, brk, etc.).
- *
- * ( When CONFIG_COMPAT_BRK=y we exclude brk from randomization,
- *   as ancient (libc5 based) binaries can segfault. )
- */
-int randomize_va_space __read_mostly =
-#ifdef CONFIG_COMPAT_BRK
-					1;
-#else
-					2;
-#endif
-
-static int __init disable_randmaps(char *s)
-{
-	randomize_va_space = 0;
-	return 1;
-}
-__setup("norandmaps", disable_randmaps);
-
 
 /*
  * If a p?d_bad entry is found while walking page tables, report
@@ -1085,7 +1043,7 @@ int zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
 	zap_page_range(vma, address, size, NULL);
 	return 0;
 }
-EXPORT_SYMBOL_GPL(zap_vma_ptes);
+
 
 /*
  * Do a quick page-table lookup for a single page.
@@ -1371,7 +1329,7 @@ int get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 				pages, vmas);
 }
 
-EXPORT_SYMBOL(get_user_pages);
+
 
 pte_t *get_locked_pte(struct mm_struct *mm, unsigned long addr,
 			spinlock_t **ptl)
@@ -1460,7 +1418,7 @@ int vm_insert_page(struct vm_area_struct *vma, unsigned long addr,
 	vma->vm_flags |= VM_INSERTPAGE;
 	return insert_page(vma, addr, page, vma->vm_page_prot);
 }
-EXPORT_SYMBOL(vm_insert_page);
+
 
 static int insert_pfn(struct vm_area_struct *vma, unsigned long addr,
 			unsigned long pfn, pgprot_t prot)
@@ -1536,7 +1494,7 @@ int vm_insert_pfn(struct vm_area_struct *vma, unsigned long addr,
 
 	return ret;
 }
-EXPORT_SYMBOL(vm_insert_pfn);
+
 
 int vm_insert_mixed(struct vm_area_struct *vma, unsigned long addr,
 			unsigned long pfn)
@@ -1560,7 +1518,7 @@ int vm_insert_mixed(struct vm_area_struct *vma, unsigned long addr,
 	}
 	return insert_pfn(vma, addr, pfn, vma->vm_page_prot);
 }
-EXPORT_SYMBOL(vm_insert_mixed);
+
 
 /*
  * maps a range of physical memory into the requested pages. the old
@@ -1699,7 +1657,7 @@ int remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
 
 	return err;
 }
-EXPORT_SYMBOL(remap_pfn_range);
+
 
 static int apply_to_pte_range(struct mm_struct *mm, pmd_t *pmd,
 				     unsigned long addr, unsigned long end,
@@ -1801,7 +1759,7 @@ int apply_to_page_range(struct mm_struct *mm, unsigned long addr,
 	mmu_notifier_invalidate_range_end(mm, start, end);
 	return err;
 }
-EXPORT_SYMBOL_GPL(apply_to_page_range);
+
 
 /*
  * handle_pte_fault chooses page fault handler according to an entry
@@ -2303,7 +2261,7 @@ void unmap_mapping_range(struct address_space *mapping,
 		unmap_mapping_range_list(&mapping->i_mmap_nonlinear, &details);
 	spin_unlock(&mapping->i_mmap_lock);
 }
-EXPORT_SYMBOL(unmap_mapping_range);
+
 
 /**
  * vmtruncate - unmap mappings "freed" by truncate() syscall
@@ -2360,7 +2318,7 @@ out_sig:
 out_big:
 	return -EFBIG;
 }
-EXPORT_SYMBOL(vmtruncate);
+
 
 int vmtruncate_range(struct inode *inode, loff_t offset, loff_t end)
 {
@@ -3190,5 +3148,5 @@ void might_fault(void)
 	if (!in_atomic() && current->mm)
 		might_lock_read(&current->mm->mmap_sem);
 }
-EXPORT_SYMBOL(might_fault);
+
 #endif
