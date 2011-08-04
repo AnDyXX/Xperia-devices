@@ -15,7 +15,7 @@ extern void length_init(void);
 extern void limit_init(void);
 extern void mac_init(void);
 extern void multiport_init(void);
-extern void 2mark_init(void);
+extern void #2mark_init(void);
 extern void owner_init(void);
 extern void physdev_init(void);
 extern void pkttype_init(void);
@@ -34,7 +34,7 @@ extern void CLASSIFY_init(void);
 extern void CONNMARK_init(void);
 extern void DNAT_init(void);
 extern void LOG_init(void);
-extern void DSCP_init(void);
+extern void #DSCP_init(void);
 extern void ECN_init(void);
 extern void MASQUERADE_init(void);
 extern void MIRROR_init(void);
@@ -43,7 +43,7 @@ extern void NFQUEUE_init(void);
 extern void NOTRACK_init(void);
 extern void REDIRECT_init(void);
 extern void REJECT_init(void);
-extern void MARK_init(void);
+extern void #MARK_init(void);
 void init_extensions(void) {
 	ah_init();
 	addrtype_init();
@@ -61,7 +61,7 @@ void init_extensions(void) {
 	limit_init();
 	mac_init();
 	multiport_init();
-	2mark_init();
+	#2mark_init();
 	owner_init();
 	physdev_init();
 	pkttype_init();
@@ -80,7 +80,7 @@ void init_extensions(void) {
 	CONNMARK_init();
 	DNAT_init();
 	LOG_init();
-	DSCP_init();
+	#DSCP_init();
 	ECN_init();
 	MASQUERADE_init();
 	MIRROR_init();
@@ -89,5 +89,5 @@ void init_extensions(void) {
 	NOTRACK_init();
 	REDIRECT_init();
 	REJECT_init();
-	MARK_init();
+	#MARK_init();
 }
