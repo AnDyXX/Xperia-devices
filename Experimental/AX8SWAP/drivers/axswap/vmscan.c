@@ -2234,13 +2234,6 @@ int kswapd_run(int nid)
 
 
 #ifdef CONFIG_NUMA
-/*
- * Zone reclaim mode
- *
- * If non-zero call zone_reclaim when the number of free pages falls below
- * the watermarks.
- */
-int zone_reclaim_mode __read_mostly;
 
 #define RECLAIM_OFF 0
 #define RECLAIM_ZONE (1<<0)	/* Run shrink_inactive_list on the zone */
@@ -2254,17 +2247,6 @@ int zone_reclaim_mode __read_mostly;
  */
 #define ZONE_RECLAIM_PRIORITY 4
 
-/*
- * Percentage of pages in a zone that must be unmapped for zone_reclaim to
- * occur.
- */
-int sysctl_min_unmapped_ratio = 1;
-
-/*
- * If the number of slab pages in a zone grows beyond this percentage then
- * slab reclaim needs to occur.
- */
-int sysctl_min_slab_ratio = 5;
 
 /*
  * Try to free up some pages from this zone through reclaim.
@@ -2572,12 +2554,6 @@ static void scan_all_zones_unevictable_pages(void)
 		scan_zone_unevictable_pages(zone);
 	}
 }
-
-/*
- * scan_unevictable_pages [vm] sysctl handler.  On demand re-scan of
- * all nodes' unevictable lists for evictable pages
- */
-unsigned long scan_unevictable_pages;
 
 int scan_unevictable_handler(struct ctl_table *table, int write,
 			   struct file *file, void __user *buffer,
