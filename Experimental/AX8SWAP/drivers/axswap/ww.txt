@@ -1,80 +1,1 @@
-[  646.303932] save exit: isCheckpointed 1
-[  661.284930] ax8swap: Unknown symbol update_mmu_cache
-[  661.287125] ax8swap: Unknown symbol last_mem_notify
-[  661.291105] ax8swap: Unknown symbol flush_ptrace_access
-[  661.295616] ax8swap: Unknown symbol mlock_vma_page
-[  661.300320] ax8swap: Unknown symbol writeback_inodes
-[  661.305515] ax8swap: Unknown symbol highest_memmap_pfn
-[  661.310201] ax8swap: Unknown symbol max_sane_readahead
-[  661.315265] ax8swap: Unknown symbol clear_zonelist_oom
-[  661.320413] ax8swap: Unknown symbol page_cluster
-[  661.325139] ax8swap: Unknown symbol nr_kernel_pages
-[  661.330274] ax8swap: Unknown symbol munlock_vma_pages_range
-[  661.336295] ax8swap: Unknown symbol prop_descriptor_init
-[  661.342507] ax8swap: Unknown symbol ax8swap_percpu_pagelist_fraction
-[  661.347304] ax8swap: Unknown symbol prop_fraction_single
-[  661.353629] ax8swap: Unknown symbol next_zones_zonelist
-[  661.358232] ax8swap: Unknown symbol __clear_page_mlock
-[  661.362737] ax8swap: Unknown symbol page_group_by_mobility_disabled
-[  661.369663] ax8swap: Unknown symbol vma_prio_tree_remove
-[  661.374833] ax8swap: Unknown symbol sysctl_lowmem_reserve_ratio
-[  661.380879] ax8swap: Unknown symbol nr_blockdev_pages
-[  661.385419] ax8swap: Unknown symbol vma_prio_tree_next
-[  661.390863] ax8swap: Unknown symbol __memory_pressure_notify
-[  661.396263] ax8swap: Unknown symbol __lru_cache_add
-[  661.401039] ax8swap: Unknown symbol cap_inode_need_killpriv
-[  661.406739] ax8swap: Unknown symbol protection_map
-[  661.411248] ax8swap: Unknown symbol flush_cache_mm
-[  661.416899] ax8swap: Unknown symbol show_mem
-[  661.421302] ax8swap: Unknown symbol __pgd_error
-[  661.424819] ax8swap: Unknown symbol first_online_pgdat
-[  661.430300] ax8swap: Unknown symbol user_shm_unlock
-[  661.434972] ax8swap: Unknown symbol prop_change_shift
-[  661.439703] ax8swap: Unknown symbol pdflush_operation
-[  661.444707] ax8swap: Unknown symbol flush_cache_range
-[  661.449755] ax8swap: Unknown symbol added_exe_file_vma
-[  661.455348] ax8swap: Unknown symbol vm_total_pages
-[  661.459653] ax8swap: Unknown symbol inodes_stat
-[  661.465223] ax8swap: Unknown symbol scan_unevictable_pages
-[  661.471429] ax8swap: Unknown symbol slab_is_available
-[  661.474876] ax8swap: Unknown symbol __prop_inc_single
-[  661.479973] ax8swap: Unknown symbol user_shm_lock
-[  661.485328] ax8swap: Unknown symbol v6wbi_flush_user_tlb_range
-[  661.490213] ax8swap: Unknown symbol buffer_heads_over_limit
-[  661.495726] ax8swap: Unknown symbol cap_inode_killpriv
-[  661.501124] ax8swap: Unknown symbol vma_prio_tree_insert
-[  661.506204] ax8swap: Unknown symbol locks_mandatory_locked
-[  661.512101] ax8swap: Unknown symbol sysctl_overcommit_memory
-[  661.517417] ax8swap: Unknown symbol sysctl_max_map_count
-[  661.522562] ax8swap: Unknown symbol next_online_pgdat
-[  661.527712] ax8swap: Unknown symbol force_page_cache_readahead
-[  661.533558] ax8swap: Unknown symbol sysctl_overcommit_ratio
-[  661.539092] ax8swap: Unknown symbol totalreserve_pages
-[  661.544242] ax8swap: Unknown symbol nr_all_pages
-[  661.549155] ax8swap: Unknown symbol prop_fraction_percpu
-[  661.554200] ax8swap: Unknown symbol flush_cache_page
-[  661.559061] ax8swap: Unknown symbol try_set_zone_oom
-[  661.564119] ax8swap: Unknown symbol next_zone
-[  661.569150] ax8swap: Unknown symbol __pmd_error
-[  661.572750] ax8swap: Unknown symbol __flush_anon_page
-[  661.578123] ax8swap: Unknown symbol lru_add_drain
-[  661.582438] ax8swap: Unknown symbol writeback_in_progress
-[  661.589315] ax8swap: Unknown symbol out_of_memory
-[  661.593035] ax8swap: Unknown symbol __alloc_bootmem_nopanic
-[  661.598109] ax8swap: Unknown symbol removed_exe_file_vma
-[  661.604369] ax8swap: Unknown symbol vm_area_cachep
-[  661.608525] ax8swap: Unknown symbol cap_vm_enough_memory
-[  661.613705] ax8swap: Unknown symbol sys_sync
-[  661.617720] ax8swap: Unknown symbol rotate_reclaimable_page
-[  661.624882] ax8swap: Unknown symbol shmem_zero_setup
-[  661.628380] ax8swap: Unknown symbol vm_swappiness
-[  661.633020] ax8swap: Unknown symbol mlock_vma_pages_range
-[  661.638827] ax8swap: Unknown symbol arch_get_unmapped_area
-[  661.644379] ax8swap: Unknown symbol mmap_min_addr
-[  661.649637] ax8swap: Unknown symbol deny_write_access
-[  661.654050] ax8swap: Unknown symbol __prop_inc_percpu_max
-[  661.658920] ax8swap: Unknown symbol do_page_cache_readahead
-[  661.664433] ax8swap: Unknown symbol __alloc_bootmem_node
-[  661.671676] ax8swap: Unknown symbol vm_committed_space
-[  661.676163] ax8swap: Unknown symbol per_cpu__mmu_gathers
-[  661.680275] ax8swap: Unknown symbol sync_supers
+[  646.303932] save exit: isCheckpointed 1[  661.291105] ax8swap: Unknown symbol flush_ptrace_access[  661.295616] ax8swap: Unknown symbol mlock_vma_page[  661.300320] ax8swap: Unknown symbol writeback_inodes[  661.305515] ax8swap: Unknown symbol highest_memmap_pfn[  661.310201] ax8swap: Unknown symbol max_sane_readahead[  661.315265] ax8swap: Unknown symbol clear_zonelist_oom[  661.320413] ax8swap: Unknown symbol page_cluster[  661.325139] ax8swap: Unknown symbol nr_kernel_pages[  661.330274] ax8swap: Unknown symbol munlock_vma_pages_range[  661.336295] ax8swap: Unknown symbol prop_descriptor_init[  661.342507] ax8swap: Unknown symbol ax8swap_percpu_pagelist_fraction[  661.347304] ax8swap: Unknown symbol prop_fraction_single[  661.353629] ax8swap: Unknown symbol next_zones_zonelist[  661.358232] ax8swap: Unknown symbol __clear_page_mlock[  661.362737] ax8swap: Unknown symbol page_group_by_mobility_disabled[  661.369663] ax8swap: Unknown symbol vma_prio_tree_remove[  661.374833] ax8swap: Unknown symbol sysctl_lowmem_reserve_ratio[  661.380879] ax8swap: Unknown symbol nr_blockdev_pages[  661.385419] ax8swap: Unknown symbol vma_prio_tree_next[  661.390863] ax8swap: Unknown symbol __memory_pressure_notify[  661.396263] ax8swap: Unknown symbol __lru_cache_add[  661.401039] ax8swap: Unknown symbol cap_inode_need_killpriv[  661.406739] ax8swap: Unknown symbol protection_map[  661.411248] ax8swap: Unknown symbol flush_cache_mm[  661.416899] ax8swap: Unknown symbol show_mem[  661.421302] ax8swap: Unknown symbol __pgd_error[  661.424819] ax8swap: Unknown symbol first_online_pgdat[  661.430300] ax8swap: Unknown symbol user_shm_unlock[  661.434972] ax8swap: Unknown symbol prop_change_shift[  661.439703] ax8swap: Unknown symbol pdflush_operation[  661.444707] ax8swap: Unknown symbol flush_cache_range[  661.449755] ax8swap: Unknown symbol added_exe_file_vma[  661.455348] ax8swap: Unknown symbol vm_total_pages[  661.459653] ax8swap: Unknown symbol inodes_stat[  661.465223] ax8swap: Unknown symbol scan_unevictable_pages[  661.471429] ax8swap: Unknown symbol slab_is_available[  661.474876] ax8swap: Unknown symbol __prop_inc_single[  661.479973] ax8swap: Unknown symbol user_shm_lock[  661.485328] ax8swap: Unknown symbol v6wbi_flush_user_tlb_range[  661.490213] ax8swap: Unknown symbol buffer_heads_over_limit[  661.495726] ax8swap: Unknown symbol cap_inode_killpriv[  661.501124] ax8swap: Unknown symbol vma_prio_tree_insert[  661.506204] ax8swap: Unknown symbol locks_mandatory_locked[  661.512101] ax8swap: Unknown symbol sysctl_overcommit_memory[  661.517417] ax8swap: Unknown symbol sysctl_max_map_count[  661.522562] ax8swap: Unknown symbol next_online_pgdat[  661.527712] ax8swap: Unknown symbol force_page_cache_readahead[  661.533558] ax8swap: Unknown symbol sysctl_overcommit_ratio[  661.539092] ax8swap: Unknown symbol totalreserve_pages[  661.544242] ax8swap: Unknown symbol nr_all_pages[  661.549155] ax8swap: Unknown symbol prop_fraction_percpu[  661.554200] ax8swap: Unknown symbol flush_cache_page[  661.559061] ax8swap: Unknown symbol try_set_zone_oom[  661.564119] ax8swap: Unknown symbol next_zone[  661.569150] ax8swap: Unknown symbol __pmd_error[  661.572750] ax8swap: Unknown symbol __flush_anon_page[  661.578123] ax8swap: Unknown symbol lru_add_drain[  661.582438] ax8swap: Unknown symbol writeback_in_progress[  661.589315] ax8swap: Unknown symbol out_of_memory[  661.593035] ax8swap: Unknown symbol __alloc_bootmem_nopanic[  661.598109] ax8swap: Unknown symbol removed_exe_file_vma[  661.604369] ax8swap: Unknown symbol vm_area_cachep[  661.608525] ax8swap: Unknown symbol cap_vm_enough_memory[  661.613705] ax8swap: Unknown symbol sys_sync[  661.617720] ax8swap: Unknown symbol rotate_reclaimable_page[  661.624882] ax8swap: Unknown symbol shmem_zero_setup[  661.628380] ax8swap: Unknown symbol vm_swappiness[  661.633020] ax8swap: Unknown symbol mlock_vma_pages_range[  661.638827] ax8swap: Unknown symbol arch_get_unmapped_area[  661.644379] ax8swap: Unknown symbol mmap_min_addr[  661.649637] ax8swap: Unknown symbol deny_write_access[  661.654050] ax8swap: Unknown symbol __prop_inc_percpu_max[  661.658920] ax8swap: Unknown symbol do_page_cache_readahead[  661.664433] ax8swap: Unknown symbol __alloc_bootmem_node[  661.671676] ax8swap: Unknown symbol vm_committed_space[  661.676163] ax8swap: Unknown symbol per_cpu__mmu_gathers[  661.680275] ax8swap: Unknown symbol sync_supers

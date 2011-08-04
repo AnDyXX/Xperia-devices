@@ -84,6 +84,23 @@ extern struct mutex * ax8swap_shmem_swaplist_mutex;
 extern struct list_head * ax8swap_shmem_swaplist;
 #define shmem_swaplist (*ax8swap_shmem_swaplist)
 
+/*  URES REF */
+typedef void (*ax8swap_update_mmu_cache_type)(struct vm_area_struct * vma,
+			     unsigned long address, pte_t pte); 
+extern ax8swap_update_mmu_cache_type ax8swap_update_mmu_cache;
 
+typedef void (*ax8swap_flush_ptrace_access_type)(struct vm_area_struct *vma, struct page *page,
+				unsigned long uaddr, void *kaddr,
+				unsigned long len, int write); 
+extern ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
+#define flush_ptrace_access ax8swap_flush_ptrace_access
+
+typedef long (*ax8swap_mlock_vma_pages_range_type)(struct vm_area_struct *vma,
+			unsigned long start, unsigned long end); 
+extern ax8swap_mlock_vma_pages_range_type ax8swap_mlock_vma_pages_range;
+
+typedef void (*ax8swap_writeback_inodes_type)(struct writeback_control *wbc);
+extern ax8swap_writeback_inodes_type ax8swap_writeback_inodes;
+#define writeback_inodes ax8swap_writeback_inodes
 
 #endif

@@ -63,8 +63,12 @@ static inline unsigned long page_order(struct page *page)
 	return page_private(page);
 }
 
+#ifdef EXTERNAL_SWAP_MODULE
+#define mlock_vma_pages_range ax8swap_mlock_vma_pages_range
+#else 
 extern long mlock_vma_pages_range(struct vm_area_struct *vma,
 			unsigned long start, unsigned long end);
+#endif
 extern void munlock_vma_pages_range(struct vm_area_struct *vma,
 			unsigned long start, unsigned long end);
 static inline void munlock_vma_pages_all(struct vm_area_struct *vma)

@@ -71,8 +71,12 @@ unsigned int * ax8swap_bdi_min_ratio;
 struct kmem_cache ** ax8swap_anon_vma_cachep;
 struct mutex * ax8swap_shmem_swaplist_mutex;
 struct list_head * ax8swap_shmem_swaplist;
-
-
+atomic_long_t * ax8swap_last_mem_notify; 
+//urn
+ax8swap_update_mmu_cache_type ax8swap_update_mmu_cache;
+ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
+ax8swap_mlock_vma_pages_range_type ax8swap_mlock_vma_pages_range;
+ax8swap_writeback_inodes_type ax8swap_writeback_inodes;
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -132,6 +136,11 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"anon_vma_cachep", 		(void**) &ax8swap_anon_vma_cachep},
 	{"shmem_swaplist_mutex", 	(void**) &ax8swap_shmem_swaplist_mutex},
 	{"shmem_swaplist", 		(void**) &ax8swap_shmem_swaplist},
+	{"update_mmu_cache", 		(void**) &ax8swap_update_mmu_cache},
+	{"last_mem_notify", 		(void**) &ax8swap_last_mem_notify},
+	{"flush_ptrace_access", 	(void**) &ax8swap_flush_ptrace_access},
+	{"mlock_vma_pages_range", 	(void**) &ax8swap_mlock_vma_pages_range},
+	{"writeback_inodes", 		(void**) &ax8swap_writeback_inodes},
 	{NULL,				0},
 };
 

@@ -17,10 +17,14 @@
  * some progress in its execution.
  */
 
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/jiffies.h>
 #include <linux/mm.h>
 #include <linux/sched.h>
 #include <linux/swap.h>
+
+#include "hijacked_types.h"
 
 static DEFINE_SPINLOCK(swap_token_lock);
 struct mm_struct *swap_token_mm;

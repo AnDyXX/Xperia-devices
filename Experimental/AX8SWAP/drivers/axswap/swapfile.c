@@ -4,6 +4,7 @@
  *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
  *  Swap reorganised 29.12.95, Stephen Tweedie
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/mm.h>
 #include <linux/hugetlb.h>
@@ -34,6 +35,8 @@
 #include <asm/tlbflush.h>
 #include <linux/swapops.h>
 #include <linux/page_cgroup.h>
+
+#include "hijacked_types.h"
 
 static DEFINE_SPINLOCK(swap_lock);
 static unsigned int nr_swapfiles;

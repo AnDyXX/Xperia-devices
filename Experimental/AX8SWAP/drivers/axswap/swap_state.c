@@ -6,6 +6,8 @@
  *
  *  Rewritten to use page cache, (C) 1998 Stephen Tweedie
  */
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/kernel_stat.h>
@@ -20,6 +22,8 @@
 #include <linux/page_cgroup.h>
 
 #include <asm/pgtable.h>
+
+#include "hijacked_types.h"
 
 /*
  * swapper_space is a fiction, retained to simplify the path through

@@ -37,6 +37,7 @@
  *
  * Aug/Sep 2004 Changed to four level page tables (Andi Kleen)
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/kernel_stat.h>
 #include <linux/mm.h>
@@ -62,6 +63,7 @@
 #include <asm/tlbflush.h>
 #include <asm/pgtable.h>
 
+#include "hijacked_types.h"
 #include "internal.h"
 
 
