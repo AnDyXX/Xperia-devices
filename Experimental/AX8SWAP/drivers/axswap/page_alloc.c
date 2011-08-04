@@ -14,6 +14,8 @@
  *          (lots of bits borrowed from Ingo Molnar & Andrew Morton)
  */
 
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/stddef.h>
 #include <linux/mm.h>
 #include <linux/swap.h>
@@ -50,60 +52,13 @@
 
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
+
+
+#include "hijacked_types.h"
 #include "internal.h"
 
-/*
- * Array of node states.
- */
-nodemask_t node_states[NR_NODE_STATES] __read_mostly = {
-	[N_POSSIBLE] = NODE_MASK_ALL,
-	[N_ONLINE] = { { [0] = 1UL } },
-#ifndef CONFIG_NUMA
-	[N_NORMAL_MEMORY] = { { [0] = 1UL } },
-#ifdef CONFIG_HIGHMEM
-	[N_HIGH_MEMORY] = { { [0] = 1UL } },
-#endif
-	[N_CPU] = { { [0] = 1UL } },
-#endif	/* NUMA */
-};
-EXPORT_SYMBOL(node_states);
-
-unsigned long totalram_pages __read_mostly;
-unsigned long totalreserve_pages __read_mostly;
-unsigned long highest_memmap_pfn __read_mostly;
-int percpu_pagelist_fraction;
-
-#ifdef CONFIG_HUGETLB_PAGE_SIZE_VARIABLE
-int pageblock_order __read_mostly;
-#endif
 
 static void __free_pages_ok(struct page *page, unsigned int order);
-
-/*
- * results with 256, 32 in the lowmem_reserve sysctl:
- *	1G machine -> (16M dma, 800M-16M normal, 1G-800M high)
- *	1G machine -> (16M dma, 784M normal, 224M high)
- *	NORMAL allocation will leave 784M/256 of ram reserved in the ZONE_DMA
- *	HIGHMEM allocation will leave 224M/32 of ram reserved in ZONE_NORMAL
- *	HIGHMEM allocation will (224M+784M)/256 of ram reserved in ZONE_DMA
- *
- * TBD: should special case ZONE_DMA32 machines here - in those we normally
- * don't need any ZONE_NORMAL reservation
- */
-int sysctl_lowmem_reserve_ratio[MAX_NR_ZONES-1] = {
-#ifdef CONFIG_ZONE_DMA
-	 256,
-#endif
-#ifdef CONFIG_ZONE_DMA32
-	 256,
-#endif
-#ifdef CONFIG_HIGHMEM
-	 32,
-#endif
-	 32,
-};
-
-EXPORT_SYMBOL(totalram_pages);
 
 static char * const zone_names[MAX_NR_ZONES] = {
 #ifdef CONFIG_ZONE_DMA
@@ -119,12 +74,6 @@ static char * const zone_names[MAX_NR_ZONES] = {
 	 "Movable",
 };
 
-int min_free_kbytes = 1024;
-int min_free_order_shift = 1;
-
-unsigned long __meminitdata nr_kernel_pages;
-unsigned long __meminitdata nr_all_pages;
-static unsigned long __meminitdata dma_reserve;
 
 #ifdef CONFIG_ARCH_POPULATES_NODE_MAP
   /*
@@ -147,29 +96,9 @@ static unsigned long __meminitdata dma_reserve;
     #endif
   #endif
 
-  static struct node_active_region __meminitdata early_node_map[MAX_ACTIVE_REGIONS];
-  static int __meminitdata nr_nodemap_entries;
-  static unsigned long __meminitdata arch_zone_lowest_possible_pfn[MAX_NR_ZONES];
-  static unsigned long __meminitdata arch_zone_highest_possible_pfn[MAX_NR_ZONES];
-#ifdef CONFIG_MEMORY_HOTPLUG_RESERVE
-  static unsigned long __meminitdata node_boundary_start_pfn[MAX_NUMNODES];
-  static unsigned long __meminitdata node_boundary_end_pfn[MAX_NUMNODES];
-#endif /* CONFIG_MEMORY_HOTPLUG_RESERVE */
-  static unsigned long __initdata required_kernelcore;
-  static unsigned long __initdata required_movablecore;
-  static unsigned long __meminitdata zone_movable_pfn[MAX_NUMNODES];
 
-  /* movable_zone is the "real" zone pages in ZONE_MOVABLE are taken from */
-  int movable_zone;
-  EXPORT_SYMBOL(movable_zone);
 #endif /* CONFIG_ARCH_POPULATES_NODE_MAP */
 
-#if MAX_NUMNODES > 1
-int nr_node_ids __read_mostly = MAX_NUMNODES;
-EXPORT_SYMBOL(nr_node_ids);
-#endif
-
-int page_group_by_mobility_disabled __read_mostly;
 
 static void set_pageblock_migratetype(struct page *page, int migratetype)
 {
@@ -1152,33 +1081,6 @@ failed:
 
 #ifdef CONFIG_FAIL_PAGE_ALLOC
 
-static struct fail_page_alloc_attr {
-	struct fault_attr attr;
-
-	u32 ignore_gfp_highmem;
-	u32 ignore_gfp_wait;
-	u32 min_order;
-
-#ifdef CONFIG_FAULT_INJECTION_DEBUG_FS
-
-	struct dentry *ignore_gfp_highmem_file;
-	struct dentry *ignore_gfp_wait_file;
-	struct dentry *min_order_file;
-
-#endif /* CONFIG_FAULT_INJECTION_DEBUG_FS */
-
-} fail_page_alloc = {
-	.attr = FAULT_ATTR_INITIALIZER,
-	.ignore_gfp_wait = 1,
-	.ignore_gfp_highmem = 1,
-	.min_order = 1,
-};
-
-static int __init setup_fail_page_alloc(char *str)
-{
-	return setup_fault_attr(&fail_page_alloc.attr, str);
-}
-__setup("fail_page_alloc=", setup_fail_page_alloc);
 
 static int should_fail_alloc_page(gfp_t gfp_mask, unsigned int order)
 {
@@ -1232,7 +1134,7 @@ static int __init fail_page_alloc_debugfs(void)
 	return err;
 }
 
-late_initcall(fail_page_alloc_debugfs);
+
 
 #endif /* CONFIG_FAULT_INJECTION_DEBUG_FS */
 
@@ -1683,7 +1585,7 @@ nopage:
 got_pg:
 	return page;
 }
-EXPORT_SYMBOL(__alloc_pages_internal);
+
 
 /*
  * Common helper functions.
@@ -1697,7 +1599,7 @@ unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 	return (unsigned long) page_address(page);
 }
 
-EXPORT_SYMBOL(__get_free_pages);
+
 
 unsigned long get_zeroed_page(gfp_t gfp_mask)
 {
@@ -1715,7 +1617,7 @@ unsigned long get_zeroed_page(gfp_t gfp_mask)
 	return 0;
 }
 
-EXPORT_SYMBOL(get_zeroed_page);
+
 
 void __pagevec_free(struct pagevec *pvec)
 {
@@ -1735,7 +1637,7 @@ void __free_pages(struct page *page, unsigned int order)
 	}
 }
 
-EXPORT_SYMBOL(__free_pages);
+
 
 void free_pages(unsigned long addr, unsigned int order)
 {
@@ -1745,7 +1647,7 @@ void free_pages(unsigned long addr, unsigned int order)
 	}
 }
 
-EXPORT_SYMBOL(free_pages);
+
 
 /**
  * alloc_pages_exact - allocate an exact number physically-contiguous pages.
@@ -1779,7 +1681,7 @@ void *alloc_pages_exact(size_t size, gfp_t gfp_mask)
 
 	return (void *)addr;
 }
-EXPORT_SYMBOL(alloc_pages_exact);
+
 
 /**
  * free_pages_exact - release memory allocated via alloc_pages_exact()
@@ -1798,7 +1700,7 @@ void free_pages_exact(void *virt, size_t size)
 		addr += PAGE_SIZE;
 	}
 }
-EXPORT_SYMBOL(free_pages_exact);
+
 
 static unsigned int nr_free_zone_pages(int offset)
 {
@@ -1827,7 +1729,7 @@ unsigned int nr_free_buffer_pages(void)
 {
 	return nr_free_zone_pages(gfp_zone(GFP_USER));
 }
-EXPORT_SYMBOL_GPL(nr_free_buffer_pages);
+
 
 /*
  * Amount of free RAM allocatable within all zones
@@ -1854,7 +1756,7 @@ void si_meminfo(struct sysinfo *val)
 	val->mem_unit = PAGE_SIZE;
 }
 
-EXPORT_SYMBOL(si_meminfo);
+
 
 #ifdef CONFIG_NUMA
 void si_meminfo_node(struct sysinfo *val, int nid)
@@ -2091,7 +1993,7 @@ static __init int setup_numa_zonelist_order(char *s)
 		return __parse_numa_zonelist_order(s);
 	return 0;
 }
-early_param("numa_zonelist_order", setup_numa_zonelist_order);
+
 
 /*
  * sysctl handler for numa_zonelist_order
@@ -2228,7 +2130,7 @@ static void build_thisnode_zonelists(pg_data_t *pgdat)
  * exhausted, but results in overflowing to remote node while memory
  * may still exist in local DMA zone.
  */
-static int node_order[MAX_NUMNODES];
+
 
 static void build_zonelists_in_zone_order(pg_data_t *pgdat, int nr_nodes)
 {
@@ -4188,10 +4090,6 @@ void __init set_dma_reserve(unsigned long new_dma_reserve)
 	dma_reserve = new_dma_reserve;
 }
 
-#ifndef CONFIG_NEED_MULTIPLE_NODES
-struct pglist_data __refdata contig_page_data = { .bdata = &bootmem_node_data[0] };
-EXPORT_SYMBOL(contig_page_data);
-#endif
 
 void __init free_area_init(unsigned long *zones_size)
 {
@@ -4547,7 +4445,7 @@ static int __init set_hashdist(char *str)
 	hashdist = simple_strtoul(str, &str, 0);
 	return 1;
 }
-__setup("hashdist=", set_hashdist);
+
 #endif
 
 /*

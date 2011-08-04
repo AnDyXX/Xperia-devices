@@ -10,6 +10,7 @@
  *  Zone aware kswapd started 02/00, Kanoj Sarcar (kanoj@sgi.com).
  *  Multiqueue VM started 5.8.00, Rik van Riel.
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/mm.h>
 #include <linux/module.h>
@@ -47,6 +48,7 @@
 
 #include <linux/swapops.h>
 
+#include "hijacked_types.h"
 #include "internal.h"
 
 struct scan_control {
@@ -116,15 +118,6 @@ struct scan_control {
 #define prefetchw_prev_lru_page(_page, _base, _field) do { } while (0)
 #endif
 
-/*
- * From 0 .. 100.  Higher means more swappy.
- */
-int vm_swappiness = 60;
-long vm_total_pages;	/* The total number of pages which the VM controls */
-
-static LIST_HEAD(shrinker_list);
-static DECLARE_RWSEM(shrinker_rwsem);
-
 #ifdef CONFIG_CGROUP_MEM_RES_CTLR
 #define scanning_global_lru(sc)	(!(sc)->mem_cgroup)
 #else
@@ -152,28 +145,6 @@ static unsigned long zone_nr_pages(struct zone *zone, struct scan_control *sc,
 }
 
 
-/*
- * Add a shrinker callback to be called from the vm
- */
-void register_shrinker(struct shrinker *shrinker)
-{
-	shrinker->nr = 0;
-	down_write(&shrinker_rwsem);
-	list_add_tail(&shrinker->list, &shrinker_list);
-	up_write(&shrinker_rwsem);
-}
-EXPORT_SYMBOL(register_shrinker);
-
-/*
- * Remove one
- */
-void unregister_shrinker(struct shrinker *shrinker)
-{
-	down_write(&shrinker_rwsem);
-	list_del(&shrinker->list);
-	up_write(&shrinker_rwsem);
-}
-EXPORT_SYMBOL(unregister_shrinker);
 
 #define SHRINK_BATCH 128
 /*
@@ -2626,14 +2597,14 @@ int scan_unevictable_handler(struct ctl_table *table, int write,
  * a specified node's per zone unevictable lists for evictable pages.
  */
 
-static ssize_t read_scan_unevictable_node(struct sys_device *dev,
+ssize_t read_scan_unevictable_node(struct sys_device *dev,
 					  struct sysdev_attribute *attr,
 					  char *buf)
 {
 	return sprintf(buf, "0\n");	/* always zero; should fit... */
 }
 
-static ssize_t write_scan_unevictable_node(struct sys_device *dev,
+ssize_t write_scan_unevictable_node(struct sys_device *dev,
 					   struct sysdev_attribute *attr,
 					const char *buf, size_t count)
 {
@@ -2654,18 +2625,5 @@ static ssize_t write_scan_unevictable_node(struct sys_device *dev,
 }
 
 
-static SYSDEV_ATTR(scan_unevictable_pages, S_IRUGO | S_IWUSR,
-			read_scan_unevictable_node,
-			write_scan_unevictable_node);
-
-int scan_unevictable_register_node(struct node *node)
-{
-	return sysdev_create_file(&node->sysdev, &attr_scan_unevictable_pages);
-}
-
-void scan_unevictable_unregister_node(struct node *node)
-{
-	sysdev_remove_file(&node->sysdev, &attr_scan_unevictable_pages);
-}
 
 #endif

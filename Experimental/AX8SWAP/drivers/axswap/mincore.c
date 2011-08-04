@@ -7,6 +7,8 @@
 /*
  * The mincore() system call.
  */
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/slab.h>
 #include <linux/pagemap.h>
 #include <linux/mm.h>
@@ -17,6 +19,8 @@
 
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
+
+#include "hijacked_types.h"
 
 /*
  * Later we can get more picky about what "in core" means precisely.
@@ -177,8 +181,8 @@ none_mapped:
  *		mapped
  *  -EAGAIN - A kernel resource was temporarily unavailable.
  */
-SYSCALL_DEFINE3(mincore, unsigned long, start, size_t, len,
-		unsigned char __user *, vec)
+asmlinkage long sys_mincore(unsigned long start, size_t len,
+				unsigned char __user * vec)
 {
 	long retval;
 	unsigned long pages;

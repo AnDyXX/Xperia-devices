@@ -5,6 +5,7 @@
  *
  * Address space accounting code	<alan@lxorguk.ukuu.org.uk>
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/slab.h>
 #include <linux/backing-dev.h>
@@ -33,6 +34,7 @@
 #include <asm/tlb.h>
 #include <asm/mmu_context.h>
 
+#include "hijacked_types.h"
 #include "internal.h"
 
 #ifndef arch_mmap_check
@@ -68,10 +70,7 @@ static void unmap_region(struct mm_struct *mm,
  *		x: (no) no	x: (no) yes	x: (no) yes	x: (yes) yes
  *
  */
-pgprot_t protection_map[16] = {
-	__P000, __P001, __P010, __P011, __P100, __P101, __P110, __P111,
-	__S000, __S001, __S010, __S011, __S100, __S101, __S110, __S111
-};
+
 
 pgprot_t vm_get_page_prot(unsigned long vm_flags)
 {
@@ -79,15 +78,7 @@ pgprot_t vm_get_page_prot(unsigned long vm_flags)
 				(VM_READ|VM_WRITE|VM_EXEC|VM_SHARED)]) |
 			pgprot_val(arch_vm_get_page_prot(vm_flags)));
 }
-EXPORT_SYMBOL(vm_get_page_prot);
 
-int sysctl_overcommit_memory = OVERCOMMIT_GUESS;  /* heuristic overcommit */
-int sysctl_overcommit_ratio = 50;	/* default is 50% */
-int sysctl_max_map_count __read_mostly = DEFAULT_MAX_MAP_COUNT;
-atomic_long_t vm_committed_space = ATOMIC_LONG_INIT(0);
-
-/* amount of vm to protect from userspace access */
-unsigned long mmap_min_addr = CONFIG_DEFAULT_MMAP_MIN_ADDR;
 
 /*
  * Check that a process has enough memory to allocate a new virtual
@@ -1055,7 +1046,7 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 
 	return mmap_region(file, addr, len, flags, vm_flags, pgoff);
 }
-EXPORT_SYMBOL(do_mmap_pgoff);
+
 
 /*
  * Some shared mappigns will want the pages marked read-only
@@ -1460,7 +1451,7 @@ get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
 	return arch_rebalance_pgtables(addr, len);
 }
 
-EXPORT_SYMBOL(get_unmapped_area);
+
 
 /* Look up the first VMA which satisfies  addr < vm_end,  NULL if none. */
 struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
@@ -1498,7 +1489,7 @@ struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
 	return vma;
 }
 
-EXPORT_SYMBOL(find_vma);
+
 
 /* Same as find_vma, but also return a pointer to the previous VMA in *pprev. */
 struct vm_area_struct *
@@ -1946,9 +1937,9 @@ int do_munmap(struct mm_struct *mm, unsigned long start, size_t len)
 	return 0;
 }
 
-EXPORT_SYMBOL(do_munmap);
 
-SYSCALL_DEFINE2(munmap, unsigned long, addr, size_t, len)
+
+asmlinkage long sys_munmap(unsigned long addr, size_t len)
 {
 	int ret;
 	struct mm_struct *mm = current->mm;
@@ -2076,7 +2067,7 @@ out:
 	return addr;
 }
 
-EXPORT_SYMBOL(do_brk);
+
 
 /* Release all mmaps. */
 void exit_mmap(struct mm_struct *mm)
@@ -2233,7 +2224,7 @@ int may_expand_vm(struct mm_struct *mm, unsigned long npages)
 }
 
 
-static int special_mapping_fault(struct vm_area_struct *vma,
+int special_mapping_fault(struct vm_area_struct *vma,
 				struct vm_fault *vmf)
 {
 	pgoff_t pgoff;
@@ -2263,55 +2254,12 @@ static int special_mapping_fault(struct vm_area_struct *vma,
 /*
  * Having a close hook prevents vma merging regardless of flags.
  */
-static void special_mapping_close(struct vm_area_struct *vma)
+void special_mapping_close(struct vm_area_struct *vma)
 {
 }
 
-static struct vm_operations_struct special_mapping_vmops = {
-	.close = special_mapping_close,
-	.fault = special_mapping_fault,
-};
 
-/*
- * Called with mm->mmap_sem held for writing.
- * Insert a new vma covering the given region, with the given flags.
- * Its pages are supplied by the given array of struct page *.
- * The array can be shorter than len >> PAGE_SHIFT if it's null-terminated.
- * The region past the last page supplied will always produce SIGBUS.
- * The array pointer and the pages it points to are assumed to stay alive
- * for as long as this mapping might exist.
- */
-int install_special_mapping(struct mm_struct *mm,
-			    unsigned long addr, unsigned long len,
-			    unsigned long vm_flags, struct page **pages)
-{
-	struct vm_area_struct *vma;
 
-	vma = kmem_cache_zalloc(vm_area_cachep, GFP_KERNEL);
-	if (unlikely(vma == NULL))
-		return -ENOMEM;
-
-	vma->vm_mm = mm;
-	vma->vm_start = addr;
-	vma->vm_end = addr + len;
-
-	vma->vm_flags = vm_flags | mm->def_flags | VM_DONTEXPAND;
-	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
-
-	vma->vm_ops = &special_mapping_vmops;
-	vma->vm_private_data = pages;
-
-	if (unlikely(insert_vm_struct(mm, vma))) {
-		kmem_cache_free(vm_area_cachep, vma);
-		return -ENOMEM;
-	}
-
-	mm->total_vm += len >> PAGE_SHIFT;
-
-	return 0;
-}
-
-static DEFINE_MUTEX(mm_all_locks_mutex);
 
 static void vm_lock_anon_vma(struct mm_struct *mm, struct anon_vma *anon_vma)
 {
@@ -2475,12 +2423,4 @@ void mm_drop_all_locks(struct mm_struct *mm)
 	mutex_unlock(&mm_all_locks_mutex);
 }
 
-/*
- * initialise the VMA slab
- */
-void __init mmap_init(void)
-{
-	vm_area_cachep = kmem_cache_create("vm_area_struct",
-			sizeof(struct vm_area_struct), 0,
-			SLAB_PANIC, NULL);
-}
+

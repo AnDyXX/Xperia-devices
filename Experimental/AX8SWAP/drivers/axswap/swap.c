@@ -12,6 +12,7 @@
  * Swap aging added 23.2.95, Stephen Tweedie.
  * Buffermem limits added 12.3.98, Rik van Riel.
  */
+#define EXTERNAL_SWAP_MODULE
 
 #include <linux/mm.h>
 #include <linux/sched.h>
@@ -31,13 +32,8 @@
 #include <linux/backing-dev.h>
 #include <linux/memcontrol.h>
 
+#include "hijacked_types.h"
 #include "internal.h"
-
-/* How many pages do we try to swap or page in/out together? */
-int page_cluster;
-
-static DEFINE_PER_CPU(struct pagevec[NR_LRU_LISTS], lru_add_pvecs);
-static DEFINE_PER_CPU(struct pagevec, lru_rotate_pvecs);
 
 /*
  * This path almost never happens for VM activity - pages are normally
@@ -76,7 +72,7 @@ void put_page(struct page *page)
 	else if (put_page_testzero(page))
 		__page_cache_release(page);
 }
-EXPORT_SYMBOL(put_page);
+
 
 /**
  * put_pages_list() - release a list of pages
@@ -95,13 +91,13 @@ void put_pages_list(struct list_head *pages)
 		page_cache_release(victim);
 	}
 }
-EXPORT_SYMBOL(put_pages_list);
+
 
 /*
  * pagevec_move_tail() must be called with IRQ disabled.
  * Otherwise this may cause nasty races.
  */
-static void pagevec_move_tail(struct pagevec *pvec)
+void pagevec_move_tail(struct pagevec *pvec)
 {
 	int i;
 	int pgmoved = 0;
@@ -128,27 +124,6 @@ static void pagevec_move_tail(struct pagevec *pvec)
 	__count_vm_events(PGROTATED, pgmoved);
 	release_pages(pvec->pages, pvec->nr, pvec->cold);
 	pagevec_reinit(pvec);
-}
-
-/*
- * Writeback is about to end against a page which has been marked for immediate
- * reclaim.  If it still appears to be reclaimable, move it to the tail of the
- * inactive list.
- */
-void  rotate_reclaimable_page(struct page *page)
-{
-	if (!PageLocked(page) && !PageDirty(page) && !PageActive(page) &&
-	    !PageUnevictable(page) && PageLRU(page)) {
-		struct pagevec *pvec;
-		unsigned long flags;
-
-		page_cache_get(page);
-		local_irq_save(flags);
-		pvec = &__get_cpu_var(lru_rotate_pvecs);
-		if (!pagevec_add(pvec, page))
-			pagevec_move_tail(pvec);
-		local_irq_restore(flags);
-	}
 }
 
 static void update_page_reclaim_stat(struct zone *zone, struct page *page,
@@ -212,17 +187,7 @@ void mark_page_accessed(struct page *page)
 	}
 }
 
-EXPORT_SYMBOL(mark_page_accessed);
 
-void __lru_cache_add(struct page *page, enum lru_list lru)
-{
-	struct pagevec *pvec = &get_cpu_var(lru_add_pvecs)[lru];
-
-	page_cache_get(page);
-	if (!pagevec_add(pvec, page))
-		____pagevec_lru_add(pvec, lru);
-	put_cpu_var(lru_add_pvecs);
-}
 
 /**
  * lru_cache_add_lru - add a page to a page list
@@ -264,52 +229,7 @@ void add_page_to_unevictable_list(struct page *page)
 	spin_unlock_irq(&zone->lru_lock);
 }
 
-/*
- * Drain pages out of the cpu's pagevecs.
- * Either "cpu" is the current CPU, and preemption has already been
- * disabled; or "cpu" is being hot-unplugged, and is already dead.
- */
-static void drain_cpu_pagevecs(int cpu)
-{
-	struct pagevec *pvecs = per_cpu(lru_add_pvecs, cpu);
-	struct pagevec *pvec;
-	int lru;
 
-	for_each_lru(lru) {
-		pvec = &pvecs[lru - LRU_BASE];
-		if (pagevec_count(pvec))
-			____pagevec_lru_add(pvec, lru);
-	}
-
-	pvec = &per_cpu(lru_rotate_pvecs, cpu);
-	if (pagevec_count(pvec)) {
-		unsigned long flags;
-
-		/* No harm done if a racing interrupt already did this */
-		local_irq_save(flags);
-		pagevec_move_tail(pvec);
-		local_irq_restore(flags);
-	}
-}
-
-void lru_add_drain(void)
-{
-	drain_cpu_pagevecs(get_cpu());
-	put_cpu();
-}
-
-static void lru_add_drain_per_cpu(struct work_struct *dummy)
-{
-	lru_add_drain();
-}
-
-/*
- * Returns 0 for success
- */
-int lru_add_drain_all(void)
-{
-	return schedule_on_each_cpu(lru_add_drain_per_cpu);
-}
 
 /*
  * Batched page_cache_release().  Decrement the reference count on all the
@@ -394,7 +314,7 @@ void __pagevec_release(struct pagevec *pvec)
 	pagevec_reinit(pvec);
 }
 
-EXPORT_SYMBOL(__pagevec_release);
+
 
 /*
  * Add the passed pages to the LRU, then drop the caller's refcount
@@ -436,7 +356,7 @@ void ____pagevec_lru_add(struct pagevec *pvec, enum lru_list lru)
 	pagevec_reinit(pvec);
 }
 
-EXPORT_SYMBOL(____pagevec_lru_add);
+
 
 /*
  * Try to drop buffers from the pages in a pagevec
@@ -502,7 +422,7 @@ unsigned pagevec_lookup(struct pagevec *pvec, struct address_space *mapping,
 	return pagevec_count(pvec);
 }
 
-EXPORT_SYMBOL(pagevec_lookup);
+
 
 unsigned pagevec_lookup_tag(struct pagevec *pvec, struct address_space *mapping,
 		pgoff_t *index, int tag, unsigned nr_pages)
@@ -521,7 +441,7 @@ EXPORT_SYMBOL(pagevec_lookup_tag);
  */
 #define ACCT_THRESHOLD	max(16, NR_CPUS * 2)
 
-static DEFINE_PER_CPU(long, committed_space);
+
 
 void vm_acct_memory(long pages)
 {

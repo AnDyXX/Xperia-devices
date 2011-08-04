@@ -38,6 +38,8 @@
  *                           within inode_lock in __sync_single_inode)
  */
 
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/mm.h>
 #include <linux/pagemap.h>
 #include <linux/swap.h>
@@ -53,9 +55,8 @@
 
 #include <asm/tlbflush.h>
 
+#include "hijacked_types.h"
 #include "internal.h"
-
-static struct kmem_cache *anon_vma_cachep;
 
 static inline struct anon_vma *anon_vma_alloc(void)
 {
@@ -583,7 +584,7 @@ int page_mkclean(struct page *page)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(page_mkclean);
+
 
 /**
  * __page_set_anon_rmap - setup new anonymous rmap

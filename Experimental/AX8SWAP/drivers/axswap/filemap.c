@@ -9,6 +9,8 @@
  * most "normal" filesystems (but you don't /have/ to use this:
  * the NFS filesystem used to do this differently, for example)
  */
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/compiler.h>
@@ -34,6 +36,8 @@
 #include <linux/hardirq.h> /* for BUG_ON(!in_atomic()) only */
 #include <linux/memcontrol.h>
 #include <linux/mm_inline.h> /* for page_is_file_cache() */
+
+#include "hijacked_types.h"
 #include "internal.h"
 
 /*
@@ -232,14 +236,14 @@ int filemap_fdatawrite(struct address_space *mapping)
 {
 	return __filemap_fdatawrite(mapping, WB_SYNC_ALL);
 }
-EXPORT_SYMBOL(filemap_fdatawrite);
+
 
 int filemap_fdatawrite_range(struct address_space *mapping, loff_t start,
 				loff_t end)
 {
 	return __filemap_fdatawrite_range(mapping, start, end, WB_SYNC_ALL);
 }
-EXPORT_SYMBOL(filemap_fdatawrite_range);
+
 
 /**
  * filemap_flush - mostly a non-blocking flush
@@ -252,7 +256,7 @@ int filemap_flush(struct address_space *mapping)
 {
 	return __filemap_fdatawrite(mapping, WB_SYNC_NONE);
 }
-EXPORT_SYMBOL(filemap_flush);
+
 
 /**
  * wait_on_page_writeback_range - wait for writeback to complete
@@ -339,7 +343,7 @@ int sync_page_range(struct inode *inode, struct address_space *mapping,
 		ret = wait_on_page_writeback_range(mapping, start, end);
 	return ret;
 }
-EXPORT_SYMBOL(sync_page_range);
+
 
 /**
  * sync_page_range_nolock - write & wait on all pages in the passed range without locking
@@ -409,7 +413,7 @@ int filemap_write_and_wait(struct address_space *mapping)
 	}
 	return err;
 }
-EXPORT_SYMBOL(filemap_write_and_wait);
+
 
 /**
  * filemap_write_and_wait_range - write out & wait on a file range
@@ -488,7 +492,7 @@ int add_to_page_cache_locked(struct page *page, struct address_space *mapping,
 out:
 	return error;
 }
-EXPORT_SYMBOL(add_to_page_cache_locked);
+
 
 int add_to_page_cache_lru(struct page *page, struct address_space *mapping,
 				pgoff_t offset, gfp_t gfp_mask)
@@ -523,7 +527,7 @@ struct page *__page_cache_alloc(gfp_t gfp)
 	}
 	return alloc_pages(gfp, 0);
 }
-EXPORT_SYMBOL(__page_cache_alloc);
+
 #endif
 
 static int __sleep_on_page_lock(void *word)
@@ -562,7 +566,7 @@ void wait_on_page_bit(struct page *page, int bit_nr)
 		__wait_on_bit(page_waitqueue(page), &wait, sync_page,
 							TASK_UNINTERRUPTIBLE);
 }
-EXPORT_SYMBOL(wait_on_page_bit);
+
 
 /**
  * unlock_page - unlock a locked page
@@ -583,7 +587,7 @@ void unlock_page(struct page *page)
 	smp_mb__after_clear_bit();
 	wake_up_page(page, PG_locked);
 }
-EXPORT_SYMBOL(unlock_page);
+
 
 /**
  * end_page_writeback - end writeback against a page
@@ -600,7 +604,7 @@ void end_page_writeback(struct page *page)
 	smp_mb__after_clear_bit();
 	wake_up_page(page, PG_writeback);
 }
-EXPORT_SYMBOL(end_page_writeback);
+
 
 /**
  * __lock_page - get a lock on the page, assuming we need to sleep to get it
@@ -618,7 +622,7 @@ void __lock_page(struct page *page)
 	__wait_on_bit_lock(page_waitqueue(page), &wait, sync_page,
 							TASK_UNINTERRUPTIBLE);
 }
-EXPORT_SYMBOL(__lock_page);
+
 
 int __lock_page_killable(struct page *page)
 {
@@ -681,7 +685,7 @@ repeat:
 
 	return page;
 }
-EXPORT_SYMBOL(find_get_page);
+
 
 /**
  * find_lock_page - locate, pin and lock a pagecache page
@@ -711,7 +715,7 @@ repeat:
 	}
 	return page;
 }
-EXPORT_SYMBOL(find_lock_page);
+
 
 /**
  * find_or_create_page - locate or add a pagecache page
@@ -758,7 +762,7 @@ repeat:
 	}
 	return page;
 }
-EXPORT_SYMBOL(find_or_create_page);
+
 
 /**
  * find_get_pages - gang pagecache lookup
@@ -873,7 +877,7 @@ repeat:
 	rcu_read_unlock();
 	return ret;
 }
-EXPORT_SYMBOL(find_get_pages_contig);
+
 
 /**
  * find_get_pages_tag - find and return pages that match @tag
@@ -930,7 +934,7 @@ repeat:
 
 	return ret;
 }
-EXPORT_SYMBOL(find_get_pages_tag);
+
 
 /**
  * grab_cache_page_nowait - returns locked page at given index in given cache
@@ -963,7 +967,7 @@ grab_cache_page_nowait(struct address_space *mapping, pgoff_t index)
 	}
 	return page;
 }
-EXPORT_SYMBOL(grab_cache_page_nowait);
+
 
 /*
  * CD/DVDs are error prone. When a medium error occurs, the driver may fail
@@ -1285,7 +1289,7 @@ int generic_segment_checks(const struct iovec *iov,
 	*count = cnt;
 	return 0;
 }
-EXPORT_SYMBOL(generic_segment_checks);
+
 
 /**
  * generic_file_aio_read - generic filesystem read routine
@@ -1360,7 +1364,7 @@ generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 out:
 	return retval;
 }
-EXPORT_SYMBOL(generic_file_aio_read);
+
 
 static ssize_t
 do_readahead(struct address_space *mapping, struct file *filp,
@@ -1374,7 +1378,7 @@ do_readahead(struct address_space *mapping, struct file *filp,
 	return 0;
 }
 
-SYSCALL_DEFINE(readahead)(int fd, loff_t offset, size_t count)
+asmlinkage long sys_readahead(int fd, loff_t offset, size_t count)
 {
 	ssize_t ret;
 	struct file *file;
@@ -1393,13 +1397,7 @@ SYSCALL_DEFINE(readahead)(int fd, loff_t offset, size_t count)
 	}
 	return ret;
 }
-#ifdef CONFIG_HAVE_SYSCALL_WRAPPERS
-asmlinkage long SyS_readahead(long fd, loff_t offset, long count)
-{
-	return SYSC_readahead((int) fd, offset, (size_t) count);
-}
-SYSCALL_ALIAS(sys_readahead, SyS_readahead);
-#endif
+
 
 #ifdef CONFIG_MMU
 /**
@@ -1602,7 +1600,7 @@ page_not_uptodate:
 	shrink_readahead_size_eio(file, ra);
 	return VM_FAULT_SIGBUS;
 }
-EXPORT_SYMBOL(filemap_fault);
+
 
 struct vm_operations_struct generic_file_vm_ops = {
 	.fault		= filemap_fault,
@@ -1642,8 +1640,6 @@ int generic_file_readonly_mmap(struct file * file, struct vm_area_struct * vma)
 }
 #endif /* CONFIG_MMU */
 
-EXPORT_SYMBOL(generic_file_mmap);
-EXPORT_SYMBOL(generic_file_readonly_mmap);
 
 static struct page *__read_cache_page(struct address_space *mapping,
 				pgoff_t index,
@@ -1724,7 +1720,7 @@ out:
 	mark_page_accessed(page);
 	return page;
 }
-EXPORT_SYMBOL(read_cache_page_async);
+
 
 /**
  * read_cache_page - read into page cache, fill it if needed
@@ -1756,7 +1752,7 @@ struct page *read_cache_page(struct address_space *mapping,
  out:
 	return page;
 }
-EXPORT_SYMBOL(read_cache_page);
+
 
 /*
  * The logic we want is
@@ -1785,7 +1781,7 @@ int should_remove_suid(struct dentry *dentry)
 
 	return 0;
 }
-EXPORT_SYMBOL(should_remove_suid);
+
 
 static int __remove_suid(struct dentry *dentry, int kill)
 {
@@ -1811,7 +1807,7 @@ int file_remove_suid(struct file *file)
 
 	return error;
 }
-EXPORT_SYMBOL(file_remove_suid);
+
 
 static size_t __iovec_copy_from_user_inatomic(char *vaddr,
 			const struct iovec *iov, size_t base, size_t bytes)
@@ -1862,7 +1858,7 @@ size_t iov_iter_copy_from_user_atomic(struct page *page,
 
 	return copied;
 }
-EXPORT_SYMBOL(iov_iter_copy_from_user_atomic);
+
 
 /*
  * This has the same sideeffects and return value as
@@ -1889,7 +1885,7 @@ size_t iov_iter_copy_from_user(struct page *page,
 	kunmap(page);
 	return copied;
 }
-EXPORT_SYMBOL(iov_iter_copy_from_user);
+
 
 void iov_iter_advance(struct iov_iter *i, size_t bytes)
 {
@@ -1923,7 +1919,7 @@ void iov_iter_advance(struct iov_iter *i, size_t bytes)
 		i->iov_offset = base;
 	}
 }
-EXPORT_SYMBOL(iov_iter_advance);
+
 
 /*
  * Fault in the first iovec of the given iov_iter, to a maximum length
@@ -1940,7 +1936,7 @@ int iov_iter_fault_in_readable(struct iov_iter *i, size_t bytes)
 	bytes = min(bytes, i->iov->iov_len - i->iov_offset);
 	return fault_in_pages_readable(buf, bytes);
 }
-EXPORT_SYMBOL(iov_iter_fault_in_readable);
+
 
 /*
  * Return the count of just the current iov_iter segment.
@@ -1953,7 +1949,7 @@ size_t iov_iter_single_seg_count(struct iov_iter *i)
 	else
 		return min(i->count, iov->iov_len - i->iov_offset);
 }
-EXPORT_SYMBOL(iov_iter_single_seg_count);
+
 
 /*
  * Performs necessary checks before doing a write
@@ -2035,7 +2031,7 @@ inline int generic_write_checks(struct file *file, loff_t *pos, size_t *count, i
 	}
 	return 0;
 }
-EXPORT_SYMBOL(generic_write_checks);
+
 
 int pagecache_write_begin(struct file *file, struct address_space *mapping,
 				loff_t pos, unsigned len, unsigned flags,
@@ -2046,7 +2042,7 @@ int pagecache_write_begin(struct file *file, struct address_space *mapping,
 	return aops->write_begin(file, mapping, pos, len, flags,
 							pagep, fsdata);
 }
-EXPORT_SYMBOL(pagecache_write_begin);
+
 
 int pagecache_write_end(struct file *file, struct address_space *mapping,
 				loff_t pos, unsigned len, unsigned copied,
@@ -2057,7 +2053,7 @@ int pagecache_write_end(struct file *file, struct address_space *mapping,
 	mark_page_accessed(page);
 	return aops->write_end(file, mapping, pos, len, copied, page, fsdata);
 }
-EXPORT_SYMBOL(pagecache_write_end);
+
 
 ssize_t
 generic_file_direct_write(struct kiocb *iocb, const struct iovec *iov,
@@ -2140,7 +2136,7 @@ out:
 	}
 	return written;
 }
-EXPORT_SYMBOL(generic_file_direct_write);
+
 
 /*
  * Find or create a page at the given pagecache position. Return the locked
@@ -2172,7 +2168,7 @@ repeat:
 	}
 	return page;
 }
-EXPORT_SYMBOL(grab_cache_page_write_begin);
+
 
 static ssize_t generic_perform_write(struct file *file,
 				struct iov_iter *i, loff_t pos)
@@ -2302,7 +2298,7 @@ generic_file_buffered_write(struct kiocb *iocb, const struct iovec *iov,
 
 	return written ? written : status;
 }
-EXPORT_SYMBOL(generic_file_buffered_write);
+
 
 static ssize_t
 __generic_file_aio_write_nolock(struct kiocb *iocb, const struct iovec *iov,
@@ -2426,7 +2422,7 @@ ssize_t generic_file_aio_write_nolock(struct kiocb *iocb,
 	}
 	return ret;
 }
-EXPORT_SYMBOL(generic_file_aio_write_nolock);
+
 
 ssize_t generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		unsigned long nr_segs, loff_t pos)
@@ -2452,7 +2448,7 @@ ssize_t generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	}
 	return ret;
 }
-EXPORT_SYMBOL(generic_file_aio_write);
+
 
 /**
  * try_to_release_page() - release old fs-specific metadata on a page
@@ -2481,4 +2477,4 @@ int try_to_release_page(struct page *page, gfp_t gfp_mask)
 	return try_to_free_buffers(page);
 }
 
-EXPORT_SYMBOL(try_to_release_page);
+

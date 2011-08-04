@@ -11,6 +11,8 @@
  *		Initial version
  */
 
+#define EXTERNAL_SWAP_MODULE
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
@@ -35,6 +37,8 @@
 #include <linux/buffer_head.h>
 #include <linux/pagevec.h>
 
+#include "hijacked_types.h"
+
 /*
  * The maximum number of pages to writeout in a single bdflush/kupdate
  * operation.  We do this so we don't hold I_SYNC against an inode for
@@ -43,12 +47,6 @@
  * the dirty each time it has written this many pages.
  */
 #define MAX_WRITEBACK_PAGES	1024
-
-/*
- * After a CPU has dirtied this many pages, balance_dirty_pages_ratelimited
- * will look to see if it needs to force writeback or throttling.
- */
-static long ratelimit_pages = 32;
 
 /*
  * When balance_dirty_pages decides that the caller needs to perform some
@@ -61,58 +59,6 @@ static inline long sync_writeback_pages(void)
 	return ratelimit_pages + ratelimit_pages / 2;
 }
 
-/* The following parameters are exported via /proc/sys/vm */
-
-/*
- * Start background writeback (via pdflush) at this percentage
- */
-int dirty_background_ratio = 5;
-
-/*
- * dirty_background_bytes starts at 0 (disabled) so that it is a function of
- * dirty_background_ratio * the amount of dirtyable memory
- */
-unsigned long dirty_background_bytes;
-
-/*
- * free highmem will not be subtracted from the total free memory
- * for calculating free ratios if vm_highmem_is_dirtyable is true
- */
-int vm_highmem_is_dirtyable;
-
-/*
- * The generator of dirty data starts writeback at this percentage
- */
-int vm_dirty_ratio = 10;
-
-/*
- * vm_dirty_bytes starts at 0 (disabled) so that it is a function of
- * vm_dirty_ratio * the amount of dirtyable memory
- */
-unsigned long vm_dirty_bytes;
-
-/*
- * The interval between `kupdate'-style writebacks, in jiffies
- */
-int dirty_writeback_interval = 5 * HZ;
-
-/*
- * The longest number of jiffies for which data is allowed to remain dirty
- */
-int dirty_expire_interval = 30 * HZ;
-
-/*
- * Flag that makes the machine dump writes/reads and block dirtyings.
- */
-int block_dump;
-
-/*
- * Flag that puts the machine in "laptop mode". Doubles as a timeout in jiffies:
- * a full sync is triggered after this time elapses without any disk activity.
- */
-int laptop_mode;
-
-EXPORT_SYMBOL(laptop_mode);
 
 /* End of sysctl-exported parameters */
 
@@ -135,8 +81,7 @@ static void background_writeout(unsigned long _min_pages);
  * measured in page writeback completions.
  *
  */
-static struct prop_descriptor vm_completions;
-static struct prop_descriptor vm_dirties;
+
 
 /*
  * couple the period to the dirty_ratio:
@@ -238,7 +183,7 @@ void bdi_writeout_inc(struct backing_dev_info *bdi)
 	__bdi_writeout_inc(bdi);
 	local_irq_restore(flags);
 }
-EXPORT_SYMBOL_GPL(bdi_writeout_inc);
+
 
 void task_dirty_inc(struct task_struct *tsk)
 {
@@ -316,54 +261,6 @@ static void task_dirty_limit(struct task_struct *tsk, long *pdirty)
 	*pdirty = dirty;
 }
 
-/*
- *
- */
-static DEFINE_SPINLOCK(bdi_lock);
-static unsigned int bdi_min_ratio;
-
-int bdi_set_min_ratio(struct backing_dev_info *bdi, unsigned int min_ratio)
-{
-	int ret = 0;
-	unsigned long flags;
-
-	spin_lock_irqsave(&bdi_lock, flags);
-	if (min_ratio > bdi->max_ratio) {
-		ret = -EINVAL;
-	} else {
-		min_ratio -= bdi->min_ratio;
-		if (bdi_min_ratio + min_ratio < 100) {
-			bdi_min_ratio += min_ratio;
-			bdi->min_ratio += min_ratio;
-		} else {
-			ret = -EINVAL;
-		}
-	}
-	spin_unlock_irqrestore(&bdi_lock, flags);
-
-	return ret;
-}
-
-int bdi_set_max_ratio(struct backing_dev_info *bdi, unsigned max_ratio)
-{
-	unsigned long flags;
-	int ret = 0;
-
-	if (max_ratio > 100)
-		return -EINVAL;
-
-	spin_lock_irqsave(&bdi_lock, flags);
-	if (bdi->min_ratio > max_ratio) {
-		ret = -EINVAL;
-	} else {
-		bdi->max_ratio = max_ratio;
-		bdi->max_prop_frac = (PROP_FRAC_BASE * max_ratio) / 100;
-	}
-	spin_unlock_irqrestore(&bdi_lock, flags);
-
-	return ret;
-}
-EXPORT_SYMBOL(bdi_set_max_ratio);
 
 /*
  * Work out the current dirty-memory clamping and background writeout
@@ -646,7 +543,7 @@ void balance_dirty_pages_ratelimited_nr(struct address_space *mapping,
 	}
 	preempt_enable();
 }
-EXPORT_SYMBOL(balance_dirty_pages_ratelimited_nr);
+
 
 void throttle_vm_writeout(gfp_t gfp_mask)
 {
@@ -731,12 +628,6 @@ int wakeup_pdflush(long nr_pages)
 	return pdflush_operation(background_writeout, nr_pages);
 }
 
-static void wb_timer_fn(unsigned long unused);
-static void laptop_timer_fn(unsigned long unused);
-
-static DEFINE_TIMER(wb_timer, wb_timer_fn, 0, 0);
-static DEFINE_TIMER(laptop_mode_wb_timer, laptop_timer_fn, 0, 0);
-
 /*
  * Periodic writeback of "old" data.
  *
@@ -752,7 +643,7 @@ static DEFINE_TIMER(laptop_mode_wb_timer, laptop_timer_fn, 0, 0);
  * older_than_this takes precedence over nr_to_write.  So we'll only write back
  * all dirty pages if they are all attached to "old" mappings.
  */
-static void wb_kupdate(unsigned long arg)
+void wb_kupdate(unsigned long arg)
 {
 	unsigned long oldest_jif;
 	unsigned long start_jif;
@@ -809,21 +700,12 @@ int dirty_writeback_centisecs_handler(ctl_table *table, int write,
 	return 0;
 }
 
-static void wb_timer_fn(unsigned long unused)
-{
-	if (pdflush_operation(wb_kupdate, 0) < 0)
-		mod_timer(&wb_timer, jiffies + HZ); /* delay 1 second */
-}
 
-static void laptop_flush(unsigned long unused)
+void laptop_flush(unsigned long unused)
 {
 	sys_sync();
 }
 
-static void laptop_timer_fn(unsigned long unused)
-{
-	pdflush_operation(laptop_flush, 0);
-}
 
 /*
  * We've spun up the disk and we're in laptop mode: schedule writeback
@@ -1098,7 +980,7 @@ continue_unlock:
 
 	return ret;
 }
-EXPORT_SYMBOL(write_cache_pages);
+
 
 /*
  * Function used by generic_writepages to call the real writepage
@@ -1131,7 +1013,7 @@ int generic_writepages(struct address_space *mapping,
 	return write_cache_pages(mapping, wbc, __writepage, mapping);
 }
 
-EXPORT_SYMBOL(generic_writepages);
+
 
 int do_writepages(struct address_space *mapping, struct writeback_control *wbc)
 {
@@ -1245,7 +1127,7 @@ int __set_page_dirty_nobuffers(struct page *page)
 	}
 	return 0;
 }
-EXPORT_SYMBOL(__set_page_dirty_nobuffers);
+
 
 /*
  * When a writepage implementation decides that it doesn't want to write this
@@ -1257,7 +1139,7 @@ int redirty_page_for_writepage(struct writeback_control *wbc, struct page *page)
 	wbc->pages_skipped++;
 	return __set_page_dirty_nobuffers(page);
 }
-EXPORT_SYMBOL(redirty_page_for_writepage);
+
 
 /*
  * If the mapping doesn't provide a set_page_dirty a_op, then
@@ -1281,7 +1163,7 @@ int set_page_dirty(struct page *page)
 	}
 	return 0;
 }
-EXPORT_SYMBOL(set_page_dirty);
+
 
 /*
  * set_page_dirty() is racy if the caller has no reference against
@@ -1302,7 +1184,7 @@ int set_page_dirty_lock(struct page *page)
 	unlock_page(page);
 	return ret;
 }
-EXPORT_SYMBOL(set_page_dirty_lock);
+
 
 /*
  * Clear a page's dirty flag, while caring for dirty memory accounting.
@@ -1373,7 +1255,7 @@ int clear_page_dirty_for_io(struct page *page)
 	}
 	return TestClearPageDirty(page);
 }
-EXPORT_SYMBOL(clear_page_dirty_for_io);
+
 
 int test_clear_page_writeback(struct page *page)
 {
@@ -1435,7 +1317,7 @@ int test_set_page_writeback(struct page *page)
 	return ret;
 
 }
-EXPORT_SYMBOL(test_set_page_writeback);
+
 
 /*
  * Return true if any of the pages in the mapping are marked with the
@@ -1449,4 +1331,4 @@ int mapping_tagged(struct address_space *mapping, int tag)
 	rcu_read_unlock();
 	return ret;
 }
-EXPORT_SYMBOL(mapping_tagged);
+

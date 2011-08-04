@@ -47,6 +47,31 @@
 #define OFS_KALLSYMS_LOOKUP_NAME	0xC00B09F0			// kallsyms_lookup_name
 #endif
 
+struct mutex * ax8swap_mm_all_locks_mutex;
+struct rw_semaphore * ax8swap_shrinker_rwsem;
+struct list_head * ax8swap_shrinker_list;
+int * ax8swap_min_free_order_shift;
+unsigned long __meminitdata * ax8swap_dma_reserve;
+int * ax8swap_min_free_kbytes;
+long * ax8swap_ratelimit_pages;
+int * ax8swap_dirty_background_ratio;
+unsigned long * ax8swap_dirty_background_bytes;
+int * ax8swap_vm_highmem_is_dirtyable;
+int * ax8swap_vm_dirty_ratio;
+unsigned long * ax8swap_vm_dirty_bytes;
+int * ax8swap_dirty_writeback_interval;
+int * ax8swap_dirty_expire_interval;
+int * ax8swap_block_dump;
+int * ax8swap_laptop_mode;
+struct prop_descriptor * ax8swap_vm_completions;
+struct prop_descriptor * ax8swap_vm_dirties;
+struct timer_list * ax8swap_wb_timer;
+struct timer_list * ax8swap_laptop_mode_wb_timer;
+unsigned int * ax8swap_bdi_min_ratio;
+struct kmem_cache ** ax8swap_anon_vma_cachep;
+struct mutex * ax8swap_shmem_swaplist_mutex;
+struct list_head * ax8swap_shmem_swaplist;
+
 
 
 // for get proc address
@@ -83,6 +108,30 @@ static const struct cfg_value_map func_mapping_table[] = {
 };
 
 static const struct cfg_value_map2 field_mapping_table[] = {
+	{"mm_all_locks_mutex", 		(void**) &ax8swap_mm_all_locks_mutex},
+	{"shrinker_rwsem", 		(void**) &ax8swap_shrinker_rwsem},
+	{"shrinker_list", 		(void**) &ax8swap_shrinker_list},
+	{"min_free_order_shift", 	(void**) &ax8swap_min_free_order_shift},
+	{"dma_reserve", 		(void**) &ax8swap_dma_reserve},
+	{"min_free_kbytes", 		(void**) &ax8swap_min_free_kbytes},
+	{"ratelimit_pages", 		(void**) &ax8swap_ratelimit_pages},
+	{"dirty_background_ratio", 	(void**) &ax8swap_dirty_background_ratio},
+	{"dirty_background_bytes", 	(void**) &ax8swap_dirty_background_bytes},
+	{"vm_highmem_is_dirtyable", 	(void**) &ax8swap_vm_highmem_is_dirtyable},
+	{"vm_dirty_ratio", 		(void**) &ax8swap_vm_dirty_ratio},
+	{"vm_dirty_bytes", 		(void**) &ax8swap_vm_dirty_bytes},
+	{"dirty_writeback_interval", 	(void**) &ax8swap_dirty_writeback_interval},
+	{"dirty_expire_interval", 	(void**) &ax8swap_dirty_expire_interval},
+	{"block_dump", 			(void**) &ax8swap_block_dump},
+	{"laptop_mode", 		(void**) &ax8swap_laptop_mode},
+	{"vm_completions", 		(void**) &ax8swap_vm_completions},
+	{"vm_dirties", 			(void**) &ax8swap_vm_dirties},
+	{"wb_timer", 			(void**) &ax8swap_wb_timer},
+	{"laptop_mode_wb_timer", 	(void**) &ax8swap_laptop_mode_wb_timer},
+	{"bdi_min_ratio", 		(void**) &ax8swap_bdi_min_ratio},
+	{"anon_vma_cachep", 		(void**) &ax8swap_anon_vma_cachep},
+	{"shmem_swaplist_mutex", 	(void**) &ax8swap_shmem_swaplist_mutex},
+	{"shmem_swaplist", 		(void**) &ax8swap_shmem_swaplist},
 	{NULL,				0},
 };
 
