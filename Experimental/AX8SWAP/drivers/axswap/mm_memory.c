@@ -77,7 +77,7 @@
 
 void ax8swap_pgd_clear_bad(pgd_t *pgd)
 {
-	pgd_ERROR(*pgd);
+	ax8swap_pgd_ERROR(*pgd);
 	pgd_clear(pgd);
 }
 
@@ -89,7 +89,7 @@ void ax8swap_pud_clear_bad(pud_t *pud)
 
 void ax8swap_pmd_clear_bad(pmd_t *pmd)
 {
-	pmd_ERROR(*pmd);
+	ax8swap_pmd_ERROR(*pmd);
 	pmd_clear(pmd);
 }
 
@@ -879,7 +879,7 @@ static unsigned long ax8swap_unmap_page_range(struct mmu_gather *tlb,
 		next = ax8swap_zap_pud_range(tlb, vma, pgd, addr, next,
 						zap_work, details);
 	} while (pgd++, addr = next, (addr != end && *zap_work > 0));
-	tlb_end_vma(tlb, vma);
+	ax8swap_tlb_end_vma(tlb, vma);
 
 	return addr;
 }
@@ -981,7 +981,7 @@ unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
 				break;
 			}
 
-			tlb_finish_mmu(*tlbp, tlb_start, start);
+			ax8swap_tlb_finish_mmu(*tlbp, tlb_start, start);
 
 			if (need_resched() ||
 				(i_mmap_lock && spin_needbreak(i_mmap_lock))) {
@@ -1022,7 +1022,7 @@ unsigned long ax8swap_zap_page_range(struct vm_area_struct *vma, unsigned long a
 	update_hiwater_rss(mm);
 	end = unmap_vmas(&tlb, vma, address, end, &nr_accounted, details);
 	if (tlb)
-		tlb_finish_mmu(tlb, address, end);
+		ax8swap_tlb_finish_mmu(tlb, address, end);
 	return end;
 }
 
@@ -1304,7 +1304,7 @@ int ax8swap___get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 			if (pages) {
 				pages[i] = page;
 
-				flush_anon_page(vma, page, start);
+				ax8swap_flush_anon_page(vma, page, start);
 				flush_dcache_page(page);
 			}
 			if (vmas)
@@ -1647,7 +1647,7 @@ int ax8swap_remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
 	BUG_ON(addr >= end);
 	pfn -= addr >> PAGE_SHIFT;
 	pgd = pgd_offset(mm, addr);
-	flush_cache_range(vma, addr, end);
+	ax8swap_flush_cache_range(vma, addr, end);
 	do {
 		next = pgd_addr_end(addr, end);
 		err = ax8swap_remap_pud_range(mm, pgd, addr, next,
@@ -1939,7 +1939,7 @@ reuse:
 		entry = pte_mkyoung(orig_pte);
 		entry = ax8swap_maybe_mkwrite(pte_mkdirty(entry), vma);
 		if (ptep_set_access_flags(vma, address, page_table, entry,1))
-			update_mmu_cache(vma, address, entry);
+			ax8swap_update_mmu_cache(vma, address, entry);
 		ret |= VM_FAULT_WRITE;
 		goto unlock;
 	}
@@ -1996,7 +1996,7 @@ gotten:
 		ptep_clear_flush_notify(vma, address, page_table);
 		page_add_new_anon_rmap(new_page, vma, address);
 		set_pte_at(mm, address, page_table, entry);
-		update_mmu_cache(vma, address, entry);
+		ax8swap_update_mmu_cache(vma, address, entry);
 		if (old_page) {
 			/*
 			 * Only after switching the pte to the new page may
@@ -2103,7 +2103,7 @@ static void ax8swap_reset_vma_truncate_counts(struct address_space *mapping)
 	struct vm_area_struct *vma;
 	struct prio_tree_iter iter;
 
-	vma_prio_tree_foreach(vma, &iter, &mapping->i_mmap, 0, ULONG_MAX)
+	ax8swap_vma_prio_tree_foreach(vma, &iter, &mapping->i_mmap, 0, ULONG_MAX)
 		vma->vm_truncate_count = 0;
 	list_for_each_entry(vma, &mapping->i_mmap_nonlinear, shared.vm_set.list)
 		vma->vm_truncate_count = 0;
@@ -2164,7 +2164,7 @@ static inline void ax8swap_unmap_mapping_range_tree(struct prio_tree_root *root,
 	pgoff_t vba, vea, zba, zea;
 
 restart:
-	vma_prio_tree_foreach(vma, &iter, root,
+	ax8swap_vma_prio_tree_foreach(vma, &iter, root,
 			details->first_index, details->last_index) {
 		/* Skip quickly over those we have already dealt with */
 		if (vma->vm_truncate_count == details->truncate_count)
@@ -2457,7 +2457,7 @@ static int ax8swap_do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma
 	}
 
 	/* No need to invalidate - it was non-present before */
-	update_mmu_cache(vma, address, pte);
+	ax8swap_update_mmu_cache(vma, address, pte);
 unlock:
 	pte_unmap_unlock(page_table, ptl);
 out:
@@ -2507,7 +2507,7 @@ static int ax8swap_do_anonymous_page(struct mm_struct *mm, struct vm_area_struct
 	set_pte_at(mm, address, page_table, entry);
 
 	/* No need to invalidate - it was non-present before */
-	update_mmu_cache(vma, address, entry);
+	ax8swap_update_mmu_cache(vma, address, entry);
 unlock:
 	pte_unmap_unlock(page_table, ptl);
 	return 0;
@@ -2662,7 +2662,7 @@ static int ax8swap___do_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 		set_pte_at(mm, address, page_table, entry);
 
 		/* no need to invalidate: a not-present page won't be cached */
-		update_mmu_cache(vma, address, entry);
+		ax8swap_update_mmu_cache(vma, address, entry);
 	} else {
 		if (charged)
 			mem_cgroup_uncharge_page(page);
@@ -2784,7 +2784,7 @@ static inline int ax8swap_handle_pte_fault(struct mm_struct *mm,
 	}
 	entry = pte_mkyoung(entry);
 	if (ptep_set_access_flags(vma, address, pte, entry, write_access)) {
-		update_mmu_cache(vma, address, entry);
+		ax8swap_update_mmu_cache(vma, address, entry);
 	} else {
 		/*
 		 * This is needed only for protection faults but the arch code
@@ -3052,7 +3052,7 @@ int ax8swap_access_process_vm(struct task_struct *tsk, unsigned long addr, void 
 
 			maddr = kmap(page);
 			if (write) {
-				copy_to_user_page(vma, page, addr,
+				ax8swap_copy_to_user_page(vma, page, addr,
 						  maddr + offset, buf, bytes);
 				set_page_dirty_lock(page);
 			} else {

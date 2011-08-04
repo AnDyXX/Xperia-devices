@@ -12,9 +12,16 @@
 #define __MM_INTERNAL_H
 
 #include <linux/mm.h>
+#include "hijacked_types.h"
 
+#ifdef EXTERNAL_SWAP_MODULE
+void ax8swap_free_pgtables(struct mmu_gather *tlb, struct vm_area_struct *start_vma,
+		unsigned long floor, unsigned long ceiling);
+#define free_pgtables(tlb,start, floor, ceil) ax8swap_free_pgtables(tlb,start, floor, ceil)
+#else
 void free_pgtables(struct mmu_gather *tlb, struct vm_area_struct *start_vma,
 		unsigned long floor, unsigned long ceiling);
+#endif
 
 extern void prep_compound_page(struct page *page, unsigned long order);
 extern void prep_compound_gigantic_page(struct page *page, unsigned long order);
@@ -49,7 +56,13 @@ extern void putback_lru_page(struct page *page);
 /*
  * in mm/page_alloc.c
  */
+#ifdef EXTERNAL_SWAP_MODULE
+extern unsigned long * ax8swap_highest_memmap_pfn;
+#define highest_memmap_pfn (*ax8swap_highest_memmap_pfn)
+#else
 extern unsigned long highest_memmap_pfn;
+#endif
+
 extern void __free_pages_bootmem(struct page *page, unsigned int order);
 
 /*
@@ -132,7 +145,12 @@ extern void mlock_vma_page(struct page *page);
  * If called for a page that is still mapped by mlocked vmas, all we do
  * is revert to lazy LRU behaviour -- semantics are not broken.
  */
+#ifdef EXTERNAL_SWAP_MODULE
+#define __clear_page_mlock(page) ax8swap___clear_page_mlock(page)
+#else
 extern void __clear_page_mlock(struct page *page);
+#endif
+
 static inline void clear_page_mlock(struct page *page)
 {
 	if (unlikely(TestClearPageMlocked(page)))
@@ -286,8 +304,15 @@ static inline void mminit_validate_memmodel_limits(unsigned long *start_pfn,
 #define GUP_FLAGS_IGNORE_VMA_PERMISSIONS 0x4
 #define GUP_FLAGS_IGNORE_SIGKILL         0x8
 
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap___get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+		     unsigned long start, int len, int flags,
+		     struct page **pages, struct vm_area_struct **vmas);
+#define __get_user_pages(tsk,mm,start,len,flags,pages,vmas) ax8swap___get_user_pages(tsk,mm,start,len,flags,pages,vmas)
+#else
 int __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 		     unsigned long start, int len, int flags,
 		     struct page **pages, struct vm_area_struct **vmas);
+#endif
 
 #endif

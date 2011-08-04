@@ -838,6 +838,47 @@ struct mm_walk {
 	void *private;
 };
 
+#ifdef EXTERNAL_SWAP_MODULE
+
+int ax8swap_walk_page_range(unsigned long addr, unsigned long end,
+		struct mm_walk *walk);
+#define walk_page_range(addr, end, walk) ax8swap_walk_page_range(addr, end, walk)
+
+void ax8swap_free_pgd_range(struct mmu_gather *tlb, unsigned long addr,
+		unsigned long end, unsigned long floor, unsigned long ceiling);
+#define free_pgd_range(tlb, addr, end, floor, ceiling) ax8swap_free_pgd_range(tlb, addr, end, floor, ceiling)
+
+
+int ax8swap_copy_page_range(struct mm_struct *dst, struct mm_struct *src,
+			struct vm_area_struct *vma);
+#define copy_page_range(dst, src, vma) ax8swap_copy_page_range(dst, src, vma)
+
+void ax8swap_unmap_mapping_range(struct address_space *mapping,
+		loff_t const holebegin, loff_t const holelen, int even_cows);
+#define unmap_mapping_range(mapping, holeb, holee, even_c) ax8swap_unmap_mapping_range(mapping, holeb, holee, even_c)
+
+int ax8swap_follow_phys(struct vm_area_struct *vma, unsigned long address,
+		unsigned int flags, unsigned long *prot, resource_size_t *phys);
+#define follow_phys(vma, address, flags, prot, phys) ax8swap_follow_phys(vma, address, flags, prot, phys)
+
+int ax8swap_generic_access_phys(struct vm_area_struct *vma, unsigned long addr,
+			void *buf, int len, int write);
+#define generic_access_phys(vma, addr, buf, len, write) ax8swap_generic_access_phys(vma, addr, buf, len, write)
+
+static inline void unmap_shared_mapping_range(struct address_space *mapping,
+		loff_t const holebegin, loff_t const holelen)
+{
+	ax8swap_unmap_mapping_range(mapping, holebegin, holelen, 0);
+}
+
+int ax8swap_vmtruncate(struct inode * inode, loff_t offset);
+#define vmtruncate(inode, offset) ax8swap_vmtruncate(inode, offset)
+
+int ax8swap_vmtruncate_range(struct inode * inode, loff_t offset, loff_t end);
+#define vmtruncate_range(inode, offset, end) ax8swap_vmtruncate_range(inode, offset, end)
+
+#else
+
 int walk_page_range(unsigned long addr, unsigned long end,
 		struct mm_walk *walk);
 void free_pgd_range(struct mmu_gather *tlb, unsigned long addr,
@@ -860,9 +901,22 @@ static inline void unmap_shared_mapping_range(struct address_space *mapping,
 extern int vmtruncate(struct inode * inode, loff_t offset);
 extern int vmtruncate_range(struct inode * inode, loff_t offset, loff_t end);
 
+#endif /* EXTERNAL_SWAP_MODULE */
+
 #ifdef CONFIG_MMU
+
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+			unsigned long address, int write_access);
+#define handle_mm_fault(mm, vma, address, write_address) ax8swap_handle_mm_fault(mm, vma, address, write_address)
+
+#else
+
 extern int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 			unsigned long address, int write_access);
+
+#endif /*  EXTERNAL_SWAP_MODULE */
+
 #else
 static inline int handle_mm_fault(struct mm_struct *mm,
 			struct vm_area_struct *vma, unsigned long address,
@@ -1046,6 +1100,22 @@ static inline void pgtable_page_dtor(struct page *page)
 	pte_unmap(pte);					\
 } while (0)
 
+#ifdef EXTERNAL_SWAP_MODULE
+
+#define pte_alloc_map(mm, pmd, address)			\
+	((unlikely(!pmd_present(*(pmd))) && ax8swap___pte_alloc(mm, pmd, address))? \
+		NULL: pte_offset_map(pmd, address))
+
+#define pte_alloc_map_lock(mm, pmd, address, ptlp)	\
+	((unlikely(!pmd_present(*(pmd))) && ax8swap___pte_alloc(mm, pmd, address))? \
+		NULL: pte_offset_map_lock(mm, pmd, address, ptlp))
+
+#define pte_alloc_kernel(pmd, address)			\
+	((unlikely(!pmd_present(*(pmd))) && ax8swap___pte_alloc_kernel(pmd, address))? \
+		NULL: pte_offset_kernel(pmd, address))
+
+#else
+
 #define pte_alloc_map(mm, pmd, address)			\
 	((unlikely(!pmd_present(*(pmd))) && __pte_alloc(mm, pmd, address))? \
 		NULL: pte_offset_map(pmd, address))
@@ -1057,6 +1127,8 @@ static inline void pgtable_page_dtor(struct page *page)
 #define pte_alloc_kernel(pmd, address)			\
 	((unlikely(!pmd_present(*(pmd))) && __pte_alloc_kernel(pmd, address))? \
 		NULL: pte_offset_kernel(pmd, address))
+
+#endif /* EXTERNAL_SWAP_MODULE */
 
 extern void free_area_init(unsigned long * zones_size);
 extern void free_area_init_node(int nid, unsigned long * zones_size,
@@ -1305,7 +1377,13 @@ void page_cache_async_readahead(struct address_space *mapping,
 unsigned long max_sane_readahead(unsigned long nr);
 
 /* Do stack extension */
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_expand_stack(struct vm_area_struct *vma, unsigned long address);
+#define expand_stack(vma, adress) ax8swap_expand_stack(vma, adress)
+#else
 extern int expand_stack(struct vm_area_struct *vma, unsigned long address);
+#endif /* EXTERNAL_SWAP_MODULE */
+
 #ifdef CONFIG_IA64
 extern int expand_upwards(struct vm_area_struct *vma, unsigned long address);
 #endif
@@ -1334,7 +1412,16 @@ static inline unsigned long vma_pages(struct vm_area_struct *vma)
 }
 
 pgprot_t vm_get_page_prot(unsigned long vm_flags);
+
+#ifdef EXTERNAL_SWAP_MODULE
+
+struct vm_area_struct *ax8swap_find_extend_vma(struct mm_struct *, unsigned long addr);
+#define find_extend_vma(st, addr) ax8swap_find_extend_vma(st, addr)
+
+#else 
 struct vm_area_struct *find_extend_vma(struct mm_struct *, unsigned long addr);
+#endif
+
 int remap_pfn_range(struct vm_area_struct *, unsigned long addr,
 			unsigned long pfn, unsigned long size, pgprot_t);
 int vm_insert_page(struct vm_area_struct *, unsigned long addr, struct page *);
@@ -1343,8 +1430,15 @@ int vm_insert_pfn(struct vm_area_struct *vma, unsigned long addr,
 int vm_insert_mixed(struct vm_area_struct *vma, unsigned long addr,
 			unsigned long pfn);
 
+#ifdef EXTERNAL_SWAP_MODULE
+struct page *ax8swap_follow_page(struct vm_area_struct *, unsigned long address,
+			unsigned int foll_flags);
+#define follow_page(str, addr, foll) ax8swap_follow_page(str, addr, foll)
+#else
 struct page *follow_page(struct vm_area_struct *, unsigned long address,
 			unsigned int foll_flags);
+#endif /* EXTERNAL_SWAP_MODULE */
+
 #define FOLL_WRITE	0x01	/* check pte is writable */
 #define FOLL_TOUCH	0x02	/* mark page accessed */
 #define FOLL_GET	0x04	/* do get_page on page */
@@ -1356,7 +1450,13 @@ extern int apply_to_page_range(struct mm_struct *mm, unsigned long address,
 			       unsigned long size, pte_fn_t fn, void *data);
 
 #ifdef CONFIG_PROC_FS
+#ifdef EXTERNAL_SWAP_MODULE
+void ax8swap_vm_stat_account(struct mm_struct *, unsigned long, struct file *, long);	
+#define vm_stat_account(str, lo, f, lo2) ax8swap_vm_stat_account(str, lo, f, lo2)
+#else
 void vm_stat_account(struct mm_struct *, unsigned long, struct file *, long);
+#endif /* EXTERNAL_SWAP_MODULE */
+
 #else
 static inline void vm_stat_account(struct mm_struct *mm,
 			unsigned long flags, struct file *file, long pages)
@@ -1387,12 +1487,26 @@ static inline bool kernel_page_present(struct page *page) { return true; }
 #endif /* CONFIG_HIBERNATION */
 #endif
 
+
+#ifdef EXTERNAL_SWAP_MODULE
+struct vm_area_struct *ax8swap_get_gate_vma(struct task_struct *tsk);
+#define get_gate_vma(tsk)  ax8swap_get_gate_vma(tsk)
+#else
 extern struct vm_area_struct *get_gate_vma(struct task_struct *tsk);
+#endif
+
 #ifdef	__HAVE_ARCH_GATE_AREA
 int in_gate_area_no_task(unsigned long addr);
 int in_gate_area(struct task_struct *task, unsigned long addr);
 #else
+
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_in_gate_area_no_task(unsigned long addr);
+#define in_gate_area_no_task(addr) ax8swap_in_gate_area_no_task(addr)
+#else
 int in_gate_area_no_task(unsigned long addr);
+#endif
+
 #define in_gate_area(task, addr) ({(void)task; in_gate_area_no_task(addr);})
 #endif	/* __HAVE_ARCH_GATE_AREA */
 

@@ -56,12 +56,30 @@ static inline void anon_vma_unlock(struct vm_area_struct *vma)
 /*
  * anon_vma helper functions.
  */
+#ifdef EXTERNAL_SWAP_MODULE
+void ax8swap_anon_vma_init(void);	/* create anon_vma_cachep */
+int  ax8swap_anon_vma_prepare(struct vm_area_struct *);
+void ax8swap___anon_vma_merge(struct vm_area_struct *, struct vm_area_struct *);
+void ax8swap_anon_vma_unlink(struct vm_area_struct *);
+void ax8swap_anon_vma_link(struct vm_area_struct *);
+void ax8swap___anon_vma_link(struct vm_area_struct *);
+
+#define anon_vma_init() ax8swap_anon_vma_init()  
+#define  anon_vma_prepare(str) ax8swap_anon_vma_prepare(str)
+#define __anon_vma_merge(str1, str2) ax8swap___anon_vma_merge(str1, str2)
+#define anon_vma_unlink(str) ax8swap_anon_vma_unlink(str)
+#define anon_vma_link(str) ax8swap_anon_vma_link(str)
+#define __anon_vma_link(str)  ax8swap___anon_vma_link(str) 
+
+#else
+
 void anon_vma_init(void);	/* create anon_vma_cachep */
 int  anon_vma_prepare(struct vm_area_struct *);
 void __anon_vma_merge(struct vm_area_struct *, struct vm_area_struct *);
 void anon_vma_unlink(struct vm_area_struct *);
 void anon_vma_link(struct vm_area_struct *);
 void __anon_vma_link(struct vm_area_struct *);
+#endif /* EXTERNAL_SWAP_MODULE  */
 
 /*
  * rmap interfaces called when adding or removing pte of page

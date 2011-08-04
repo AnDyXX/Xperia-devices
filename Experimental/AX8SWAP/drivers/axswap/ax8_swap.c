@@ -68,6 +68,23 @@ ax8swap_exit_aio_type ax8swap_exit_aio;
 ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
 ax8swap_user_shm_lock_type ax8swap_user_shm_lock;
 int * axswap_page_cluster;
+ax8swap_flush_cache_mm_type ax8swap_flush_cache_mm;
+unsigned long *ax8swap_totalram_pages;
+unsigned long *ax8swap_totalreserve_pages;
+struct kmem_cache **ax8swap_vm_area_cachep;
+ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
+unsigned long * ax8swap_highest_memmap_pfn;
+ax8swap___clear_page_mlock_type ax8swap___clear_page_mlock;
+ax8swap_vma_prio_tree_next_type ax8swap_vma_prio_tree_next;
+ax8swap___pte_error_type ax8swap___pte_error;
+ax8swap___pmd_error_type ax8swap___pmd_error;
+ax8swap___pgd_error_type ax8swap___pgd_error;
+ax8swap___flush_anon_page_type ax8swap___flush_anon_page;
+ax8swap_v6wbi_flush_user_tlb_range_type ax8swap_v6wbi_flush_user_tlb_range;
+struct prop_descriptor * ax8swap_vm_completions;
+ax8swap_flush_cache_range_type ax8swap_flush_cache_range;
+ax8swap_flush_cache_page_type ax8swap_flush_cache_page;
+ax8swap_unlink_file_vma_type ax8swap_unlink_file_vma;
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -130,15 +147,15 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"remove_from_page_cache", 		&ax8swap_remove_from_page_cache},
 	{"sync_page", 				&ax8swap_sync_page},
 	{"handle_mm_fault", 			&ax8swap_handle_mm_fault},
-	{"vmtruncate", &ax8swap_vmtruncate},
-	{"unmap_mapping_range", &ax8swap_unmap_mapping_range},
-	{"apply_to_page_range", &ax8swap_apply_to_page_range},
-	{"remap_pfn_range",&ax8swap_remap_pfn_range},
-	{"vm_insert_mixed", &ax8swap_vm_insert_mixed},
-	{"vm_insert_pfn", &ax8swap_vm_insert_pfn},
-	{"vm_insert_page", &ax8swap_vm_insert_page},
-	{"get_user_pages", &ax8swap_get_user_pages},
-	{"zap_vma_ptes", &ax8swap_zap_vma_ptes},
+	{"vmtruncate", 				&ax8swap_vmtruncate},
+	{"unmap_mapping_range", 		&ax8swap_unmap_mapping_range},
+	{"apply_to_page_range", 		&ax8swap_apply_to_page_range},
+	{"remap_pfn_range",			&ax8swap_remap_pfn_range},
+	{"vm_insert_mixed", 			&ax8swap_vm_insert_mixed},
+	{"vm_insert_pfn", 			&ax8swap_vm_insert_pfn},
+	{"vm_insert_page", 			&ax8swap_vm_insert_page},
+	{"get_user_pages",			&ax8swap_get_user_pages},
+	{"zap_vma_ptes", 			&ax8swap_zap_vma_ptes},
 	{NULL, 				0},
 };
 
@@ -163,6 +180,23 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"set_mm_exe_file",		(void**) &ax8swap_set_mm_exe_file},
 	{"user_shm_lock", 		(void**) &ax8swap_user_shm_lock},
 	{"page_cluster", 		(void**) &axswap_page_cluster},
+	{"flush_cache_mm", 		(void**) &ax8swap_flush_cache_mm},
+	{"totalram_pages", 		(void**) &ax8swap_totalram_pages},
+	{"totalreserve_pages", 		(void**) &ax8swap_totalreserve_pages},
+	{"vm_area_cachep", 		(void**) &ax8swap_vm_area_cachep},
+	{"flush_ptrace_access", 	(void**) &ax8swap_flush_ptrace_access},
+	{"highest_memmap_pfn", 		(void**) &ax8swap_highest_memmap_pfn},
+	{"__clear_page_mlock", 		(void**) &ax8swap___clear_page_mlock},
+	{"vma_prio_tree_next", 		(void**) &ax8swap_vma_prio_tree_next},
+	{"__pte_error", 		(void**) &ax8swap___pte_error},
+	{"__pmd_error", 		(void**) &ax8swap___pmd_error},
+	{"__pgd_error", 		(void**) &ax8swap___pgd_error},
+	{"__flush_anon_page", 		(void**) &ax8swap___flush_anon_page},
+	{"v6wbi_flush_user_tlb_range", 	(void**) &ax8swap_v6wbi_flush_user_tlb_range},
+	{"vm_completions", 		(void**) &ax8swap_vm_completions},
+	{"flush_cache_range", 		(void**) &ax8swap_flush_cache_range},
+	{"flush_cache_page", 		(void**) &ax8swap_flush_cache_page},
+	{"swap_unlink_file_vma", 	(void**) &ax8swap_unlink_file_vma},
 	{NULL,				0},
 };
 

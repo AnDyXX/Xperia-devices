@@ -165,8 +165,18 @@ struct swap_list_t {
 #define vm_swap_full() (nr_swap_pages*2 < total_swap_pages)
 
 /* linux/mm/page_alloc.c */
+#ifdef EXTERNAL_SWAP_MODULE
+extern unsigned long *ax8swap_totalram_pages;
+extern unsigned long *ax8swap_totalreserve_pages;
+
+#define totalram_pages (*ax8swap_totalram_pages)
+#define totalreserve_pages (*ax8swap_totalreserve_pages)
+
+#else
 extern unsigned long totalram_pages;
 extern unsigned long totalreserve_pages;
+#endif
+
 extern unsigned int nr_free_buffer_pages(void);
 extern unsigned int nr_free_pagecache_pages(void);
 

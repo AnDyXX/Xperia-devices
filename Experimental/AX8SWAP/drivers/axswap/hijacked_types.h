@@ -7,6 +7,7 @@
 #include <linux/cgroup.h>
 #include <linux/shmem_fs.h>
 #include <linux/pagevec.h>
+#include <asm/tlb.h>
 
 /* Flag allocation requirements to shmem_getpage and shmem_swp_alloc */
 enum sgp_type {
@@ -33,6 +34,21 @@ do {						\
 	(vmi)->largest_chunk = 0;		\
 } while(0)
 #endif
+
+/*
+ * Copy user data from/to a page which is mapped into a different
+ * processes address space.  Really, we want to allow our "user
+ * space" model to handle this.
+ */
+#define ax8swap_copy_to_user_page(vma, page, vaddr, dst, src, len) \
+	do {							\
+		memcpy(dst, src, len);				\
+		ax8swap_flush_ptrace_access(vma, page, vaddr, dst, len, 1);\
+	} while (0)
+
+#define ax8swap_vma_prio_tree_foreach(vma, iter, root, begin, end)	\
+	for (prio_tree_iter_init(iter, root, begin, end), vma = NULL;	\
+		(vma = ax8swap_vma_prio_tree_next(vma, iter)); )
 
 typedef int (*ax8swap_adjust_pte_type)(struct vm_area_struct *vma, unsigned long address);
 extern ax8swap_adjust_pte_type ax8swap_adjust_pte;
@@ -71,15 +87,6 @@ typedef void (*ax8swap_munlock_vma_pages_range_type)(struct vm_area_struct *vma,
 			   unsigned long start, unsigned long end) ;
 
 extern ax8swap_munlock_vma_pages_range_type ax8swap_munlock_vma_pages_range;
-
-static inline void
-ax8swap_flush_cache_page(struct vm_area_struct *vma, unsigned long user_addr, unsigned long pfn)
-{
-	if (cpu_isset(smp_processor_id(), vma->vm_mm->cpu_vm_mask)) {
-		unsigned long addr = user_addr & PAGE_MASK;
-		__cpuc_flush_user_range(addr, addr + PAGE_SIZE, vma->vm_flags);
-	}
-}
 
 extern struct mutex * ax8swap_shmem_swaplist_mutex;
 extern struct list_head * ax8swap_shmem_swaplist;
@@ -175,5 +182,80 @@ int ax8swap_get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 
 int ax8swap_zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
 		unsigned long size);
+
+typedef void (*ax8swap_flush_cache_mm_type)(struct mm_struct *mm);
+extern ax8swap_flush_cache_mm_type ax8swap_flush_cache_mm;
+
+extern struct kmem_cache **ax8swap_vm_area_cachep;
+
+static inline void
+ax8swap_tlb_finish_mmu(struct mmu_gather *tlb, unsigned long start, unsigned long end)
+{
+	if (tlb->fullmm)
+		flush_tlb_mm(tlb->mm);
+
+	/* keep the page table cache within bounds */
+	check_pgt_cache();
+
+	preempt_enable();
+}
+
+typedef void (*ax8swap_flush_ptrace_access_type)(struct vm_area_struct *vma, struct page *page,
+			 unsigned long uaddr, void *kaddr,
+			 unsigned long len, int write);
+extern ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
+
+typedef void (*ax8swap___clear_page_mlock_type)(struct page *page);
+extern ax8swap___clear_page_mlock_type ax8swap___clear_page_mlock;
+
+typedef struct vm_area_struct *(*ax8swap_vma_prio_tree_next_type)(struct vm_area_struct *vma,
+	struct prio_tree_iter *iter);
+extern ax8swap_vma_prio_tree_next_type ax8swap_vma_prio_tree_next;
+
+typedef void (*ax8swap___pte_error_type)(const char *file, int line, unsigned long val);
+typedef void (*ax8swap___pmd_error_type)(const char *file, int line, unsigned long val);
+typedef void (*ax8swap___pgd_error_type)(const char *file, int line, unsigned long val);
+extern ax8swap___pte_error_type ax8swap___pte_error;
+extern ax8swap___pmd_error_type ax8swap___pmd_error;
+extern ax8swap___pgd_error_type ax8swap___pgd_error;
+
+#define ax8swap_pte_ERROR(pte)		ax8swap___pte_error(__FILE__, __LINE__, pte_val(pte))
+#define ax8swap_pmd_ERROR(pmd)		ax8swap___pmd_error(__FILE__, __LINE__, pmd_val(pmd))
+#define ax8swap_pgd_ERROR(pgd)		ax8swap___pgd_error(__FILE__, __LINE__, pgd_val(pgd))
+
+typedef void (*ax8swap___flush_anon_page_type)(struct vm_area_struct *vma, struct page *page, unsigned long vmaddr);
+extern ax8swap___flush_anon_page_type ax8swap___flush_anon_page;
+
+typedef void  (*ax8swap_v6wbi_flush_user_tlb_range_type)(unsigned long, unsigned long, struct vm_area_struct *);
+extern ax8swap_v6wbi_flush_user_tlb_range_type ax8swap_v6wbi_flush_user_tlb_range;
+
+#define ax8swap___cpu_flush_user_tlb_range(start,end,vma) ax8swap_v6wbi_flush_user_tlb_range(start,end,vma)
+#define ax8swap_local_flush_tlb_range(vma,start,end)	ax8swap___cpu_flush_user_tlb_range(start,end,vma)
+#define ax8swap_flush_tlb_range		ax8swap_local_flush_tlb_range
+
+static inline void
+ax8swap_tlb_end_vma(struct mmu_gather *tlb, struct vm_area_struct *vma)
+{
+	if (!tlb->fullmm)
+		ax8swap_flush_tlb_range(vma, vma->vm_start, vma->vm_end);
+}
+
+extern struct prop_descriptor * ax8swap_vm_completions;
+
+typedef  void (*ax8swap_flush_cache_range_type)(struct vm_area_struct *vma, unsigned long start, unsigned long end);
+typedef  void (*ax8swap_flush_cache_page_type)(struct vm_area_struct *vma, unsigned long user_addr, unsigned long pfn);
+extern ax8swap_flush_cache_range_type ax8swap_flush_cache_range;
+extern ax8swap_flush_cache_page_type ax8swap_flush_cache_page;
+
+
+static inline void ax8swap_flush_anon_page(struct vm_area_struct *vma,
+			 struct page *page, unsigned long vmaddr)
+{
+	if (PageAnon(page))
+		ax8swap___flush_anon_page(vma, page, vmaddr);
+}
+
+typedef void (*ax8swap_unlink_file_vma_type)(struct vm_area_struct *vma);
+extern ax8swap_unlink_file_vma_type ax8swap_unlink_file_vma;
 
 #endif
