@@ -1,0 +1,1200 @@
+[    0.000000] Linux version 2.6.29 (SEMCUser@SEMCHost) (gcc version 4.4.0 (GCC) ) #1 PREEMPT Fri Dec 17 18:35:45 2010
+[    0.000000] CPU: ARMv6-compatible processor [4117b365] revision 5 (ARMv6TEJ), cr=00c5387f
+[    0.000000] CPU: VIPT aliasing data cache, VIPT aliasing instruction cache
+[    0.000000] Machine: SEMC Delta
+[    0.000000] Partition (from atag) system -- Offset:160 Size:670
+[    0.000000] Partition (from atag) cache -- Offset:7d0 Size:190
+[    0.000000] Partition (from atag) userdata -- Offset:960 Size:69e
+[    0.000000] Memory policy: ECC disabled, Data cache writeback
+[    0.000000] On node 0 totalpages: 55040
+[    0.000000] free_area_init_node: node 0, pgdat c051e278, node_mem_map c061c000
+[    0.000000]   Normal zone: 430 pages used for memmap
+[    0.000000]   Normal zone: 0 pages reserved
+[    0.000000]   Normal zone: 54610 pages, LIFO batch:15
+[    0.000000] allocating 13058048 bytes at c0ed0000 (10d0000 physical) for mdp pmem arena
+[    0.000000] allocating 9355264 bytes at c1b44000 (1d44000 physical) for adsp pmem arena
+[    0.000000] allocating 372736 bytes at c2430000 (2630000 physical) for audio pmem arena
+[    0.000000] allocating 745472 bytes at c248b000 (268b000 physical) for fb
+[    0.000000] allocating 114688 bytes at c2600000 (2800000 physical) for kernel ebi1 pmem arena
+[    0.000000] allocating 2097152 bytes at c2700000 (2900000 physical) for KGSL
+[    0.000000] L210 cache controller enabled
+[    0.000000] KDUMP: Reserved Crashk Memory
+[    0.000000] Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 54610
+[    0.000000] Kernel command line: mem=215M androidboot.hardware=delta g_android.product_id=0x3149 console=ttyMSM2 serialno=BX902BNG3U console=ttyMSM0 startup=0x00000078
+[    0.000000] Unknown boot option `androidboot.hardware=delta': ignoring
+[    0.000000] USB serial number: 4258393032424E473355
+[    0.000000] startup_reason_setup: 0x78
+[    0.000000] PID hash table entries: 1024 (order: 10, 4096 bytes)
+[    0.000000] Console: colour dummy device 80x30
+[    0.000276] Dentry cache hash table entries: 32768 (order: 5, 131072 bytes)
+[    0.000915] Inode-cache hash table entries: 16384 (order: 4, 65536 bytes)
+[    0.017553] Memory: 215MB = 215MB total
+[    0.017585] Memory: 178560KB available (4844K code, 1213K data, 140K init)
+[    0.017930] Calibrating delay loop... 599.65 BogoMIPS (lpj=2998272)
+[    0.230301] Mount-cache hash table entries: 512
+[    0.230860] CPU: Testing write buffer coherency: <1>Initialized Zero page successfully
+[    0.230996] ok
+[    0.232680] net_namespace: 716 bytes
+[    0.233541] NET: Registered protocol family 16
+[    0.235505] socinfo_init: v3, id=43, ver=0.0, raw_id=0, raw_ver=0, hw_plat=0
+[    0.248620] acpu_clock_init()
+[    0.248785] L val: PLL0: 50, PLL1: 12, PLL2: 62
+[    0.248913] ACPU running at 600000 KHz
+[    0.248928] Id CPU-KHz PLL DIV AHB-KHz ADIV AXI-KHz D0 D1 D2 U0 U1 U2
+[    0.248953]  0   19200  -1   1   19200    1   30720 -1 -1 -1  1  4  3
+[    0.248976]  1  120000   0   8   60000    2   61440 -1 -1 -1  5  4  3
+[    0.249000]  2  122880   1   2   61440    2   61440  1 -1 -1  5  4  3
+[    0.249025]  3  200000   2   6   66667    3   61440  1  2 -1  5  4  6
+[    0.249048]  4  245760   1   1  122880    2   61440  1  2  3  7 -1  6
+[    0.249071]  5  320000   0   3  160000    2  160000  1  2  3  7 -1  6
+[    0.249095]  6  400000   2   3  133333    3  160000  5  4  3  7 -1  8
+[    0.249118]  7  480000   0   2  160000    3  160000  5  4  6 -1 -1  8
+[    0.249141]  8  600000   2   2  200000    3  200000  7 -1  6 -1 -1 -1
+[    0.249161] Shared PLL control available.
+[    0.249175] 5 scaling frequencies supported.
+[    0.255323] rmt_storage_add_ramfs: No RAMFS table in SMEM
+[    0.290008] msm_mddi_toshiba_hvga_display_device_init 
+[    0.290243] msm_mddi_hitachi_hvga_display_device_init 
+[    0.307881] bio: create slab <bio-0> at 0
+[    0.309158] msm_i2c_probe
+[    0.309263] msm_i2c_probe: clk_ctl 315, 400000 Hz
+[    0.312945] Bluetooth: Core ver 2.15
+[    0.313263] NET: Registered protocol family 31
+[    0.313278] Bluetooth: HCI device and connection manager initialized
+[    0.313298] Bluetooth: HCI socket layer initialized
+[    0.315686] NET: Registered protocol family 2
+[    0.315868] IP route cache hash table entries: 2048 (order: 1, 8192 bytes)
+[    0.316328] TCP established hash table entries: 8192 (order: 4, 65536 bytes)
+[    0.316600] TCP bind hash table entries: 8192 (order: 3, 32768 bytes)
+[    0.316768] TCP: Hash tables configured (established 8192 bind 8192)
+[    0.316785] TCP reno registered
+[    0.316995] NET: Registered protocol family 1
+[    0.317533] checking if image is initramfs...<7>Switched to high resolution mode on CPU 0
+[    0.478779]  it is
+[    0.646021] Freeing initrd memory: 828K
+[    0.648253] smd probe
+[    0.648271] smd_core_init()
+[    0.648338] smd_core_init() done
+[    0.648356] smd_alloc_loopback_channel: 'local_loopback' cid=100
+[    0.648558] smd_alloc_channel() 'DS' cid=0
+[    0.649049] smd_alloc_channel() 'DIAG' cid=1
+[    0.649261] last_amsslog: Log not present
+[    0.649753] smd_alloc_channel() 'RPCCALL' cid=2
+[    0.650113] smd_alloc_channel() 'DATA1' cid=7
+[    0.650568] smd_alloc_channel() 'DATA2' cid=8
+[    0.650969] smd_alloc_channel() 'DATA3' cid=9
+[    0.651354] smd_alloc_channel() 'DATA4' cid=10
+[    0.651744] smd_alloc_channel() 'DATA5' cid=11
+[    0.652129] smd_alloc_channel() 'DATA6' cid=12
+[    0.652503] smd_alloc_channel() 'DATA7' cid=13
+[    0.652844] smd_alloc_channel() 'DATA11' cid=17
+[    0.653243] smd_alloc_channel() 'DAL00' cid=38
+[    0.653641] smd_alloc_channel() 'DATA5_CNTL' cid=39
+[    0.654029] smd_alloc_channel() 'DATA6_CNTL' cid=40
+[    0.654426] smd_alloc_channel() 'DATA7_CNTL' cid=41
+[    0.655484] SMD Control Port Driver Initialized.
+[    0.656424] SMD: ch 2 0 -> 1
+[    0.656544] SMD: ch 2 1 -> 2
+[    0.657141] Using very old AMSS modem firmware.
+[    0.657854] [adsp:adsp.c:adsp_init] rs3000000a -- 0
+[    0.664089] [msm-audio:audpp.c:audpp_probe] Number of decoder supported 5
+[    0.664113] [msm-audio:audpp.c:audpp_probe] Number of concurrency supported 7
+[    0.664131] [msm-audio:audpp.c:audpp_probe] module_name:AUDPLAY0TASK
+[    0.664148] [msm-audio:audpp.c:audpp_probe] queueid:13
+[    0.664163] [msm-audio:audpp.c:audpp_probe] decid:0
+[    0.664183] [msm-audio:audpp.c:audpp_probe] nr_codec_support:11
+[    0.664198] [msm-audio:audpp.c:audpp_probe] module_name:AUDPLAY1TASK
+[    0.664213] [msm-audio:audpp.c:audpp_probe] queueid:14
+[    0.664228] [msm-audio:audpp.c:audpp_probe] decid:1
+[    0.664241] [msm-audio:audpp.c:audpp_probe] nr_codec_support:4
+[    0.664256] [msm-audio:audpp.c:audpp_probe] module_name:AUDPLAY2TASK
+[    0.664276] [msm-audio:audpp.c:audpp_probe] queueid:15
+[    0.664289] [msm-audio:audpp.c:audpp_probe] decid:2
+[    0.664304] [msm-audio:audpp.c:audpp_probe] nr_codec_support:4
+[    0.664319] [msm-audio:audpp.c:audpp_probe] module_name:AUDPLAY3TASK
+[    0.664334] [msm-audio:audpp.c:audpp_probe] queueid:16
+[    0.664349] [msm-audio:audpp.c:audpp_probe] decid:3
+[    0.664363] [msm-audio:audpp.c:audpp_probe] nr_codec_support:4
+[    0.664378] [msm-audio:audpp.c:audpp_probe] module_name:AUDPLAY4TASK
+[    0.664394] [msm-audio:audpp.c:audpp_probe] queueid:17
+[    0.664408] [msm-audio:audpp.c:audpp_probe] decid:4
+[    0.664421] [msm-audio:audpp.c:audpp_probe] nr_codec_support:1
+[    0.679976] RPC_TIME_TOD_SET_APPS_BASES:
+[    0.679984] 	tick = 202706
+[    0.679991] 	stamp = 553648128
+[    0.680018] /home/hudsonslave/root/workspace/offbuild_edream2.1_matrix/HUDSON_PRODUCT/shakira/HUDSON_VARIANT/user/jdk/Sun-Java-5_64-bit/label/CM_BLD/kernel/drivers/rtc/hctosys.c: unable to open rtc device (rtc0)
+[    0.681283] proximity-sensor: proximity_probe called.
+[    0.681818] Registered semc device: proximity-sensor
+[    0.681833] proximity-sensor: driver installation succeeded
+[    0.694191] ashmem: initialized
+[    0.695656] fuse init (API version 7.11)
+[    0.696306] yaffs Jan 30 2011 20:26:12 Installing. 
+[    0.696369] msgmni has been set to 350
+[    0.700011] alg: No test for stdrng (krng)
+[    0.700089] io scheduler noop registered
+[    0.700103] io scheduler deadline registered (default)
+[    0.702203] msm_fb_probe:  phy_Addr = 0x268b000 virt = 0xcd900000
+[    0.703926] MDP HW Base phy_Address = 0xaa200000 virt = 0xcda00000
+[    0.704706] primary mddi base phy_addr = 0xaa600000 virt = 0xcd810000
+[    0.716289] MDDI: Hitachi HVGA:  Found display with cell ID = 0xfa, module ID = 0x1, revision ID = 0x10, driver IC ID = 0xf0, driver ID = 0x7
+[    0.721339] FrameBuffer[0] 320x480 size=745472 bytes is registered successfully!
+[    0.721993] Registered led device: lcd-backlight
+[    0.739551] diagfwd initializing ..
+[    0.739868] SMD: ch 1 0 -> 1
+[    0.739883] diag opened SMD port ; r = 0
+[    0.739969] SMD: ch 1 1 -> 2
+[    0.740344] diagchar initializing ..
+[    0.740801] diagchar initialized
+[    0.741011] [drm] Initialized drm 1.1.0 20060810
+[    0.741101] msm_serial: detected port #2
+[    0.741213] msm_serial.2: ttyMSM2 at MMIO 0xa9c00000 (irq = 11) is a MSM
+[    0.741338] msm_serial: console setup on port #2
+[    0.741361] console [ttyMSM2] enabled
+[    1.507988] msm_serial: driver initialized
+[    1.511770] msm_serial_hs.0: ttyHS0 at MMIO 0xa0200000 (irq = 45) is a MSM HS UART
+[    1.520338] msm_serial_hs module loaded
+[    1.526826] brd: module loaded
+[    1.530855] loop: module loaded
+[    1.531090] pmem: Initializing pmem_kernel_ebi1 (in-kernel)
+[    1.534605] pmem: Initializing pmem (user-space) as cached
+[    1.540963] pmem: Initializing pmem_adsp (user-space) as non-cached
+[    1.546961] pmem: Initializing pmem_audio (user-space) as non-cached
+[    1.553486] lightsensor: registered.
+[    1.557085] SEMC_Systemconnector: Successfully initialized.
+[    1.561901] __msm_rpc_connect: server not found 30000061:30001
+[    1.567520] __msm_rpc_connect: server not found 30000061:20001
+[    1.575425] msm_pmic_vibrator version 0.2 loaded
+[    1.578176] semc_power: Loading...
+[    1.581371] bq24180: Setting up HW
+[    1.584755] bq24180: Probing
+[    1.587566] bq24180: Starting watchdog reset
+[    1.592240] bq24180: BQ24180 not initialized by boot SW
+[    1.597028] bq24180: Stopping watchdog reset
+[    1.601518] bq24180: Found HW BQ24180 revision 0x01.
+[    1.607066] bq24180: Set init values
+[    1.609788] bq24180: Setting charger voltage to 0 mV
+[    1.614846] bq24180: Setting charger current to 0 mA
+[    1.619683] bq24180: Disable charger
+[    1.623346] semc_power: Got event 0x5 but not fully init
+[    1.628540] bq24180: Set safety timer to 0 minutes
+[    1.633879] semc_pwr_pltf: Setting up platform
+[    1.638386] power_supply battery: driver failed to report `status' property
+[    1.645753] bq24180: Charger Ready
+[    1.651438] PPP generic driver version 2.4.2
+[    1.652778] PPP Deflate Compression module registered
+[    1.657358] PPP BSD Compression module registered
+[    1.662536] PPP MPPE Compression module registered
+[    1.666823] NET: Registered protocol family 24
+[    1.671283] SLIP: version 0.8.4-NET3.019-NEWTTY (dynamic channels, max=256) (6 bit encapsulation enabled).
+[    1.680926] CSLIP: code copyright 1989 Regents of the University of California.
+[    1.689299] rmnet0 (): not using net_device_ops yet
+[    1.693673] rmnet1 (): not using net_device_ops yet
+[    1.698489] rmnet2 (): not using net_device_ops yet
+[    1.703618] Linux video capture interface: v2.00
+[    1.812434] msm_camdrv: Camera vendor [1]
+[    1.812523] msm_camdrv: Camera revision[8197]
+[    1.901948] msm_nand: phys addr 0xa0a00000 
+[    1.902043] msm_nandc01_phys resource invalid/absent
+[    1.905444] dmac 0x7
+[    1.907653] allocated dma buffer at ffc1d000, dma_addr cd72000
+[    1.913559] status: c03120
+[    1.916123] nandid: 5510bc20 maker 20 device bc
+[    1.920653] Found a supported NAND device
+[    1.924628] NAND Id  : 0x5510bc20
+[    1.927924] Buswidth : 16 Bits 
+[    1.931096] Density  : 512 MByte
+[    1.934263] Pagesize : 2048 Bytes
+[    1.937561] Erasesize: 131072 Bytes
+[    1.941046] Oobsize  : 64 Bytes
+[    1.944159] ecmdcycle: 5 erase cycle 
+[    1.947803] 2nd_bbm  : 0
+[    1.950333] CFG0 Init  : 0xa85408c0 
+[    1.953881] CFG1 Init  : 0x0004745e 
+[    1.957439] ECCBUFCFG  : 0x00000203 
+[    1.961019] Creating 3 MTD partitions on "msm_nand":
+[    1.965954] 0x000002c00000-0x00000fa00000 : "system"
+[    1.971679] bq24180: Charger Ready
+[    1.974876] 0x00000fa00000-0x000012c00000 : "cache"
+[    1.980008] 0x000012c00000-0x00001ffc0000 : "userdata"
+[    1.985493] msm_hsusb_rpc_connect: rpc connect success vers = 10001
+[    1.990546] msm_otg_probe: rpc_connect(0)
+[    1.999686] msm_hsusb_phy_reset
+[    2.120634] msm72k_udc: msm72k_probe
+[    2.120734] msm_chg_rpc_connect: connect compatible failed 
+[    2.124683] peripheral driver registered w/ tranceiver
+[    2.129489] android init
+[    2.131799] adb_function_init
+[    2.135126] android_probe pdata: c04f4ec8
+[    2.139324] android_bind
+[    2.141294] android_usb gadget: using random self ethernet address
+[    2.147406] android_usb gadget: using random host ethernet address
+[    2.154314] usb0: MAC 72:1c:93:07:f2:56
+[    2.157374] usb0: HOST MAC 12:9d:f4:63:5b:33
+[    2.161656] android_bind_config
+[    2.161669] mass_storage_function_add
+[    2.165696] android_usb gadget: Number of LUNs=2
+[    2.169888] android_usb gadget: android_usb ready
+[    2.174624] msm72k_udc: registered gadget driver 'android_usb'
+[    2.180443] msm72k_udc: IDLE -> ONLINE
+[    2.184111] msm72k_udc: reset controller
+[    2.188371] msm_i2c msm_i2c.0: Error during data xfer (-5)
+[    2.193514] synaptics_load_rmi4_func_regs: Failed reading block data, err:-5
+[    2.200544] synaptics_ts_probe: load rmi4_func base addresses failed
+[    2.206873] synaptics-rmi-ts: probe of 0-0020 failed with error -5
+[    2.230301] usb: notify offline
+[    2.233494] msm72k_udc: suspend
+[    2.339983] msm72k_udc: reset
+[    2.342261] msm72k_udc: portchange USB_SPEED_HIGH
+[    2.342371] 
+[    2.342378] *********** Charger Type: HOST PC
+[    2.342386] 
+[    2.349288] 
+[    2.349293] Charger Type: STD DOWNSTREAM PORT
+[    2.355124] bq24180: Turning on charger. USB-Host mode
+[    2.361133] bq24180: Set init values
+[    2.363786] bq24180: Setting charger current to 0 mA
+[    2.368734] bq24180: Set safety timer to 0 minutes
+[    2.373794] bq24180: Starting watchdog reset
+[    2.500184] msm72k_udc: reset
+[    2.502471] msm72k_udc: portchange USB_SPEED_HIGH
+[    2.697986] msm72k_udc: max_power: 0xFA
+[    2.701221] msm72k_udc: max_power: 0xFA
+[    2.701726] msm72k_udc: max_power: 0xFA
+[    2.705758] android_usb gadget: high speed config #1: android
+[    2.709614] android_usb gadget: config #1
+[    2.713916] semc_pwr_pltf: USB max allowed chg current updated to 500 mA
+[    3.230194] 
+[    3.230199] Charger Type: STD DOWNSTREAM PORT
+[    3.554713] cyttsp_set_sysinfo_mode:SI2:tts_ver=0x1014 app_id=0x0507 app_ver=0x0119 c_id=0xC0C1C2
+[    4.060638] input: cyttsp-spi as /devices/platform/i2c-adapter/i2c-0/0-0024/input/input0
+[    4.063396] cyttsp-i2c 0-0024: cyttsp_setup_input_dev: Registered input device cyttsp-spi
+[    4.071389] cyttsp_core_init: Successful.
+[    4.075249] cyttsp_i2c_probe: Successful registration cyttsp-i2c
+[    4.081484] cyttsp_i2c_init: Cypress TrueTouch(R) Standard Product I2C Touchscreen Driver (Built Jan 30 2011 @ 20:26:13) returned 0
+[    4.093759] SEMC GPIO Matrix Keypad Driver: Start keypad matrix for shakira_keypad in interrupt mode
+[    4.102736] input: shakira_keypad as /devices/virtual/input/input1
+[    4.109433] RTC Registering with rs30000048
+[    4.110439] msm_rpc_client_req: RPC call was not successful (3)
+[    4.114233] msmrtc_setup_cb: RPC client registration for PROC:12 failed
+[    4.114249] msmrtc_probe: Could not initialize RPC callback
+[    4.115339] msm_rtc: dev (254:0)
+[    4.115384] rs30000048 rs30000048.65536: rtc core: registered msm_rtc as rtc0
+[    4.121701] msm_rtc_secure: dev (254:1)
+[    4.121716] rs30000048 rs30000048.65536: rtc core: registered msm_rtc_secure as rtc1
+[    4.129238] i2c /dev entries driver
+[    4.133398] AK8975 compass driver: init
+[    4.136469] akm8975_init_client: request INT gpio failed
+[    4.141728] Trying to free already-free IRQ 171
+[    4.146564] input: compass as /devices/virtual/input/input2
+[    4.152813] Bosch Sensortec Device detected!
+[    4.152823] BMA150/SMB380 registered I2C driver!
+[    4.160656] register_chrdev
+[    4.163564] class_create ok
+[    4.166428] BMA150 device create ok
+[    4.170024] Bluetooth: HCI UART driver ver 2.2
+[    4.174061] Bluetooth: HCI H4 protocol initialized
+[    4.178808] Bluetooth: HCI BCSP protocol initialized
+[    4.183798] Bluetooth: HCILL protocol initialized
+[    4.188443] bluetooth_power_init
+[    4.188531] bt_power_probe
+[    4.190104] mmc0: Qualcomm MSM SDCC at 0x00000000a0400000 irq 24,113 dma 8
+[    4.195334] mmc0: 8 bit data mode disabled
+[    4.199379] mmc0: 4 bit data mode enabled
+[    4.203429] mmc0: polling status mode disabled
+[    4.207803] mmc0: MMC clock 144000 -> 49152000 Hz, PCLK 100000000 Hz
+[    4.214151] mmc0: Slot eject status = 0
+[    4.217956] mmc0: Power save feature enable = 1
+[    4.222486] mmc0: DM non-cached buffer at ffc21000, dma_addr 0x0cd67000
+[    4.229069] mmc0: DM cmd busaddr 0x0cd67000, cmdptr busaddr 0x0cd67300
+[    4.236374] lm3530_probe
+[    4.240946] lm3530 0-0036: version 0.2 loaded
+[    4.242611] msm_pmic_rgb_led Inserting
+[    4.249004] Registered semc device: rgb_led
+[    4.250398] msm_pmic_rgb_led version 0.2 loaded
+[    4.256056] logger: created 64K log 'log_main'
+[    4.259544] logger: created 256K log 'log_events'
+[    4.264274] logger: created 64K log 'log_radio'
+[    4.268548] ram_console: got buffer at d9e0000, size 20000
+[    4.274028] ram_console: found existing buffer, size 30800, start 30800
+[    4.281768] console [ram-1] enabled
+[    5.792308] msm72k_udc: max_power: 0xFA
+[    5.796116] msm72k_udc: max_power: 0xFA
+[    5.804096] Advanced Linux Sound Architecture Driver Version 1.0.18a.
+[    5.806868] No device for DAI CODEC_DAI
+[    5.815095] No device for DAI CPU_DAI
+[    5.815577] msm_soc: create pcms
+[    5.822201] asoc: CODEC_DAI <-> CPU_DAI mapping ok
+[    5.822308] msm_soc: ALSA MSM Mixer Setting
+[    5.837045] ALSA device list:
+[    5.837118]   #0: msm-audio (MSM-CARD)
+[    5.838321] TCP cubic registered
+[    5.841641] NET: Registered protocol family 10
+[    5.847076] IPv6 over IPv4 tunneling driver
+[    5.850998] NET: Registered protocol family 17
+[    5.854396] NET: Registered protocol family 15
+[    5.858796] Bluetooth: L2CAP ver 2.13
+[    5.862448] Bluetooth: L2CAP socket layer initialized
+[    5.867460] Bluetooth: SCO (Voice Link) ver 0.6
+[    5.872003] Bluetooth: SCO socket layer initialized
+[    5.877981] Bluetooth: RFCOMM socket layer initialized
+[    5.882021] Bluetooth: RFCOMM TTY layer initialized
+[    5.886806] Bluetooth: RFCOMM ver 1.11
+[    5.890571] Bluetooth: BNEP (Ethernet Emulation) ver 1.3
+[    5.895835] Bluetooth: BNEP filters: protocol multicast
+[    5.901060] Bluetooth: HIDP (Human Interface Emulation) ver 1.2
+[    5.909656] RPC: Registered udp transport module.
+[    5.911690] RPC: Registered tcp transport module.
+[    5.916796] clock_late_init() disabled 15 unused clocks
+[    5.924336] VFP support v0.3: implementor 41 architecture 1 part 20 variant b rev 5
+[    5.930948] kgsl kgsl: |kgsl_platform_probe| clk_get(grp_2d_clk) returned 0
+[    5.947425] [drm] Initialized kgsl 2.0.0 20090810 on minor 0
+[    5.948110] msm_v4l2: msm_v4l2_init
+[    5.951996] msmrtc_tod_proc_result: 08/04/2011 11:22:25 (03)
+[    5.956593] rs30000048 rs30000048.65536: setting system clock to 2011-08-04 11:22:25 UTC (1312456945)
+[    5.965938] Freeing init memory: 140K
+[    5.974708] init: /init.delta.rc: 124: ignored duplicate definition of service 'drmbackup'
+[    6.009468] mmc0: host does not support reading read-only switch. assuming write-enable.
+[    6.011991] mmc0: new high speed SDHC card at address b368
+[    6.018621] mmcblk0: mmc0:b368 SD    7.70 GiB 
+[    6.022221]  mmcblk0: p1 p2
+[    6.138784] init: waitpid return (PID = 1078)
+[    6.138899] init: child process exited normally
+[    6.245326] mddi_on: clk_set_min_rate failed
+[    6.437939] yaffs: dev is 32505857 name is "mtdblock1"
+[    6.438061] yaffs: passed flags ""
+[    6.440886] yaffs: Attempting MTD mount on 31.1, "mtdblock1"
+[    6.447933] yaffs: restored from checkpoint
+[    6.450731] yaffs_read_super: isCheckpointed 1
+[    6.455694] save exit: isCheckpointed 1
+[    6.461156] init: waitpid return (PID = 1083)
+[    6.463243] init: child process exited normally
+[    6.482726] init: waitpid return (PID = 1084)
+[    6.482863] init: child process exited normally
+[    6.488489] yaffs: dev is 32505856 name is "mtdblock0"
+[    6.491148] yaffs: passed flags ""
+[    6.494481] yaffs: Attempting MTD mount on 31.0, "mtdblock0"
+[    6.568923] yaffs: restored from checkpoint
+[    6.569456] yaffs_read_super: isCheckpointed 1
+[    6.572428] yaffs: dev is 32505858 name is "mtdblock2"
+[    6.577051] yaffs: passed flags ""
+[    6.580451] yaffs: Attempting MTD mount on 31.2, "mtdblock2"
+[    6.658151] yaffs: restored from checkpoint
+[    6.663306] yaffs_read_super: isCheckpointed 0
+[    9.990777] init: /init.rc: 13: invalid command 'rmdir'
+[    9.993342] init: /init.delta.rc: 65: ignored duplicate definition of service 'dhcp-service'
+[   10.267637] save exit: isCheckpointed 1
+[   10.268326] yaffs: dev is 32505857 name is "mtdblock1"
+[   10.271006] yaffs: passed flags ""
+[   10.274356] yaffs: Attempting MTD mount on 31.1, "mtdblock1"
+[   10.281474] yaffs: restored from checkpoint
+[   10.284212] yaffs_read_super: isCheckpointed 1
+[   19.033535] EXT4-fs: barriers enabled
+[   19.034517] kjournald2 starting: pid 1564, dev mmcblk0p2:8, commit interval 5 seconds
+[   19.041204] EXT4 FS on mmcblk0p2, internal journal on mmcblk0p2:8
+[   19.045460] EXT4-fs: delayed allocation enabled
+[   19.049984] EXT4-fs: file extents enabled
+[   19.054364] EXT4-fs: mballoc enabled
+[   19.057525] EXT4-fs: mounted filesystem mmcblk0p2 with ordered data mode
+[   19.363600] warning: `rild' uses 32-bit capabilities (legacy support in use)
+[   19.376926] init: cannot find '/system/bin/DxDrmServerIpc', disabling 'dx_drm_server'
+[   19.479410] SMD: ch 39 0 -> 1
+[   19.479583] SMD: ch 39 1 -> 2
+[   19.483207] SMD: ch 40 0 -> 1
+[   19.483359] SMD: ch 40 1 -> 2
+[   19.489709] SMD: ch 41 0 -> 1
+[   19.489850] SMD: ch 41 1 -> 2
+[   19.571359] ax8mt: module v005 loaded
+[   19.608012] input: cyttsp-spi as /devices/platform/i2c-adapter/i2c-0/0-0024/input/input3
+[   19.615049] [ sdioDrv_probe ] BEGIN
+[   19.615142] [ sdioDrv_probe ] Probing the controller
+[   19.619250] mmc1: Qualcomm MSM SDCC at 0x00000000a0500000 irq 26,0 dma 8
+[   19.625929] mmc1: 4 bit data mode enabled
+[   19.629765] cyttsp-i2c 0-0024: ax8mt_cyttsp_setup_input_dev: Registered input device cyttsp-spi
+[   19.638602] ax8mt: Enjoy dual touch now :)
+[   19.642433] ax8mt_init: Mode set to: andyx 
+[   19.660735] mmc1: MMC clock 144000 -> 50000000 Hz, PCLK 100000000 Hz
+[   19.661885] mmc1: Slot eject status = 0
+[   19.673042] mmc1: Power save feature enable = 1
+[   19.673320] mmc1: DM non-cached buffer at ffc2e000, dma_addr 0x0bb53000
+[   19.678580] mmc1: DM cmd busaddr 0x0bb53000, cmdptr busaddr 0x0bb53300
+[   19.685385] mmc1: Polling status mode enabled
+[   19.735938] proximity-sensor (th_set): threshold=40
+[   19.744078] proximity-sensor (hyst_set): hysteresis=18
+[   19.746813] bq24180: Set charger safety limit voltage to 4200 mV
+[   19.753525] bq24180: Set charger safety limit current to 1250 mA
+[   19.759107] bq24180: Set charge current termination to 0 mA
+[   19.761212] bq24180: Setting charger voltage to 4200 mV
+[   19.767138] bq24180: Setting input charger current to 500 mA
+[   19.772047] bq24180: Input current limit set to 500 mA
+[   19.805723] x8uv: Module loaded. Built for target device: X8
+[   19.832715] bq24180: Setting charger current to 1250 mA
+[   19.832990] bq24180: Enable charger
+[   19.837918] x8uv: patching done. enjoy better battery life.
+[   19.885921] bq24180: Set charge current termination to 200 mA
+[   19.955840] ax8_smartass: module v002 loaded
+[   20.165443] bq24180: Charge in progress
+[   20.167498] bq24180: Set safety timer to 60 minutes
+[   20.358045] x8mddi: module v001 loaded. Build target : X8
+[   20.358181] x8mddi: patching done. enjoy no lag ;)
+[   20.425316] save exit: isCheckpointed 1
+[   20.527535] device-mapper: ioctl: 4.14.0-ioctl (2008-04-23) initialised: dm-devel@redhat.com
+[   20.669763] enabling adb
+[   20.950403] android_bind
+[   20.950525] android_usb gadget: using random self ethernet address
+[   20.953505] android_usb gadget: using random host ethernet address
+[   20.961148] usb0: MAC ae:a7:c3:77:e3:fb
+[   20.963483] usb0: HOST MAC b2:e7:02:c3:ff:a1
+[   20.967714] android_bind_config
+[   20.970876] android_usb gadget: adb_function_add
+[   20.975506] mass_storage_function_add
+[   20.980275] android_usb gadget: Number of LUNs=2
+[   20.983702] android_usb gadget: android_usb ready
+[   20.988404] msm72k_udc: registered gadget driver 'android_usb'
+[   20.994440] msm72k_udc: IDLE -> ONLINE
+[   20.997979] msm72k_udc: reset controller
+[   21.018600] [msm-audio:snd.c:snd_ioctl] snd_agc_ctl 1
+[   21.033350] [msm-audio:snd.c:snd_ioctl] snd_set_device 29 1 1
+[   21.034385] [msm-audio:snd.c:snd_ioctl] snd_set_device 29 1 0
+[   21.040387] usb: notify offline
+[   21.045439] msm72k_udc: suspend
+[   21.045572] semc_pwr_pltf: USB max allowed chg current updated to 0 mA
+[   21.052179] bq24180: Setting input charger current to 0 mA
+[   21.057440] bq24180: Disable charger
+[   21.061827] [msm-audio:snd.c:snd_ioctl] snd_set_volume 29 0 7
+[   21.151938] msm72k_udc: reset
+[   21.154222] msm72k_udc: portchange USB_SPEED_HIGH
+[   21.312191] msm72k_udc: reset
+[   21.314465] msm72k_udc: portchange USB_SPEED_HIGH
+[   21.360373] bq24180: Charger Ready
+[   21.361573] bq24180: Set safety timer to 0 minutes
+[   21.509989] msm72k_udc: max_power: 0xFA
+[   21.514224] msm72k_udc: max_power: 0xFA
+[   21.514715] msm72k_udc: max_power: 0xFA
+[   21.516632] android_usb gadget: high speed config #1: android
+[   21.522365] android_usb gadget: config #1
+[   21.528039] semc_pwr_pltf: USB max allowed chg current updated to 500 mA
+[   21.533277] bq24180: Setting input charger current to 500 mA
+[   21.538564] bq24180: Enable charger
+[   21.840445] bq24180: Charge done
+[   22.040412] 
+[   22.040425] Charger Type: STD DOWNSTREAM PORT
+[   23.115825] msm72k_udc: max_power: 0xFA
+[   23.116308] msm72k_udc: max_power: 0xFA
+[   28.340714] msm_kgsl: initialized dev=1 mmu=on per_process_pagetable=off
+[   28.341922] misc kgsl: firmware: requesting yamato_pm4.fw
+[   28.351559] init: untracked pid 1784 exited
+[   28.352449] misc kgsl: firmware: requesting yamato_pfp.fw
+[   28.358877] init: untracked pid 1787 exited
+[   58.251236] request_suspend_state: wakeup (3->0) at 58251053403 (2011-08-04 11:23:17.794636723 UTC)
+[   76.618932] msmrtc_timeremote_set_time: 07/04/2011 11:23:36 (04)
+[   76.650000] RPC_TIME_TOD_SET_APPS_BASES:
+[   76.650010] 	tick = 2770893
+[   76.650017] 	stamp = 52244888426643456
+[   76.667862] msmrtc_tod_proc_result: 08/04/2011 11:23:36 (03)
+[   76.668036] rs30000048 rs30000048.65536: setting system clock to 2011-08-04 11:23:36 UTC (1312457016)
+[   79.842494] rmnet_open()
+[   79.842580] SMD: ch 11 0 -> 1
+[   79.842755] SMD: ch 11 1 -> 2
+[   86.958966] select 1966 (om.timsu.astrid), adj 15, size 4680, to kill
+[   86.958993] send sigkill to 1966 (om.timsu.astrid), adj 15, size 4680
+[   87.470256] select 1991 (lwral.osmonitor), adj 15, size 3852, to kill
+[   87.471091] select 2021 (anogenmod.stats), adj 15, size 4010, to kill
+[   87.477501] send sigkill to 2021 (anogenmod.stats), adj 15, size 4010
+[   88.182549] select 1991 (lwral.osmonitor), adj 15, size 3852, to kill
+[   88.183409] send sigkill to 1991 (lwral.osmonitor), adj 15, size 3852
+[   90.120266] input: systemconnector as /devices/virtual/input/input4
+[   90.220241] SEMC_PHF (Interrupt handler) Status changed. Headset is not inserted
+[   90.222307] semc_power: Disabling DCOUT. Current: 1000
+[   90.760224] rmnet0: no IPv6 routers present
+[   94.211914] select 2056 (viders.calendar), adj 15, size 4532, to kill
+[   94.212742] send sigkill to 2056 (viders.calendar), adj 15, size 4532
+[   94.630047] select 2086 (droid.deskclock), adj 15, size 4397, to kill
+[   94.630939] select 2097 (m.android.email), adj 15, size 4780, to kill
+[   94.637309] send sigkill to 2097 (m.android.email), adj 15, size 4780
+[  128.453197] request_suspend_state: sleep (0->3) at 128453003430 (2011-08-04 11:24:28.285141696 UTC)
+[  128.699587] lightsensor: Suspend.
+[  129.254347] save exit: isCheckpointed 1
+[  129.258583] save exit: isCheckpointed 1
+[  247.217545] request_suspend_state: wakeup (3->0) at 247217298390 (2011-08-04 11:26:27.049426656 UTC)
+[  247.228297] lightsensor: Resume.
+[  247.463978] mddi_on: clk_set_min_rate failed
+[  280.571038] bq24180: Charge in progress
+[  283.200306] select 1936 (d.process.acore), adj 8, size 4501, to kill
+[  283.201047] select 2046 (d.process.media), adj 11, size 4063, to kill
+[  283.207482] select 2395 (anogenmod.stats), adj 14, size 3782, to kill
+[  283.213919] send sigkill to 2395 (anogenmod.stats), adj 14, size 3782
+[  283.372150] select 1936 (d.process.acore), adj 8, size 4501, to kill
+[  283.372894] select 2046 (d.process.media), adj 11, size 4063, to kill
+[  283.379340] select 2419 (ogle.android.gm), adj 13, size 3800, to kill
+[  283.385795] send sigkill to 2419 (ogle.android.gm), adj 13, size 3800
+[  285.255966] select 1936 (d.process.acore), adj 8, size 4426, to kill
+[  285.256797] select 2046 (d.process.media), adj 11, size 3994, to kill
+[  285.263386] select 2432 (d.apps.uploader), adj 12, size 3559, to kill
+[  285.269667] select 2445 (ogenmod.cmparts), adj 13, size 3604, to kill
+[  285.276144] send sigkill to 2445 (ogenmod.cmparts), adj 13, size 3604
+[  287.612375] select 1936 (d.process.acore), adj 8, size 4426, to kill
+[  287.613117] select 2046 (d.process.media), adj 11, size 3994, to kill
+[  287.619554] select 2432 (d.apps.uploader), adj 12, size 3559, to kill
+[  287.626004] send sigkill to 2432 (d.apps.uploader), adj 12, size 3559
+[  288.608032] select 1936 (d.process.acore), adj 8, size 4420, to kill
+[  288.608790] select 2046 (d.process.media), adj 11, size 3988, to kill
+[  288.615245] select 2500 (ndroid.fotakill), adj 12, size 3450, to kill
+[  288.621647] send sigkill to 2500 (ndroid.fotakill), adj 12, size 3450
+[  288.870658] select 1936 (d.process.acore), adj 8, size 4403, to kill
+[  288.871398] select 2046 (d.process.media), adj 11, size 3966, to kill
+[  288.877853] send sigkill to 2046 (d.process.media), adj 11, size 3966
+[  289.640290] select 1936 (d.process.acore), adj 8, size 4397, to kill
+[  289.641038] select 2476 (oid.voicedialer), adj 9, size 3404, to kill
+[  289.647365] select 2485 (.TitaniumBackup), adj 9, size 3652, to kill
+[  289.653743] select 2522 (id.partnersetup), adj 11, size 3668, to kill
+[  289.660127] send sigkill to 2522 (id.partnersetup), adj 11, size 3668
+[  290.120290] select 1936 (d.process.acore), adj 8, size 4397, to kill
+[  290.121052] select 2476 (oid.voicedialer), adj 9, size 3404, to kill
+[  290.127379] select 2485 (.TitaniumBackup), adj 9, size 3652, to kill
+[  290.133778] select 2537 (oid.voicesearch), adj 10, size 3694, to kill
+[  290.140168] select 2553 (android.youtube), adj 10, size 3776, to kill
+[  290.146588] send sigkill to 2553 (android.youtube), adj 10, size 3776
+[  291.680825] select 1936 (d.process.acore), adj 8, size 4397, to kill
+[  291.681566] select 2476 (oid.voicedialer), adj 9, size 3404, to kill
+[  291.687915] select 2485 (.TitaniumBackup), adj 9, size 3652, to kill
+[  291.694268] select 2537 (oid.voicesearch), adj 10, size 3694, to kill
+[  291.700682] send sigkill to 2537 (oid.voicesearch), adj 10, size 3694
+[  292.442208] select 1936 (d.process.acore), adj 8, size 4163, to kill
+[  292.442954] select 2476 (oid.voicedialer), adj 9, size 3199, to kill
+[  292.449303] select 2485 (.TitaniumBackup), adj 9, size 3421, to kill
+[  292.455676] send sigkill to 2485 (.TitaniumBackup), adj 9, size 3421
+[  293.754032] select 1936 (d.process.acore), adj 8, size 4163, to kill
+[  293.754780] select 2476 (oid.voicedialer), adj 9, size 3199, to kill
+[  293.761179] send sigkill to 2476 (oid.voicedialer), adj 9, size 3199
+[  294.980349] select 1936 (d.process.acore), adj 8, size 4143, to kill
+[  294.981111] send sigkill to 1936 (d.process.acore), adj 8, size 4143
+[  354.012260] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] INIT_INFO Event
+[  354.013450] [adsp:adsp.c:msm_adsp_get] opening module QCAMTASK
+[  354.019381] [adsp:adsp.c:msm_adsp_get] module QCAMTASK has been registered
+[  354.025728] [adsp:adsp.c:msm_adsp_get] opening module VFETASK
+[  354.032310] [adsp:adsp.c:msm_adsp_get] module VFETASK has been registered
+[  354.328912] msm_enqueue: queue event new max is 1
+[  354.336595] msm_enqueue: queue control new max is 1
+[  355.236963] msm_pp_release: pp not in progress for 0
+[  355.237115] [adsp:adsp.c:msm_adsp_enable] enable 'QCAMTASK'state[0] id[17227151]
+[  355.252454] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] rpc event=0, proc_id=2, module=17227151, image=0
+[  355.255984] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] module QCAMTASK: READY
+[  355.264028] [adsp:adsp.c:msm_adsp_enable] enable 'VFETASK'state[0] id[17227140]
+[  355.271233] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] rpc event=0, proc_id=2, module=17227140, image=0
+[  355.280259] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] module VFETASK: READY
+[  355.474480] msm_enqueue: queue frame new max is 1
+[  357.890268] select 2299 (eautifulwidgets), adj 7, size 3761, to kill
+[  357.891003] select 2464 (.cooliris.media), adj 10, size 3264, to kill
+[  357.897434] send sigkill to 2464 (.cooliris.media), adj 10, size 3264
+[  361.720486] select 2299 (eautifulwidgets), adj 7, size 3567, to kill
+[  361.720533] select 2589 (ndroid.settings), adj 9, size 3186, to kill
+[  361.720573] send sigkill to 2589 (ndroid.settings), adj 9, size 3186
+[  364.186799] msm_enqueue: queue event new max is 2
+[  364.280279] [adsp:adsp.c:msm_adsp_disable] disable 'QCAMTASK'
+[  364.281357] [adsp:adsp.c:msm_adsp_disable] disable 'VFETASK'
+[  364.287466] [adsp:adsp.c:msm_adsp_disable_locked] disable interrupt
+[  364.292346] [adsp:adsp.c:msm_adsp_put] closing module QCAMTASK
+[  364.298162] [adsp:adsp.c:msm_adsp_put] closing module VFETASK
+[  369.580220] [adsp:adsp.c:msm_adsp_get] opening module QCAMTASK
+[  369.581265] [adsp:adsp.c:msm_adsp_get] module QCAMTASK has been registered
+[  369.587323] [adsp:adsp.c:msm_adsp_get] opening module VFETASK
+[  369.594441] [adsp:adsp.c:msm_adsp_get] module VFETASK has been registered
+[  369.870633] msm_enqueue: queue control new max is 1
+[  369.940037] msm_pp_release: pp not in progress for 0
+[  369.940210] [adsp:adsp.c:msm_adsp_enable] enable 'QCAMTASK'state[0] id[17227151]
+[  369.952120] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] rpc event=0, proc_id=2, module=17227151, image=0
+[  369.955873] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] module QCAMTASK: READY
+[  369.963110] [adsp:adsp.c:msm_adsp_enable] enable 'VFETASK'state[0] id[17227140]
+[  369.971011] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] rpc event=0, proc_id=2, module=17227140, image=0
+[  369.980209] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] module VFETASK: READY
+[  370.166055] msm_enqueue: queue event new max is 3
+[  372.210235] [adsp:adsp.c:msm_adsp_disable] disable 'QCAMTASK'
+[  372.212029] [adsp:adsp.c:msm_adsp_disable] disable 'VFETASK'
+[  372.217502] [adsp:adsp.c:msm_adsp_disable_locked] disable interrupt
+[  372.222322] [adsp:adsp.c:msm_adsp_put] closing module QCAMTASK
+[  372.229162] [adsp:adsp.c:msm_adsp_put] closing module VFETASK
+[  375.015745] select 2299 (eautifulwidgets), adj 8, size 3563, to kill
+[  375.016483] select 2598 (grybirdsseasons), adj 9, size 14868, to kill
+[  375.022982] send sigkill to 2598 (grybirdsseasons), adj 9, size 14868
+[  377.050218] [adsp:adsp.c:msm_adsp_get] opening module QCAMTASK
+[  377.052001] [adsp:adsp.c:msm_adsp_get] module QCAMTASK has been registered
+[  377.057311] [adsp:adsp.c:msm_adsp_get] opening module VFETASK
+[  377.063909] [adsp:adsp.c:msm_adsp_get] module VFETASK has been registered
+[  377.362167] msm_enqueue: queue control new max is 1
+[  377.453434] msm_pp_release: pp not in progress for 0
+[  377.453596] [adsp:adsp.c:msm_adsp_enable] enable 'QCAMTASK'state[0] id[17227151]
+[  377.466046] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] rpc event=0, proc_id=2, module=17227151, image=0
+[  377.469594] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] module QCAMTASK: READY
+[  377.477007] [adsp:adsp.c:msm_adsp_enable] enable 'VFETASK'state[0] id[17227140]
+[  377.484882] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] rpc event=0, proc_id=2, module=17227140, image=0
+[  377.493055] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] module VFETASK: READY
+[  388.057742] [msm-audio:audmgr.c:audmgr_rpc_thread] start
+[  388.058367] [msm-audio:audio_out.c:audio_enable] 
+[  388.062169] [msm-audio:audmgr.c:audmgr_enable] session 0xc05749d8
+[  388.069109] [msm-audio:audmgr.c:process_audmgr_callback] rpc READY handle=0x00000000
+[  388.076010] [msm-audio:audmgr.c:audmgr_rpc_thread] rpc_reply status 0
+[  388.240610] msm_enqueue: queue pict new max is 1
+[  388.289093] [msm-audio:audmgr.c:process_audmgr_callback] rpc CODEC_CONFIG volume=0x00002000
+[  388.291958] [adsp:adsp.c:msm_adsp_get] opening module AUDPPTASK
+[  388.298499] [adsp:adsp.c:msm_adsp_get] module AUDPPTASK has been registered
+[  388.304721] [adsp:adsp.c:msm_adsp_enable] enable 'AUDPPTASK'state[0] id[17227122]
+[  388.313014] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] rpc event=0, proc_id=2, module=17227122, image=0
+[  388.321379] [adsp:adsp.c:handle_adsp_rtos_mtoa_app] module AUDPPTASK: READY
+[  388.329886] [msm-audio:audpp.c:audpp_dsp_event] ENABLE
+[  388.333331] [msm-audio:audio_out.c:audio_dsp_event] CFG_MSG ENABLE
+[  389.749363] msm_pp_release: pp not in progress for 0
+[  391.347223] [msm-audio:audio_out.c:audio_disable] 
+[  391.347265] [msm-audio:audio_out.c:audio_dsp_event] CFG_MSG DISABLE
+[  391.347306] [msm-audio:audpp.c:audpp_dsp_event] DISABLE
+[  391.347335] [msm-audio:audpp.c:audpp_disable] Received CFG_MSG_DISABLE from ADSP
+[  391.347351] [adsp:adsp.c:msm_adsp_disable] disable 'AUDPPTASK'
+[  391.348308] [adsp:adsp.c:msm_adsp_put] closing module AUDPPTASK
+[  391.348341] [msm-audio:audmgr.c:audmgr_disable] session 0xc05749d8
+[  391.385251] [msm-audio:audmgr.c:audmgr_rpc_thread] rpc_reply status 0
+[  391.385281] [msm-audio:audmgr.c:process_audmgr_callback] DISABLED
+[  396.338276] msm_enqueue: queue event new max is 4
+[  396.430360] [adsp:adsp.c:msm_adsp_disable] disable 'QCAMTASK'
+[  396.431715] [adsp:adsp.c:msm_adsp_disable] disable 'VFETASK'
+[  396.437860] [adsp:adsp.c:msm_adsp_disable_locked] disable interrupt
+[  396.442527] [adsp:adsp.c:msm_adsp_put] closing module QCAMTASK
+[  396.448327] [adsp:adsp.c:msm_adsp_put] closing module VFETASK
+[  460.167489] request_suspend_state: sleep (0->3) at 460167291759 (2011-08-04 11:29:59.999428359 UTC)
+[  460.471725] lightsensor: Suspend.
+[  460.674811] save exit: isCheckpointed 1
+[  461.304916] request_suspend_state: wakeup (3->0) at 461304678428 (2011-08-04 11:30:01.136805027 UTC)
+[  461.308890] lightsensor: Resume.
+[  461.480214] mddi_on: clk_set_min_rate failed
+[  478.269394] msm72k_udc: suspend
+[  478.269694] semc_pwr_pltf: USB max allowed chg current updated to 0 mA
+[  478.273987] bq24180: Setting input charger current to 0 mA
+[  478.278982] bq24180: Disable charger
+[  478.286237] VBUS - (OFF)
+[  478.286352] msm72k_udc: ONLINE -> OFFLINE
+[  478.289749] bq24180: Turning off charger
+[  478.292947] bq24180: Stopping watchdog reset
+[  478.300496] bq24180: Set charge current termination to 0 mA
+[  478.302871] bq24180: Setting charger voltage to 0 mV
+[  478.308791] bq24180: Setting charger current to 0 mA
+[  478.313046] msm72k_udc: usb_ept_queue_xfer() called while offline
+[  478.318907] usb: notify offline
+[  478.373599] msm_hsusb_phy_reset
+[  478.500915] msm_otg_suspend: usb in low power mode
+[  478.560420] bq24180: Charger Ready
+[  478.918347] bq24180: Charger Ready
+[  483.831393] request_suspend_state: sleep (0->3) at 483831203430 (2011-08-04 11:30:23.663343362 UTC)
+[  484.156662] lightsensor: Suspend.
+[  484.304180] save exit: isCheckpointed 1
+[  485.461953] save exit: isCheckpointed 1
+[  485.467140] PM: Syncing filesystems ... done.
+[  485.472195] Freezing user space processes ... (elapsed 0.01 seconds) done.
+[  485.491433] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  485.495600] Suspending console(s) (use no_console_suspend to debug)
+[  485.505281] msmrtc_tod_proc_result: 08/04/2011 11:30:24 (03)
+[  485.506126] msmrtc_tod_proc_result: 08/04/2011 11:30:24 (03)
+[  485.506953] msmrtc_tod_proc_result: 08/04/2011 11:30:24 (03)
+[  485.508853] msmrtc_tod_proc_result: 08/04/2011 11:30:24 (03)
+[  485.514974] vfp_pm_suspend: saved vfp state
+[  485.514974] wakeup wake lock: gpio_kp
+[  485.809225] bq24180: Strange HW behaviour. Got safety timer fault but HW timer is disabled.
+[  485.809243] bq24180: Charger Ready
+[  485.830193] msmrtc_tod_proc_result: 08/04/2011 11:41:18 (03)
+[  485.831052] msmrtc_tod_proc_result: 08/04/2011 11:41:18 (03)
+[  485.879663] Restarting tasks ... done.
+[  486.079237] suspend: exit suspend, ret = 0 (2011-08-04 11:41:18.748145004 UTC)
+[  486.165432] request_suspend_state: wakeup (3->0) at 486166370107 (2011-08-04 11:41:18.834326672 UTC)
+[  486.169003] lightsensor: Resume.
+[  486.499400] mddi_on: clk_set_min_rate failed
+[  518.592085] request_suspend_state: sleep (0->3) at 518593013446 (2011-08-04 11:41:51.260968345 UTC)
+[  518.879402] lightsensor: Suspend.
+[  518.996870] save exit: isCheckpointed 1
+[  520.519578] save exit: isCheckpointed 1
+[  520.525003] PM: Syncing filesystems ... done.
+[  520.530203] Freezing user space processes ... (elapsed 0.01 seconds) done.
+[  520.549730] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  520.553898] Suspending console(s) (use no_console_suspend to debug)
+[  520.563460] msmrtc_tod_proc_result: 08/04/2011 11:41:52 (03)
+[  520.564315] msmrtc_tod_proc_result: 08/04/2011 11:41:52 (03)
+[  520.565133] msmrtc_tod_proc_result: 08/04/2011 11:41:52 (03)
+[  520.567031] msmrtc_tod_proc_result: 08/04/2011 11:41:52 (03)
+[  520.573098] vfp_pm_suspend: saved vfp state
+[  520.575958] wakeup wake lock: rpcrotuer_smd_xprt
+[  520.839298] msmrtc_tod_proc_result: 08/04/2011 11:42:51 (03)
+[  520.839321] msm_rtc: Generating alarm event (src 2)
+[  520.840199] msmrtc_tod_proc_result: 08/04/2011 11:42:51 (03)
+[  520.882896] Restarting tasks ... done.
+[  521.078241] suspend: exit suspend, ret = 0 (2011-08-04 11:42:51.738000006 UTC)
+[  522.721829] save exit: isCheckpointed 1
+[  522.729720] PM: Syncing filesystems ... done.
+[  522.736468] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  522.760580] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  522.764735] Suspending console(s) (use no_console_suspend to debug)
+[  522.784450] msmrtc_tod_proc_result: 08/04/2011 11:42:53 (03)
+[  522.793663] msmrtc_tod_proc_result: 08/04/2011 11:42:53 (03)
+[  522.803286] msmrtc_tod_proc_result: 08/04/2011 11:42:53 (03)
+[  522.814691] msmrtc_tod_proc_result: 08/04/2011 11:42:53 (03)
+[  522.835834] wakeup wake lock: rpcrotuer_smd_xprt
+[  523.108222] msmrtc_tod_proc_result: 08/04/2011 11:42:53 (03)
+[  523.109498] msmrtc_tod_proc_result: 08/04/2011 11:42:53 (03)
+[  523.143435] Restarting tasks ... done.
+[  523.216421] suspend: exit suspend, ret = 0 (2011-08-04 11:42:53.878038337 UTC)
+[  524.990464] save exit: isCheckpointed 1
+[  524.998379] PM: Syncing filesystems ... done.
+[  525.005111] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  525.029247] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  525.033404] Suspending console(s) (use no_console_suspend to debug)
+[  525.053025] msmrtc_tod_proc_result: 08/04/2011 11:42:55 (03)
+[  525.062269] msmrtc_tod_proc_result: 08/04/2011 11:42:55 (03)
+[  525.071992] msmrtc_tod_proc_result: 08/04/2011 11:42:55 (03)
+[  525.083190] msmrtc_tod_proc_result: 08/04/2011 11:42:55 (03)
+[  525.092160] wakeup wake lock: rpcrotuer_smd_xprt
+[  525.356930] msmrtc_tod_proc_result: 08/04/2011 11:52:40 (03)
+[  525.357015] msm_rtc: Generating alarm event (src 2)
+[  525.358612] msmrtc_tod_proc_result: 08/04/2011 11:52:40 (03)
+[  525.399022] Restarting tasks ... done.
+[  525.530624] suspend: exit suspend, ret = 0 (2011-08-04 11:52:40.671863340 UTC)
+[  527.651325] save exit: isCheckpointed 1
+[  527.657470] PM: Syncing filesystems ... done.
+[  527.663001] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  527.683801] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  527.687968] Suspending console(s) (use no_console_suspend to debug)
+[  527.703691] msmrtc_tod_proc_result: 08/04/2011 11:52:42 (03)
+[  527.711721] msmrtc_tod_proc_result: 08/04/2011 11:52:42 (03)
+[  527.719941] msmrtc_tod_proc_result: 08/04/2011 11:52:42 (03)
+[  527.729749] msmrtc_tod_proc_result: 08/04/2011 11:52:43 (03)
+[  527.743261] wakeup wake lock: rpcrotuer_smd_xprt
+[  528.012721] msmrtc_tod_proc_result: 08/04/2011 11:53:27 (03)
+[  528.012741] msm_rtc: Generating alarm event (src 2)
+[  528.013590] msmrtc_tod_proc_result: 08/04/2011 11:53:27 (03)
+[  528.052096] Restarting tasks ... done.
+[  528.147837] suspend: exit suspend, ret = 0 (2011-08-04 11:53:27.634203337 UTC)
+[  529.910179] save exit: isCheckpointed 1
+[  529.923145] PM: Syncing filesystems ... done.
+[  529.929857] Freezing user space processes ... (elapsed 0.07 seconds) done.
+[  530.007735] Freezing remaining freezable tasks ... (elapsed 0.10 seconds) done.
+[  530.111911] Suspending console(s) (use no_console_suspend to debug)
+[  530.119761] msmrtc_tod_proc_result: 08/04/2011 11:53:29 (03)
+[  530.121906] msmrtc_tod_proc_result: 08/04/2011 11:53:29 (03)
+[  530.131699] msmrtc_tod_proc_result: 08/04/2011 11:53:29 (03)
+[  530.143187] msmrtc_tod_proc_result: 08/04/2011 11:53:29 (03)
+[  530.159245] wakeup wake lock: rpcrotuer_smd_xprt
+[  530.431779] msmrtc_tod_proc_result: 08/04/2011 12:08:27 (03)
+[  530.431864] msm_rtc: Generating alarm event (src 2)
+[  530.433484] msmrtc_tod_proc_result: 08/04/2011 12:08:27 (03)
+[  530.473976] Restarting tasks ... done.
+[  530.719521] suspend: exit suspend, ret = 0 (2011-08-04 12:08:27.785791675 UTC)
+[  532.684042] save exit: isCheckpointed 1
+[  532.692150] PM: Syncing filesystems ... done.
+[  532.699013] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  532.724333] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  532.728488] Suspending console(s) (use no_console_suspend to debug)
+[  532.739700] msmrtc_tod_proc_result: 08/04/2011 12:08:30 (03)
+[  532.741838] msmrtc_tod_proc_result: 08/04/2011 12:08:30 (03)
+[  532.743876] msmrtc_tod_proc_result: 08/04/2011 12:08:30 (03)
+[  532.747715] msmrtc_tod_proc_result: 08/04/2011 12:08:30 (03)
+[  532.763578] wakeup wake lock: rpcrotuer_smd_xprt
+[  533.048372] msmrtc_tod_proc_result: 08/04/2011 12:12:52 (03)
+[  533.048441] msm_rtc: Generating alarm event (src 2)
+[  533.049657] msmrtc_tod_proc_result: 08/04/2011 12:12:52 (03)
+[  533.088796] Restarting tasks ... done.
+[  533.143619] suspend: exit suspend, ret = 0 (2011-08-04 12:12:52.593871666 UTC)
+[  534.910009] save exit: isCheckpointed 1
+[  534.918089] PM: Syncing filesystems ... done.
+[  534.925077] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  534.950282] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  534.954435] Suspending console(s) (use no_console_suspend to debug)
+[  534.973485] msmrtc_tod_proc_result: 08/04/2011 12:12:54 (03)
+[  534.976052] msmrtc_tod_proc_result: 08/04/2011 12:12:54 (03)
+[  534.978898] msmrtc_tod_proc_result: 08/04/2011 12:12:54 (03)
+[  534.982493] msmrtc_tod_proc_result: 08/04/2011 12:12:54 (03)
+[  534.998763] wakeup wake lock: rpcrotuer_smd_xprt
+[  535.265651] msmrtc_tod_proc_result: 08/04/2011 12:20:41 (03)
+[  535.265671] msm_rtc: Generating alarm event (src 2)
+[  535.266510] msmrtc_tod_proc_result: 08/04/2011 12:20:41 (03)
+[  535.305013] Restarting tasks ... done.
+[  535.400722] suspend: exit suspend, ret = 0 (2011-08-04 12:20:41.634171670 UTC)
+[  537.157583] save exit: isCheckpointed 1
+[  537.163951] PM: Syncing filesystems ... done.
+[  537.169896] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  537.191861] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  537.196026] Suspending console(s) (use no_console_suspend to debug)
+[  537.213471] msmrtc_tod_proc_result: 08/04/2011 12:20:43 (03)
+[  537.222279] msmrtc_tod_proc_result: 08/04/2011 12:20:43 (03)
+[  537.231262] msmrtc_tod_proc_result: 08/04/2011 12:20:43 (03)
+[  537.240425] msmrtc_tod_proc_result: 08/04/2011 12:20:43 (03)
+[  537.253519] wakeup wake lock: rpcrotuer_smd_xprt
+[  537.525133] msmrtc_tod_proc_result: 08/04/2011 12:21:42 (03)
+[  537.525216] msm_rtc: Generating alarm event (src 2)
+[  537.526848] msmrtc_tod_proc_result: 08/04/2011 12:21:42 (03)
+[  537.567353] Restarting tasks ... done.
+[  537.772753] suspend: exit suspend, ret = 0 (2011-08-04 12:21:42.745738341 UTC)
+[  539.405282] save exit: isCheckpointed 1
+[  539.413356] PM: Syncing filesystems ... done.
+[  539.420317] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  539.445475] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  539.449630] Suspending console(s) (use no_console_suspend to debug)
+[  539.468952] msmrtc_tod_proc_result: 08/04/2011 12:21:44 (03)
+[  539.478832] msmrtc_tod_proc_result: 08/04/2011 12:21:44 (03)
+[  539.481635] msmrtc_tod_proc_result: 08/04/2011 12:21:44 (03)
+[  539.492820] msmrtc_tod_proc_result: 08/04/2011 12:21:44 (03)
+[  539.512238] wakeup wake lock: rpcrotuer_smd_xprt
+[  539.782159] msmrtc_tod_proc_result: 08/04/2011 12:23:28 (03)
+[  539.782204] msm_rtc: Generating alarm event (src 2)
+[  539.783312] msmrtc_tod_proc_result: 08/04/2011 12:23:28 (03)
+[  539.822869] Restarting tasks ... done.
+[  539.970316] suspend: exit suspend, ret = 0 (2011-08-04 12:23:28.686933339 UTC)
+[  541.662729] save exit: isCheckpointed 1
+[  541.670912] PM: Syncing filesystems ... done.
+[  541.677997] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  541.703285] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  541.707442] Suspending console(s) (use no_console_suspend to debug)
+[  541.730892] msmrtc_tod_proc_result: 08/04/2011 12:23:30 (03)
+[  541.733250] msmrtc_tod_proc_result: 08/04/2011 12:23:30 (03)
+[  541.735058] msmrtc_tod_proc_result: 08/04/2011 12:23:30 (03)
+[  541.746427] msmrtc_tod_proc_result: 08/04/2011 12:23:30 (03)
+[  541.761598] wakeup wake lock: rpcrotuer_smd_xprt
+[  542.028894] msmrtc_tod_proc_result: 08/04/2011 12:38:27 (03)
+[  542.028916] msm_rtc: Generating alarm event (src 2)
+[  542.029772] msmrtc_tod_proc_result: 08/04/2011 12:38:27 (03)
+[  542.068304] Restarting tasks ... done.
+[  542.131192] suspend: exit suspend, ret = 0 (2011-08-04 12:38:27.601378334 UTC)
+[  543.868051] save exit: isCheckpointed 1
+[  543.874191] PM: Syncing filesystems ... done.
+[  543.879486] Freezing user space processes ... (elapsed 0.01 seconds) done.
+[  543.896114] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  543.900284] Suspending console(s) (use no_console_suspend to debug)
+[  543.916621] msmrtc_tod_proc_result: 08/04/2011 12:38:29 (03)
+[  543.924914] msmrtc_tod_proc_result: 08/04/2011 12:38:29 (03)
+[  543.933541] msmrtc_tod_proc_result: 08/04/2011 12:38:29 (03)
+[  543.942739] msmrtc_tod_proc_result: 08/04/2011 12:38:29 (03)
+[  543.955317] wakeup wake lock: rpcrotuer_smd_xprt
+[  544.229673] msmrtc_tod_proc_result: 08/04/2011 12:42:52 (03)
+[  544.229758] msm_rtc: Generating alarm event (src 2)
+[  544.231369] msmrtc_tod_proc_result: 08/04/2011 12:42:52 (03)
+[  544.271761] Restarting tasks ... done.
+[  544.477264] suspend: exit suspend, ret = 0 (2011-08-04 12:42:52.745726676 UTC)
+[  546.099779] save exit: isCheckpointed 1
+[  546.108157] PM: Syncing filesystems ... done.
+[  546.115359] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  546.141395] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  546.145550] Suspending console(s) (use no_console_suspend to debug)
+[  546.164913] msmrtc_tod_proc_result: 08/04/2011 12:42:54 (03)
+[  546.174170] msmrtc_tod_proc_result: 08/04/2011 12:42:54 (03)
+[  546.183470] msmrtc_tod_proc_result: 08/04/2011 12:42:54 (03)
+[  546.194538] msmrtc_tod_proc_result: 08/04/2011 12:42:54 (03)
+[  546.210379] wakeup wake lock: rpcrotuer_smd_xprt
+[  546.474825] msmrtc_tod_proc_result: 08/04/2011 12:48:42 (03)
+[  546.474850] msm_rtc: Generating alarm event (src 2)
+[  546.475755] msmrtc_tod_proc_result: 08/04/2011 12:48:42 (03)
+[  546.514498] Restarting tasks ... done.
+[  546.613466] suspend: exit suspend, ret = 0 (2011-08-04 12:48:42.637666669 UTC)
+[  548.340799] save exit: isCheckpointed 1
+[  548.347303] PM: Syncing filesystems ... done.
+[  548.353080] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  548.375430] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  548.379598] Suspending console(s) (use no_console_suspend to debug)
+[  548.395725] msmrtc_tod_proc_result: 08/04/2011 12:48:44 (03)
+[  548.403891] msmrtc_tod_proc_result: 08/04/2011 12:48:44 (03)
+[  548.412745] msmrtc_tod_proc_result: 08/04/2011 12:48:44 (03)
+[  548.422795] msmrtc_tod_proc_result: 08/04/2011 12:48:44 (03)
+[  548.435453] wakeup wake lock: rpcrotuer_smd_xprt
+[  548.702593] msmrtc_tod_proc_result: 08/04/2011 12:49:42 (03)
+[  548.702613] msm_rtc: Generating alarm event (src 2)
+[  548.703686] msmrtc_tod_proc_result: 08/04/2011 12:49:42 (03)
+[  548.743149] Restarting tasks ... done.
+[  548.813647] suspend: exit suspend, ret = 0 (2011-08-04 12:49:42.609918335 UTC)
+[  550.584530] save exit: isCheckpointed 1
+[  550.592728] PM: Syncing filesystems ... done.
+[  550.599837] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  550.625448] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  550.629601] Suspending console(s) (use no_console_suspend to debug)
+[  550.648980] msmrtc_tod_proc_result: 08/04/2011 12:49:44 (03)
+[  550.658323] msmrtc_tod_proc_result: 08/04/2011 12:49:44 (03)
+[  550.660694] msmrtc_tod_proc_result: 08/04/2011 12:49:44 (03)
+[  550.672559] msmrtc_tod_proc_result: 08/04/2011 12:49:44 (03)
+[  550.688101] wakeup wake lock: rpcrotuer_smd_xprt
+[  550.960313] msmrtc_tod_proc_result: 08/04/2011 12:53:28 (03)
+[  550.960334] msm_rtc: Generating alarm event (src 2)
+[  550.961436] msmrtc_tod_proc_result: 08/04/2011 12:53:28 (03)
+[  550.999976] Restarting tasks ... done.
+[  551.031534] suspend: exit suspend, ret = 0 (2011-08-04 12:53:28.570055000 UTC)
+[  552.832654] save exit: isCheckpointed 1
+[  552.840989] PM: Syncing filesystems ... done.
+[  552.848199] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  552.873776] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  552.877931] Suspending console(s) (use no_console_suspend to debug)
+[  552.889332] msmrtc_tod_proc_result: 08/04/2011 12:53:30 (03)
+[  552.891487] msmrtc_tod_proc_result: 08/04/2011 12:53:30 (03)
+[  552.894277] msmrtc_tod_proc_result: 08/04/2011 12:53:30 (03)
+[  552.897462] msmrtc_tod_proc_result: 08/04/2011 12:53:30 (03)
+[  552.913053] wakeup wake lock: rpcrotuer_smd_xprt
+[  553.178161] msmrtc_tod_proc_result: 08/04/2011 13:08:27 (03)
+[  553.178181] msm_rtc: Generating alarm event (src 2)
+[  553.179043] msmrtc_tod_proc_result: 08/04/2011 13:08:27 (03)
+[  553.217596] Restarting tasks ... done.
+[  553.307188] suspend: exit suspend, ret = 0 (2011-08-04 13:08:27.628105003 UTC)
+[  555.059990] save exit: isCheckpointed 1
+[  555.068144] PM: Syncing filesystems ... done.
+[  555.075218] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  555.100543] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  555.104694] Suspending console(s) (use no_console_suspend to debug)
+[  555.123819] msmrtc_tod_proc_result: 08/04/2011 13:08:29 (03)
+[  555.127007] msmrtc_tod_proc_result: 08/04/2011 13:08:29 (03)
+[  555.129064] msmrtc_tod_proc_result: 08/04/2011 13:08:29 (03)
+[  555.132642] msmrtc_tod_proc_result: 08/04/2011 13:08:29 (03)
+[  555.148822] wakeup wake lock: rpcrotuer_smd_xprt
+[  555.416312] msmrtc_tod_proc_result: 08/04/2011 13:12:53 (03)
+[  555.416357] msm_rtc: Generating alarm event (src 2)
+[  555.417489] msmrtc_tod_proc_result: 08/04/2011 13:12:53 (03)
+[  555.456879] Restarting tasks ... done.
+[  555.558278] suspend: exit suspend, ret = 0 (2011-08-04 13:12:53.640716669 UTC)
+[  557.296936] save exit: isCheckpointed 1
+[  557.305106] PM: Syncing filesystems ... done.
+[  557.312271] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  557.337594] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  557.341749] Suspending console(s) (use no_console_suspend to debug)
+[  557.361310] msmrtc_tod_proc_result: 08/04/2011 13:12:55 (03)
+[  557.370557] msmrtc_tod_proc_result: 08/04/2011 13:12:55 (03)
+[  557.379805] msmrtc_tod_proc_result: 08/04/2011 13:12:55 (03)
+[  557.390915] msmrtc_tod_proc_result: 08/04/2011 13:12:55 (03)
+[  557.406491] wakeup wake lock: rpcrotuer_smd_xprt
+[  557.673382] msmrtc_tod_proc_result: 08/04/2011 13:16:43 (03)
+[  557.673407] msm_rtc: Generating alarm event (src 2)
+[  557.674316] msmrtc_tod_proc_result: 08/04/2011 13:16:43 (03)
+[  557.713141] Restarting tasks ... done.
+[  557.779890] suspend: exit suspend, ret = 0 (2011-08-04 13:16:43.605528334 UTC)
+[  559.539213] save exit: isCheckpointed 1
+[  559.545663] PM: Syncing filesystems ... done.
+[  559.551508] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  559.573456] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  559.577624] Suspending console(s) (use no_console_suspend to debug)
+[  559.594034] msmrtc_tod_proc_result: 08/04/2011 13:16:45 (03)
+[  559.602531] msmrtc_tod_proc_result: 08/04/2011 13:16:45 (03)
+[  559.610984] msmrtc_tod_proc_result: 08/04/2011 13:16:45 (03)
+[  559.621499] msmrtc_tod_proc_result: 08/04/2011 13:16:45 (03)
+[  559.671892] wakeup wake lock: rpcrotuer_smd_xprt
+[  559.941721] msmrtc_tod_proc_result: 08/04/2011 13:17:44 (03)
+[  559.941804] msm_rtc: Generating alarm event (src 2)
+[  559.943406] msmrtc_tod_proc_result: 08/04/2011 13:17:44 (03)
+[  559.984274] Restarting tasks ... done.
+[  560.145679] suspend: exit suspend, ret = 0 (2011-08-04 13:17:44.702125007 UTC)
+[  561.821995] save exit: isCheckpointed 1
+[  561.830203] PM: Syncing filesystems ... done.
+[  561.837877] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  561.863471] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  561.867628] Suspending console(s) (use no_console_suspend to debug)
+[  561.879281] msmrtc_tod_proc_result: 08/04/2011 13:17:46 (03)
+[  561.881449] msmrtc_tod_proc_result: 08/04/2011 13:17:46 (03)
+[  561.883486] msmrtc_tod_proc_result: 08/04/2011 13:17:46 (03)
+[  561.886656] msmrtc_tod_proc_result: 08/04/2011 13:17:46 (03)
+[  561.903551] wakeup wake lock: rpcrotuer_smd_xprt
+[  562.168213] msmrtc_tod_proc_result: 08/04/2011 13:23:27 (03)
+[  562.168233] msm_rtc: Generating alarm event (src 2)
+[  562.169085] msmrtc_tod_proc_result: 08/04/2011 13:23:27 (03)
+[  562.207592] Restarting tasks ... done.
+[  562.307173] suspend: exit suspend, ret = 0 (2011-08-04 13:23:27.638046669 UTC)
+[  563.947437] select 2628 (.android.camera), adj 15, size 6104, to kill
+[  563.948390] send sigkill to 2628 (.android.camera), adj 15, size 6104
+[  564.123229] save exit: isCheckpointed 1
+[  564.146125] PM: Syncing filesystems ... <4>save exit: isCheckpointed 1
+[  564.281600] done.
+[  564.281745] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  564.302401] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  564.306571] Suspending console(s) (use no_console_suspend to debug)
+[  564.316030] msmrtc_tod_proc_result: 08/04/2011 13:23:29 (03)
+[  564.316870] msmrtc_tod_proc_result: 08/04/2011 13:23:29 (03)
+[  564.317796] msmrtc_tod_proc_result: 08/04/2011 13:23:29 (03)
+[  564.320003] msmrtc_tod_proc_result: 08/04/2011 13:23:29 (03)
+[  564.326948] wakeup wake lock: rpcrotuer_smd_xprt
+[  564.595100] msmrtc_tod_proc_result: 08/04/2011 13:38:27 (03)
+[  564.595125] msm_rtc: Generating alarm event (src 2)
+[  564.596272] msmrtc_tod_proc_result: 08/04/2011 13:38:27 (03)
+[  564.635075] Restarting tasks ... done.
+[  564.702727] suspend: exit suspend, ret = 0 (2011-08-04 13:38:27.606408334 UTC)
+[  566.476639] save exit: isCheckpointed 1
+[  566.484842] PM: Syncing filesystems ... done.
+[  566.492009] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  566.517317] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  566.521472] Suspending console(s) (use no_console_suspend to debug)
+[  566.540880] msmrtc_tod_proc_result: 08/04/2011 13:38:29 (03)
+[  566.550158] msmrtc_tod_proc_result: 08/04/2011 13:38:29 (03)
+[  566.553516] msmrtc_tod_proc_result: 08/04/2011 13:38:29 (03)
+[  566.557286] msmrtc_tod_proc_result: 08/04/2011 13:38:29 (03)
+[  566.571316] wakeup wake lock: rpcrotuer_smd_xprt
+[  566.843770] msmrtc_tod_proc_result: 08/04/2011 13:42:55 (03)
+[  566.843795] msm_rtc: Generating alarm event (src 2)
+[  566.844725] msmrtc_tod_proc_result: 08/04/2011 13:42:55 (03)
+[  566.883535] Restarting tasks ... done.
+[  566.955608] suspend: exit suspend, ret = 0 (2011-08-04 13:42:55.610840002 UTC)
+[  568.714822] save exit: isCheckpointed 1
+[  568.723020] PM: Syncing filesystems ... done.
+[  568.730172] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  568.755452] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  568.759605] Suspending console(s) (use no_console_suspend to debug)
+[  568.779272] msmrtc_tod_proc_result: 08/04/2011 13:42:57 (03)
+[  568.789742] msmrtc_tod_proc_result: 08/04/2011 13:42:57 (03)
+[  568.799031] msmrtc_tod_proc_result: 08/04/2011 13:42:57 (03)
+[  568.810488] msmrtc_tod_proc_result: 08/04/2011 13:42:57 (03)
+[  568.826036] wakeup wake lock: rpcrotuer_smd_xprt
+[  569.091005] msmrtc_tod_proc_result: 08/04/2011 13:44:44 (03)
+[  569.091027] msm_rtc: Generating alarm event (src 2)
+[  569.091877] msmrtc_tod_proc_result: 08/04/2011 13:44:44 (03)
+[  569.130382] Restarting tasks ... done.
+[  569.194960] suspend: exit suspend, ret = 0 (2011-08-04 13:44:44.603041667 UTC)
+[  570.956784] save exit: isCheckpointed 1
+[  570.963216] PM: Syncing filesystems ... done.
+[  570.968989] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  570.990687] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  570.994854] Suspending console(s) (use no_console_suspend to debug)
+[  571.010711] msmrtc_tod_proc_result: 08/04/2011 13:44:46 (03)
+[  571.017889] msmrtc_tod_proc_result: 08/04/2011 13:44:46 (03)
+[  571.026510] msmrtc_tod_proc_result: 08/04/2011 13:44:46 (03)
+[  571.036459] msmrtc_tod_proc_result: 08/04/2011 13:44:46 (03)
+[  571.048847] wakeup wake lock: rpcrotuer_smd_xprt
+[  571.320792] msmrtc_tod_proc_result: 08/04/2011 13:45:45 (03)
+[  571.320877] msm_rtc: Generating alarm event (src 2)
+[  571.322529] msmrtc_tod_proc_result: 08/04/2011 13:45:45 (03)
+[  571.363070] Restarting tasks ... done.
+[  571.579013] suspend: exit suspend, ret = 0 (2011-08-04 13:45:45.756316676 UTC)
+[  573.201099] save exit: isCheckpointed 1
+[  573.209385] PM: Syncing filesystems ... done.
+[  573.216572] Freezing user space processes ... (elapsed 0.02 seconds) done.
+[  573.241791] Freezing remaining freezable tasks ... (elapsed 0.00 seconds) done.
+[  573.245945] Suspending console(s) (use no_console_suspend to debug)
+[  573.258358] msmrtc_tod_proc_result: 08/04/2011 13:45:47 (03)
+[  573.268364] msmrtc_tod_proc_result: 08/04/2011 13:45:47 (03)
+[  573.270701] msmrtc_tod_proc_result: 08/04/2011 13:45:47 (03)
+[  573.281689] msmrtc_tod_proc_result: 08/04/2011 13:45:47 (03)
+[  573.294848] msm_otg_resume: usb exited from low power mode
+[  573.296856] VBUS - (ON)
+[  573.296871] wakeup wake lock: usb_bus_active
+[  573.296953] msm72k_udc: OFFLINE -> ONLINE
+[  573.296974] msm72k_udc: reset controller
+[  573.336062] usb: notify offline
+[  573.339156] msm72k_udc: suspend
+[  573.509685] msm72k_udc: reset
+[  573.511967] msm72k_udc: portchange USB_SPEED_HIGH
+[  573.511987] 
+[  573.511992] *********** Charger Type: HOST PC
+[  573.512000] 
+[  573.512007] 
+[  573.512012] Charger Type: STD DOWNSTREAM PORT
+[  573.512029] bq24180: Turning on charger. USB-Host mode
+[  573.512952] bq24180: Set init values
+[  573.512964] bq24180: Setting charger voltage to 0 mV
+[  573.513069] bq24180: Setting charger current to 0 mA
+[  573.513079] bq24180: Disable charger
+[  573.513180] bq24180: Set safety timer to 0 minutes
+[  573.513552] bq24180: Starting watchdog reset
+[  573.567088] msmrtc_tod_proc_result: 08/04/2011 13:53:24 (03)
+[  573.567941] msmrtc_tod_proc_result: 08/04/2011 13:53:24 (03)
+[  573.675338] Restarting tasks ... <6>msm72k_udc: reset
+[  573.681216] msm72k_udc: portchange USB_SPEED_HIGH
+[  573.688056] bq24180: Set charger safety limit voltage to 4200 mV
+[  573.701663] bq24180: Set charger safety limit current to 1250 mA
+[  573.703723] bq24180: Set charge current termination to 0 mA
+[  573.707656] bq24180: Setting charger voltage to 4200 mV
+[  573.766041] bq24180: Setting input charger current to 0 mA
+[  573.766176] bq24180: Setting charger current to 1250 mA
+[  573.777258] request_suspend_state: wakeup (3->0) at 573831313661 (2011-08-04 13:53:24.709265001 UTC)
+[  573.876732] msm72k_udc: max_power: 0xFA
+[  573.879733] done.
+[  573.879820] suspend: exit suspend, ret = 0 (2011-08-04 13:53:24.811850005 UTC)
+[  573.884222] lightsensor: Resume.
+[  573.887478] msm72k_udc: max_power: 0xFA
+[  573.891475] msm72k_udc: max_power: 0xFA
+[  573.895350] android_usb gadget: high speed config #1: android
+[  573.901960] android_usb gadget: config #1
+[  573.929224] semc_pwr_pltf: USB max allowed chg current updated to 500 mA
+[  573.930553] bq24180: Set charge current termination to 200 mA
+[  573.966127] bq24180: Setting input charger current to 500 mA
+[  573.966262] bq24180: Input current limit set to 500 mA
+[  573.971519] bq24180: Enable charger
+[  574.264224] mddi_on: clk_set_min_rate failed
+[  574.306392] bq24180: Charge in progress
+[  574.307793] bq24180: Set safety timer to 60 minutes
+[  574.415969] 
+[  574.415982] Charger Type: STD DOWNSTREAM PORT
+[  575.855805] msm72k_udc: max_power: 0xFA
+[  575.856320] msm72k_udc: max_power: 0xFA
+[  636.134604] select 2668 (.cooliris.media), adj 15, size 6145, to kill
+[  636.135452] send sigkill to 2668 (.cooliris.media), adj 15, size 6145
+[  646.303932] save exit: isCheckpointed 1
+[  661.284930] ax8swap: Unknown symbol update_mmu_cache
+[  661.287125] ax8swap: Unknown symbol last_mem_notify
+[  661.291105] ax8swap: Unknown symbol flush_ptrace_access
+[  661.295616] ax8swap: Unknown symbol mlock_vma_page
+[  661.300320] ax8swap: Unknown symbol writeback_inodes
+[  661.305515] ax8swap: Unknown symbol highest_memmap_pfn
+[  661.310201] ax8swap: Unknown symbol max_sane_readahead
+[  661.315265] ax8swap: Unknown symbol clear_zonelist_oom
+[  661.320413] ax8swap: Unknown symbol page_cluster
+[  661.325139] ax8swap: Unknown symbol nr_kernel_pages
+[  661.330274] ax8swap: Unknown symbol munlock_vma_pages_range
+[  661.336295] ax8swap: Unknown symbol prop_descriptor_init
+[  661.342507] ax8swap: Unknown symbol ax8swap_percpu_pagelist_fraction
+[  661.347304] ax8swap: Unknown symbol prop_fraction_single
+[  661.353629] ax8swap: Unknown symbol next_zones_zonelist
+[  661.358232] ax8swap: Unknown symbol __clear_page_mlock
+[  661.362737] ax8swap: Unknown symbol page_group_by_mobility_disabled
+[  661.369663] ax8swap: Unknown symbol vma_prio_tree_remove
+[  661.374833] ax8swap: Unknown symbol sysctl_lowmem_reserve_ratio
+[  661.380879] ax8swap: Unknown symbol nr_blockdev_pages
+[  661.385419] ax8swap: Unknown symbol vma_prio_tree_next
+[  661.390863] ax8swap: Unknown symbol __memory_pressure_notify
+[  661.396263] ax8swap: Unknown symbol __lru_cache_add
+[  661.401039] ax8swap: Unknown symbol cap_inode_need_killpriv
+[  661.406739] ax8swap: Unknown symbol protection_map
+[  661.411248] ax8swap: Unknown symbol flush_cache_mm
+[  661.416899] ax8swap: Unknown symbol show_mem
+[  661.421302] ax8swap: Unknown symbol __pgd_error
+[  661.424819] ax8swap: Unknown symbol first_online_pgdat
+[  661.430300] ax8swap: Unknown symbol user_shm_unlock
+[  661.434972] ax8swap: Unknown symbol prop_change_shift
+[  661.439703] ax8swap: Unknown symbol pdflush_operation
+[  661.444707] ax8swap: Unknown symbol flush_cache_range
+[  661.449755] ax8swap: Unknown symbol added_exe_file_vma
+[  661.455348] ax8swap: Unknown symbol vm_total_pages
+[  661.459653] ax8swap: Unknown symbol inodes_stat
+[  661.465223] ax8swap: Unknown symbol scan_unevictable_pages
+[  661.471429] ax8swap: Unknown symbol slab_is_available
+[  661.474876] ax8swap: Unknown symbol __prop_inc_single
+[  661.479973] ax8swap: Unknown symbol user_shm_lock
+[  661.485328] ax8swap: Unknown symbol v6wbi_flush_user_tlb_range
+[  661.490213] ax8swap: Unknown symbol buffer_heads_over_limit
+[  661.495726] ax8swap: Unknown symbol cap_inode_killpriv
+[  661.501124] ax8swap: Unknown symbol vma_prio_tree_insert
+[  661.506204] ax8swap: Unknown symbol locks_mandatory_locked
+[  661.512101] ax8swap: Unknown symbol sysctl_overcommit_memory
+[  661.517417] ax8swap: Unknown symbol sysctl_max_map_count
+[  661.522562] ax8swap: Unknown symbol next_online_pgdat
+[  661.527712] ax8swap: Unknown symbol force_page_cache_readahead
+[  661.533558] ax8swap: Unknown symbol sysctl_overcommit_ratio
+[  661.539092] ax8swap: Unknown symbol totalreserve_pages
+[  661.544242] ax8swap: Unknown symbol nr_all_pages
+[  661.549155] ax8swap: Unknown symbol prop_fraction_percpu
+[  661.554200] ax8swap: Unknown symbol flush_cache_page
+[  661.559061] ax8swap: Unknown symbol try_set_zone_oom
+[  661.564119] ax8swap: Unknown symbol next_zone
+[  661.569150] ax8swap: Unknown symbol __pmd_error
+[  661.572750] ax8swap: Unknown symbol __flush_anon_page
+[  661.578123] ax8swap: Unknown symbol lru_add_drain
+[  661.582438] ax8swap: Unknown symbol writeback_in_progress
+[  661.589315] ax8swap: Unknown symbol out_of_memory
+[  661.593035] ax8swap: Unknown symbol __alloc_bootmem_nopanic
+[  661.598109] ax8swap: Unknown symbol removed_exe_file_vma
+[  661.604369] ax8swap: Unknown symbol vm_area_cachep
+[  661.608525] ax8swap: Unknown symbol cap_vm_enough_memory
+[  661.613705] ax8swap: Unknown symbol sys_sync
+[  661.617720] ax8swap: Unknown symbol rotate_reclaimable_page
+[  661.624882] ax8swap: Unknown symbol shmem_zero_setup
+[  661.628380] ax8swap: Unknown symbol vm_swappiness
+[  661.633020] ax8swap: Unknown symbol mlock_vma_pages_range
+[  661.638827] ax8swap: Unknown symbol arch_get_unmapped_area
+[  661.644379] ax8swap: Unknown symbol mmap_min_addr
+[  661.649637] ax8swap: Unknown symbol deny_write_access
+[  661.654050] ax8swap: Unknown symbol __prop_inc_percpu_max
+[  661.658920] ax8swap: Unknown symbol do_page_cache_readahead
+[  661.664433] ax8swap: Unknown symbol __alloc_bootmem_node
+[  661.671676] ax8swap: Unknown symbol vm_committed_space
+[  661.676163] ax8swap: Unknown symbol per_cpu__mmu_gathers
+[  661.680275] ax8swap: Unknown symbol sync_supers
