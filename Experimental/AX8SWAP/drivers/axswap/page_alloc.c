@@ -152,7 +152,7 @@ static inline int bad_range(struct zone *zone, struct page *page)
 }
 #endif
 
-static void bad_page(struct page *page)
+void ax8swap_bad_page(struct page *page)
 {
 	static unsigned long resume;
 	static unsigned long nr_shown;
@@ -485,7 +485,7 @@ static void free_one_page(struct zone *zone, struct page *page, int order)
 	spin_unlock(&zone->lock);
 }
 
-static void __free_pages_ok(struct page *page, unsigned int order)
+void ax8swap___free_pages_ok(struct page *page, unsigned int order)
 {
 	unsigned long flags;
 	int i;
@@ -936,7 +936,7 @@ void mark_free_pages(struct zone *zone)
 /*
  * Free a 0-order page
  */
-static void free_hot_cold_page(struct page *page, int cold)
+void ax8swap_free_hot_cold_page(struct page *page, int cold)
 {
 	struct zone *zone = page_zone(page);
 	struct per_cpu_pages *pcp;
@@ -1784,7 +1784,7 @@ void si_meminfo_node(struct sysinfo *val, int nid)
  * We also calculate the percentage fragmentation. We do this by counting the
  * memory on each free list with the exception of the first item on the list.
  */
-void show_free_areas(void)
+void ax8swap_show_free_areas(void)
 {
 	int cpu;
 	struct zone *zone;

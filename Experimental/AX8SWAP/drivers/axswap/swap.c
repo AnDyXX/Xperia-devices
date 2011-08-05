@@ -385,7 +385,7 @@ void pagevec_strip(struct pagevec *pvec)
  * trylock on the page lock so it may not always free the swap
  * space associated with a page.
  */
-void pagevec_swap_free(struct pagevec *pvec)
+void ax8swap_pagevec_swap_free(struct pagevec *pvec)
 {
 	int i;
 

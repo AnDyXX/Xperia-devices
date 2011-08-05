@@ -493,7 +493,7 @@ static void balance_dirty_pages(struct address_space *mapping)
 		pdflush_operation(background_writeout, 0);
 }
 
-void set_page_dirty_balance(struct page *page, int page_mkwrite)
+void ax8swap_set_page_dirty_balance(struct page *page, int page_mkwrite)
 {
 	if (set_page_dirty(page) || page_mkwrite) {
 		struct address_space *mapping = page_mapping(page);
@@ -1094,7 +1094,7 @@ int __set_page_dirty_no_writeback(struct page *page)
  * We take care to handle the case where the page was truncated from the
  * mapping by re-checking page_mapping() inside tree_lock.
  */
-int __set_page_dirty_nobuffers(struct page *page)
+int ax8swap___set_page_dirty_nobuffers(struct page *page)
 {
 	if (!TestSetPageDirty(page)) {
 		struct address_space *mapping = page_mapping(page);
@@ -1145,7 +1145,7 @@ int redirty_page_for_writepage(struct writeback_control *wbc, struct page *page)
  * If the mapping doesn't provide a set_page_dirty a_op, then
  * just fall through and assume that it wants buffer_heads.
  */
-int set_page_dirty(struct page *page)
+int ax8swap_set_page_dirty(struct page *page)
 {
 	struct address_space *mapping = page_mapping(page);
 
@@ -1200,7 +1200,7 @@ int set_page_dirty_lock(struct page *page)
  * This incoherency between the page's dirty flag and radix-tree tag is
  * unfortunate, but it only exists while the page is locked.
  */
-int clear_page_dirty_for_io(struct page *page)
+int ax8swap_clear_page_dirty_for_io(struct page *page)
 {
 	struct address_space *mapping = page_mapping(page);
 
@@ -1257,7 +1257,7 @@ int clear_page_dirty_for_io(struct page *page)
 }
 
 
-int test_clear_page_writeback(struct page *page)
+int ax8swap_test_clear_page_writeback(struct page *page)
 {
 	struct address_space *mapping = page_mapping(page);
 	int ret;
@@ -1286,7 +1286,7 @@ int test_clear_page_writeback(struct page *page)
 	return ret;
 }
 
-int test_set_page_writeback(struct page *page)
+int ax8swap_test_set_page_writeback(struct page *page)
 {
 	struct address_space *mapping = page_mapping(page);
 	int ret;

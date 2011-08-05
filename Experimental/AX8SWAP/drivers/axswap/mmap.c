@@ -96,7 +96,7 @@ pgprot_t vm_get_page_prot(unsigned long vm_flags)
  * Note this is a helper function intended to be used by LSMs which
  * wish to use this logic.
  */
-int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
+int ax8swap___vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 {
 	unsigned long free, allowed;
 
@@ -2070,7 +2070,7 @@ out:
 
 
 /* Release all mmaps. */
-void exit_mmap(struct mm_struct *mm)
+void ax8swap_exit_mmap(struct mm_struct *mm)
 {
 	struct mmu_gather *tlb;
 	struct vm_area_struct *vma;

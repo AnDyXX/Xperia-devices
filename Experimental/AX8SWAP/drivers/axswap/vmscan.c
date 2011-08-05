@@ -391,7 +391,7 @@ static pageout_t pageout(struct page *page, struct address_space *mapping,
  * Same as remove_mapping, but if the page is removed from the mapping, it
  * gets returned with a refcount of 0.
  */
-static int __remove_mapping(struct address_space *mapping, struct page *page)
+int ax8swap___remove_mapping(struct address_space *mapping, struct page *page)
 {
 	BUG_ON(!PageLocked(page));
 	BUG_ON(mapping != page_mapping(page));
@@ -547,7 +547,7 @@ void putback_lru_page(struct page *page)
 /*
  * shrink_page_list() returns the number of reclaimed pages
  */
-static unsigned long shrink_page_list(struct list_head *page_list,
+unsigned long ax8swap_shrink_page_list(struct list_head *page_list,
 					struct scan_control *sc,
 					enum pageout_io sync_writeback)
 {
@@ -1180,7 +1180,7 @@ static inline void note_zone_scanning_priority(struct zone *zone, int priority)
  */
 
 
-static void shrink_active_list(unsigned long nr_pages, struct zone *zone,
+void ax8swap_shrink_active_list(unsigned long nr_pages, struct zone *zone,
 			struct scan_control *sc, int priority, int file)
 {
 	unsigned long pgmoved;
@@ -1443,7 +1443,7 @@ static void get_scan_ratio(struct zone *zone, struct scan_control *sc,
 /*
  * This is a basic per-zone page freer.  Used by both kswapd and direct reclaim.
  */
-static void shrink_zone(int priority, struct zone *zone,
+void ax8swap_shrink_zone(int priority, struct zone *zone,
 				struct scan_control *sc)
 {
 	unsigned long nr[NR_LRU_LISTS];
@@ -1677,7 +1677,7 @@ out:
 	return ret;
 }
 
-unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
+unsigned long ax8swap_try_to_free_pages(struct zonelist *zonelist, int order,
 								gfp_t gfp_mask)
 {
 	struct scan_control sc = {
@@ -2389,7 +2389,7 @@ int zone_reclaim(struct zone *zone, gfp_t gfp_mask, unsigned int order)
  * (2) page is part of an mlocked VMA
  *
  */
-int page_evictable(struct page *page, struct vm_area_struct *vma)
+int ax8swap_page_evictable(struct page *page, struct vm_area_struct *vma)
 {
 
 	if (mapping_unevictable(page_mapping(page)))

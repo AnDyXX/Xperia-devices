@@ -333,7 +333,7 @@ static int page_mapped_in_vma(struct page *page, struct vm_area_struct *vma)
  * Subfunctions of page_referenced: page_referenced_one called
  * repeatedly from either page_referenced_anon or page_referenced_file.
  */
-static int page_referenced_one(struct page *page,
+int ax8swap_page_referenced_one(struct page *page,
 	struct vm_area_struct *vma, unsigned int *mapcount)
 {
 	struct mm_struct *mm = vma->vm_mm;
@@ -565,7 +565,7 @@ static int page_mkclean_file(struct address_space *mapping, struct page *page)
 	return ret;
 }
 
-int page_mkclean(struct page *page)
+int ax8swap_page_mkclean(struct page *page)
 {
 	int ret = 0;
 
@@ -755,7 +755,7 @@ void page_remove_rmap(struct page *page)
  * Subfunctions of try_to_unmap: try_to_unmap_one called
  * repeatedly from either try_to_unmap_anon or try_to_unmap_file.
  */
-static int try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
+int ax8swap_try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
 				int migration)
 {
 	struct mm_struct *mm = vma->vm_mm;

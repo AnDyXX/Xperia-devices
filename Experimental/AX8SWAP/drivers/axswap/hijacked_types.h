@@ -410,4 +410,157 @@ extern ax8swap_lru_add_drain_type ax8swap_lru_add_drain;
 
 extern ax8swap_rotate_reclaimable_page_type ax8swap_rotate_reclaimable_page;
 
+//hijacked
+asmlinkage long sys_ax8swap_mincore(unsigned long start, size_t len,
+				unsigned char __user * vec);
+#define sys_mincore sys_ax8swap_mincore
+void ax8swap_flush_dcache_page(struct page *page);
+int ax8swap___set_page_dirty_buffers(struct page *page);
+int ax8swap_page_cache_pipe_buf_steal(struct pipe_inode_info *pipe,
+int ax8swap_sync_page(void *word);
+#define sync_page ax8swap_sync_page
+
+void ax8swap_mark_buffer_dirty(struct buffer_head *bh)
+void ax8swap_block_sync_page(struct page *page)
+void ax8swap_set_page_dirty_balance(struct page *page, int page_mkwrite);
+#define set_page_dirty_balance ax8swap_set_page_dirty_balance
+
+int ax8swap___set_page_dirty_nobuffers(struct page *page);
+#define __set_page_dirty_nobuffers ax8swap___set_page_dirty_nobuffers
+
+int ax8swap_set_page_dirty(struct page *page);
+#define set_page_dirty ax8swap_set_page_dirty
+
+int ax8swap_clear_page_dirty_for_io(struct page *page);
+#define clear_page_dirty_for_io ax8swap_clear_page_dirty_for_io
+
+int ax8swap_test_clear_page_writeback(struct page *page);
+#define test_clear_page_writeback ax8swap_test_clear_page_writeback
+
+
+int ax8swap_test_set_page_writeback(struct page *page);
+#define test_set_page_writeback ax8swap_test_set_page_writeback
+
+int ax8swap_page_mkclean(struct page *page);
+#define page_mkclean ax8swap_page_mkclean
+
+unsigned long ax8swap_shrink_page_list(struct list_head *page_list,
+					struct scan_control *sc,
+					enum pageout_io sync_writeback);
+#define shrink_page_list ax8swap_shrink_page_list
+
+int ax8swap___remove_mapping(struct address_space *mapping, struct page *page);
+#define __remove_mapping ax8swap___remove_mapping
+
+void ax8swap_shrink_active_list(unsigned long nr_pages, struct zone *zone,
+			struct scan_control *sc, int priority, int file);
+#define shrink_active_list ax8swap_shrink_active_list
+
+int ax8swap_page_evictable(struct page *page, struct vm_area_struct *vma);
+#define page_evictable ax8swap_page_evictable
+
+swp_entry_t *ax8swap_shmem_swp_entry(struct shmem_inode_info *info, unsigned long index, struct page **page);
+#define shmem_swp_entry ax8swap_shmem_swp_entry
+
+swp_entry_t *ax8swap_shmem_swp_alloc(struct shmem_inode_info *info, unsigned long index, enum sgp_type sgp);
+#define shmem_swp_alloc ax8swap_shmem_swp_alloc
+
+int ax8swap_shmem_free_swp(swp_entry_t *dir, swp_entry_t *edir,
+						spinlock_t *punch_lock);
+#define shmem_free_swp ax8swap_shmem_free_swp
+
+void ax8swap_shmem_truncate_range(struct inode *inode, loff_t start, loff_t end);
+#define shmem_truncate_range ax8swap_shmem_truncate_range
+
+void ax8swap_shmem_truncate(struct inode *inode);
+#define shmem_truncate ax8swap_shmem_truncate
+
+int ax8swap_shmem_notify_change(struct dentry *dentry, struct iattr *attr);
+#define shmem_notify_change ax8swap_shmem_notify_change
+
+void ax8swap_shmem_delete_inode(struct inode *inode);
+#define shmem_delete_inode ax8swap_shmem_delete_inode
+
+int ax8swap_shmem_unuse_inode(struct shmem_inode_info *info, swp_entry_t entry, struct page *page);
+#define shmem_unuse_inode ax8swap_shmem_unuse_inode
+
+int ax8swap_shmem_writepage(struct page *page, struct writeback_control *wbc);
+#define shmem_writepage ax8swap_shmem_writepage
+
+int ax8swap_shmem_getpage(struct inode *inode, unsigned long idx,
+			struct page **pagep, enum sgp_type sgp, int *type);
+#define  shmem_getpage ax8swap_shmem_getpage
+
+int ax8swap_shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
+#define shmem_fault ax8swap_shmem_fault
+
+int ax8swap_shmem_lock(struct file *file, int lock, struct user_struct *user);
+#define shmem_lock ax8swap_shmem_lock
+
+void ax8swap_pagevec_swap_free(struct pagevec *pvec);
+#define pagevec_swap_free ax8swap_pagevec_swap_free
+void ax8swap___set_page_dirty(struct page *page,
+		struct address_space *mapping, int warn);
+
+void ax8swap___free_pages_ok(struct page *page, unsigned int order);
+#define __free_pages_ok ax8swap___free_pages_ok
+
+void ax8swap_free_hot_cold_page(struct page *page, int cold);
+#define free_hot_cold_page ax8swap_free_hot_cold_page
+
+void ax8swap_bad_page(struct page *page);
+#define bad_page ax8swap_bad_page
+
+int ax8swap___vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin);
+#define __vm_enough_memory ax8swap___vm_enough_memory
+
+void ax8swap_shrink_zone(int priority, struct zone *zone,
+				struct scan_control *sc);
+#define shrink_zone ax8swap_shrink_zone
+
+int ax8swap_handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, int write_access);
+#define handle_mm_fault ax8swap_handle_mm_fault
+
+int ax8swap_meminfo_proc_show(struct seq_file *m, void *v);
+
+unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
+		struct vm_area_struct *vma, unsigned long start_addr,
+		unsigned long end_addr, unsigned long *nr_accounted,
+		struct zap_details *details);
+#define unmap_vmas ax8swap_unmap_vmas
+
+unsigned long ax8swap_zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details *details);
+#define zap_page_range ax8swap_zap_page_range
+
+void ax8swap_exit_mmap(struct mm_struct *mm);
+#define exit_mmap ax8swap_exit_mmap
+
+void ax8swap_show_free_areas(void);
+#define show_free_areas ax8swap_show_free_areas
+
+asmlinkage long ax8swap_sys_remap_file_pages(unsigned long start, unsigned long size,
+			unsigned long prot, unsigned long pgoff,
+			unsigned long flags);
+#define sys_remap_file_pages ax8swap_sys_remap_file_pages
+
+int ax8swap_copy_page_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		struct vm_area_struct *vma);
+#define copy_page_range ax8swap_copy_page_range
+
+int ax8swap_try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
+				int migration);
+#define try_to_unmap_one ax8swap_try_to_unmap_one
+
+void ax8swap_mmput(struct mm_struct *mm);
+
+int ax8swap_page_referenced_one(struct page *page,
+	struct vm_area_struct *vma, unsigned int *mapcount);
+#define page_referenced_one ax8swap_page_referenced_one
+
+unsigned long ax8swap_try_to_free_pages(struct zonelist *zonelist, int order,
+								gfp_t gfp_mask);
+#define try_to_free_pages ax8swap_try_to_free_pages
+
 #endif

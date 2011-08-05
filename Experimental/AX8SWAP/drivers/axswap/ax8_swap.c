@@ -188,6 +188,56 @@ struct cfg_value_map2 {
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
+	{"sys_mincore", 		&sys_ax8swap_mincore},
+	{"update_mmu_cache", 		&ax8swap_update_mmu_cache},
+	{"flush_dcache_page",		&ax8swap_flush_dcache_page},
+	{"__set_page_dirty_buffers",	&ax8swap___set_page_dirty_buffers},
+	{"page_cache_pipe_buf_steal", 	&ax8swap_page_cache_pipe_buf_steal},
+	{"sync_page",			&ax8swap_sync_page},
+	{"mark_buffer_dirty", 		&ax8swap_mark_buffer_dirty},
+	{"block_sync_page",		&ax8swap_block_sync_page},
+	{"set_page_dirty_balance", 	&ax8swap_set_page_dirty_balance},
+	{"__set_page_dirty_nobuffers", 	&ax8swap___set_page_dirty_nobuffers},
+	{"set_page_dirty", 		&ax8swap_set_page_dirty},
+	{"clear_page_dirty_for_io", 	&ax8swap_clear_page_dirty_for_io},
+	{"test_clear_page_writeback", 	&ax8swap_test_clear_page_writeback},
+	{"test_set_page_writeback", 	&ax8swap_test_set_page_writeback},
+	{"page_mkclean", 		&ax8swap_page_mkclean},
+	{"shrink_page_list",		&ax8swap_shrink_page_list},
+	{"__remove_mapping",		&ax8swap___remove_mapping},
+	{"shrink_active_list",		&ax8swap_shrink_active_list},
+	{"page_evictable",		&ax8swap_page_evictable},
+	{"shmem_swp_entry", 		&ax8swap_shmem_swp_entry},
+	{"shmem_swp_alloc", 		&ax8swap_shmem_swp_alloc},
+	{"shmem_free_swp", 		&ax8swap_shmem_free_swp},
+	{"shmem_truncate_range", 	&ax8swap_shmem_truncate_range},
+	{"shmem_truncate",		&ax8swap_shmem_truncate},
+	{"shmem_notify_change", 	&ax8swap_shmem_notify_change},
+	{"shmem_delete_inode", 		&ax8swap_shmem_delete_inode},
+	{"shmem_unuse", 		&ax8swap_shmem_unuse},
+	{"shmem_writepage", 		&ax8swap_shmem_writepage},
+	{"shmem_getpage", 		&ax8swap_shmem_getpage},
+	{"shmem_fault", 		&ax8swap_shmem_fault},
+	{"shmem_lock", 			&ax8swap_shmem_lock},
+	{"pagevec_swap_free",		&ax8swap_pagevec_swap_free},
+	{"__set_page_dirty", 		&ax8swap___set_page_dirty},
+	{"__free_pages_ok",		&ax8swap___free_pages_ok},
+	{"free_hot_cold_page",		&ax8swap_free_hot_cold_page},
+	{"bad_page",			&ax8swap_bad_page},
+	{"__vm_enough_memory",		&ax8swap___vm_enough_memory},
+	{"shrink_zone",			&ax8swap_shrink_zone},
+	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
+	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
+	{"unmap_vmas", 			&ax8swap_unmap_vmas},
+	{"zap_page_range", 		&ax8swap_zap_page_range},
+	{"exit_mmap", 			&ax8swap_exit_mmap},
+	{"show_free_areas", 		&ax8swap_show_free_areas},
+	{"sys_remap_file_pages", 	&sys_ax8swap_remap_file_pages},
+	{"copy_page_range", 		&ax8swap_copy_page_range},
+	{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
+	{"mmput", 			&ax8swap_mmput},
+	{"page_referenced_one", 	&ax8swap_page_referenced_one},
+	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},
 	{NULL, 				0},
 };
 
@@ -376,9 +426,9 @@ static int __init ax8swap_init(void)
 	if(!hijack_fields(1))
 		goto eof;
 
-	//hijack_fields(0);
+	hijack_fields(0);
 
-	//ret = procswaps_init();
+	ret = procswaps_init();
 	
 	if(ret < 0)
 	{
@@ -388,11 +438,11 @@ static int __init ax8swap_init(void)
 
 	//hijack_functions(0);
 
-	//bdi_init(swapper_space.backing_dev_info);
+	bdi_init(swapper_space.backing_dev_info);
 
 eof:
 
-	return ret-100;
+	return ret;
 }
 
 module_init(ax8swap_init);

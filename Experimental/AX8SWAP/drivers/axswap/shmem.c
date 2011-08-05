@@ -298,7 +298,7 @@ static void shmem_recalc_inode(struct inode *inode)
  * 	      	       +-> 48-51
  * 	      	       +-> 52-55
  */
-static swp_entry_t *shmem_swp_entry(struct shmem_inode_info *info, unsigned long index, struct page **page)
+swp_entry_t *ax8swap_shmem_swp_entry(struct shmem_inode_info *info, unsigned long index, struct page **page)
 {
 	unsigned long offset;
 	struct page **dir;
@@ -372,7 +372,7 @@ static void shmem_swp_set(struct shmem_inode_info *info, swp_entry_t *entry, uns
  *
  * If the entry does not exist, allocate it.
  */
-static swp_entry_t *shmem_swp_alloc(struct shmem_inode_info *info, unsigned long index, enum sgp_type sgp)
+swp_entry_t *ax8swap_shmem_swp_alloc(struct shmem_inode_info *info, unsigned long index, enum sgp_type sgp)
 {
 	struct inode *inode = &info->vfs_inode;
 	struct shmem_sb_info *sbinfo = SHMEM_SB(inode->i_sb);
@@ -436,7 +436,7 @@ static swp_entry_t *shmem_swp_alloc(struct shmem_inode_info *info, unsigned long
  * @edir:       pointer after last entry of the directory
  * @punch_lock: pointer to spinlock when needed for the holepunch case
  */
-static int shmem_free_swp(swp_entry_t *dir, swp_entry_t *edir,
+int ax8swap_shmem_free_swp(swp_entry_t *dir, swp_entry_t *edir,
 						spinlock_t *punch_lock)
 {
 	spinlock_t *punch_unlock = NULL;
@@ -506,7 +506,7 @@ static void shmem_free_pages(struct list_head *next)
 	} while (next);
 }
 
-static void shmem_truncate_range(struct inode *inode, loff_t start, loff_t end)
+void ax8swap_shmem_truncate_range(struct inode *inode, loff_t start, loff_t end)
 {
 	struct shmem_inode_info *info = SHMEM_I(inode);
 	unsigned long idx;
@@ -733,12 +733,12 @@ done2:
 	}
 }
 
-static void shmem_truncate(struct inode *inode)
+void ax8swap_shmem_truncate(struct inode *inode)
 {
 	shmem_truncate_range(inode, inode->i_size, (loff_t)-1);
 }
 
-int shmem_notify_change(struct dentry *dentry, struct iattr *attr)
+int ax8swap_shmem_notify_change(struct dentry *dentry, struct iattr *attr)
 {
 	struct inode *inode = dentry->d_inode;
 	struct page *page = NULL;
@@ -788,7 +788,7 @@ int shmem_notify_change(struct dentry *dentry, struct iattr *attr)
 	return error;
 }
 
-void shmem_delete_inode(struct inode *inode)
+void ax8swap_shmem_delete_inode(struct inode *inode)
 {
 	struct shmem_inode_info *info = SHMEM_I(inode);
 
@@ -819,7 +819,7 @@ static inline int shmem_find_swp(swp_entry_t entry, swp_entry_t *dir, swp_entry_
 	return -1;
 }
 
-static int shmem_unuse_inode(struct shmem_inode_info *info, swp_entry_t entry, struct page *page)
+int ax8swap_shmem_unuse_inode(struct shmem_inode_info *info, swp_entry_t entry, struct page *page)
 {
 	struct inode *inode;
 	unsigned long idx;
@@ -994,7 +994,7 @@ out:	return found;	/* 0 or 1 or -ENOMEM */
 /*
  * Move the page from the page cache to the swap cache.
  */
-int shmem_writepage(struct page *page, struct writeback_control *wbc)
+int ax8swap_shmem_writepage(struct page *page, struct writeback_control *wbc)
 {
 	struct shmem_inode_info *info;
 	swp_entry_t *entry, swap;
@@ -1173,7 +1173,7 @@ static inline struct mempolicy *shmem_get_sbmpol(struct shmem_sb_info *sbinfo)
  * vm. If we swap it in we mark it dirty since we also free the swap
  * entry since a page cannot live in both the swap and page cache
  */
-static int shmem_getpage(struct inode *inode, unsigned long idx,
+int ax8swap_shmem_getpage(struct inode *inode, unsigned long idx,
 			struct page **pagep, enum sgp_type sgp, int *type)
 {
 	struct address_space *mapping = inode->i_mapping;
@@ -1433,7 +1433,7 @@ failed:
 	return error;
 }
 
-int shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+int ax8swap_shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct inode *inode = vma->vm_file->f_path.dentry->d_inode;
 	int error;
@@ -1467,7 +1467,7 @@ static struct mempolicy *shmem_get_policy(struct vm_area_struct *vma,
 }
 #endif
 
-int shmem_lock(struct file *file, int lock, struct user_struct *user)
+int ax8swap_shmem_lock(struct file *file, int lock, struct user_struct *user)
 {
 	struct inode *inode = file->f_path.dentry->d_inode;
 	struct shmem_inode_info *info = SHMEM_I(inode);

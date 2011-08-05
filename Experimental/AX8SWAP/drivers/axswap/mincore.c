@@ -181,7 +181,7 @@ none_mapped:
  *		mapped
  *  -EAGAIN - A kernel resource was temporarily unavailable.
  */
-asmlinkage long sys_mincore(unsigned long start, size_t len,
+asmlinkage long sys_ax8swap_mincore(unsigned long start, size_t len,
 				unsigned char __user * vec)
 {
 	long retval;

@@ -151,7 +151,7 @@ void remove_from_page_cache(struct page *page)
 	spin_unlock_irq(&mapping->tree_lock);
 }
 
-static int sync_page(void *word)
+int ax8swap_sync_page(void *word)
 {
 	struct address_space *mapping;
 	struct page *page;
