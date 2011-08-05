@@ -201,6 +201,12 @@ struct cpu_tlb_fns {
 extern void __cpu_flush_user_tlb_range(unsigned long, unsigned long, struct vm_area_struct *);
 extern void __cpu_flush_kern_tlb_range(unsigned long, unsigned long);
 
+#ifdef EXTERNAL_SWAP_MODULE
+typedef void (*ax8swap_v6wbi_flush_user_tlb_range_type)(unsigned long, unsigned long, struct vm_area_struct *);
+extern ax8swap_v6wbi_flush_user_tlb_range_type ax8swap_v6wbi_flush_user_tlb_range;
+#define v6wbi_flush_user_tlb_range ax8swap_v6wbi_flush_user_tlb_range
+#endif
+
 #endif
 
 extern struct cpu_tlb_fns cpu_tlb;

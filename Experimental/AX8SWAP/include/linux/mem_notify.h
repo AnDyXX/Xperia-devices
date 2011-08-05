@@ -21,7 +21,13 @@ extern atomic_long_t last_mem_notify;
 
 extern const struct file_operations mem_notify_fops;
 
+#ifdef EXTERNAL_SWAP_MODULE
+typedef void (*ax8swap___memory_pressure_notify_type)(struct zone *zone, int pressure);
+extern ax8swap___memory_pressure_notify_type ax8swap___memory_pressure_notify;
+#define __memory_pressure_notify ax8swap___memory_pressure_notify
+#else
 extern void __memory_pressure_notify(struct zone *zone, int pressure);
+#endif
 
 static inline void memory_pressure_notify(struct zone *zone, int pressure)
 {

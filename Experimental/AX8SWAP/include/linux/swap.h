@@ -175,13 +175,27 @@ extern unsigned int nr_free_pagecache_pages(void);
 
 
 /* linux/mm/swap.c */
+#ifdef EXTERNAL_SWAP_MODULE
+typedef void (*ax8swap___lru_cache_add_type)(struct page *page, enum lru_list lru);
+extern ax8swap___lru_cache_add_type ax8swap___lru_cache_add;
+#define __lru_cache_add ax8swap___lru_cache_add
+#else
 extern void __lru_cache_add(struct page *, enum lru_list lru);
+#endif
 extern void lru_cache_add_lru(struct page *, enum lru_list lru);
 extern void activate_page(struct page *);
 extern void mark_page_accessed(struct page *);
 extern void lru_add_drain(void);
 extern int lru_add_drain_all(void);
+
+#ifdef EXTERNAL_SWAP_MODULE
+typedef void (*ax8swap_rotate_reclaimable_page_type)(struct page *page);
+extern ax8swap_rotate_reclaimable_page_type ax8swap_rotate_reclaimable_page;
+#define rotate_reclaimable_page ax8swap_rotate_reclaimable_page
+#else 
 extern void rotate_reclaimable_page(struct page *page);
+#endif
+
 extern void swap_setup(void);
 
 extern void add_page_to_unevictable_list(struct page *page);
