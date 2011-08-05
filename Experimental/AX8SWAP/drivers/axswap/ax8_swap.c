@@ -73,7 +73,6 @@ struct mutex * ax8swap_shmem_swaplist_mutex;
 struct list_head * ax8swap_shmem_swaplist;
 atomic_long_t * ax8swap_last_mem_notify; 
 //urn
-ax8swap_update_mmu_cache_type ax8swap_update_mmu_cache;
 ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
 ax8swap_mlock_vma_pages_range_type ax8swap_mlock_vma_pages_range;
 ax8swap_writeback_inodes_type ax8swap_writeback_inodes;
@@ -92,14 +91,13 @@ ax8swap_next_zones_zonelist_type ax8swap_next_zones_zonelist;
 ax8swap___clear_page_mlock_type ax8swap___clear_page_mlock;
 int * ax8swap_page_group_by_mobility_disabled;
 ax8swap_vma_prio_tree_remove_type ax8swap_vma_prio_tree_remove;
-int * ax8swap_sysctl_lowmem_reserve_ratio;
+int ** ax8swap_sysctl_lowmem_reserve_ratio;
 ax8swap_nr_blockdev_pages_type ax8swap_nr_blockdev_pages;
 ax8swap_vma_prio_tree_next_type ax8swap_vma_prio_tree_next;
 ax8swap___memory_pressure_notify_type ax8swap___memory_pressure_notify;
 ax8swap_cap_inode_need_killpriv_type ax8swap_cap_inode_need_killpriv;
-pgprot_t * ax8swap_protection_map;
+pgprot_t ** ax8swap_protection_map;
 ax8swap_flush_cache_mm_type ax8swap_flush_cache_mm;
-ax8swap_show_mem_type ax8swap_show_mem;
 ax8swap___pgd_error_type ax8swap___pgd_error;
 ax8swap_first_online_pgdat_type ax8swap_first_online_pgdat;
 ax8swap_user_shm_unlock_type ax8swap_user_shm_unlock;
@@ -149,9 +147,16 @@ ax8swap_do_page_cache_readahead_type ax8swap_do_page_cache_readahead;
 ax8swap___alloc_bootmem_node_type ax8swap___alloc_bootmem_node;
 atomic_long_t * ax8swap_vm_committed_space;
 ax8swap_sync_supers_type ax8swap_sync_supers;
-
-
-
+ax8swap_mlock_vma_page_type ax8swap_mlock_vma_page;
+ax8swap___lru_cache_add_type ax8swap___lru_cache_add;
+ax8swap_adjust_pte_type ax8swap_adjust_pte;
+ax8swap___flush_dcache_page_type ax8swap___flush_dcache_page;
+struct meminfo *ax8swap_meminfo;
+ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
+ax8swap_exit_aio_type ax8swap_exit_aio;
+ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
+ax8swap_lru_add_drain_type ax8swap_lru_add_drain;
+ax8swap_rotate_reclaimable_page_type ax8swap_rotate_reclaimable_page;
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -211,7 +216,6 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"anon_vma_cachep", 		(void**) &ax8swap_anon_vma_cachep},
 	{"shmem_swaplist_mutex", 	(void**) &ax8swap_shmem_swaplist_mutex},
 	{"shmem_swaplist", 		(void**) &ax8swap_shmem_swaplist},
-	{"update_mmu_cache", 		(void**) &ax8swap_update_mmu_cache},
 	{"last_mem_notify", 		(void**) &ax8swap_last_mem_notify},
 	{"flush_ptrace_access", 	(void**) &ax8swap_flush_ptrace_access},
 	{"mlock_vma_pages_range", 	(void**) &ax8swap_mlock_vma_pages_range},
@@ -237,7 +241,6 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"cap_inode_need_killpriv",(void**) &ax8swap_cap_inode_need_killpriv },
 	{"protection_map",(void**) &ax8swap_protection_map },
 	{"flush_cache_mm",(void**) &ax8swap_flush_cache_mm },
-	{"show_mem",(void**) &ax8swap_show_mem },
 	{"__pgd_error",(void**) &ax8swap___pgd_error },
 	{"first_online_pgdat",(void**) &ax8swap_first_online_pgdat },
 	{"user_shm_unlock",(void**) &ax8swap_user_shm_unlock },
@@ -287,6 +290,16 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"__alloc_bootmem_node",(void**) &ax8swap___alloc_bootmem_node },
 	{"vm_committed_space",(void**) &ax8swap_vm_committed_space },
 	{"sync_supers",(void**) &ax8swap_sync_supers },
+	{"mlock_vma_page", (void**) &ax8swap_mlock_vma_page},
+	{"__lru_cache_add", (void**) &ax8swap___lru_cache_add},
+	{"adjust_pte", (void**) &ax8swap_adjust_pte},
+	{"__flush_dcache_page", (void**) &ax8swap___flush_dcache_page},
+	{"meminfo", (void**) &ax8swap_meminfo},
+	{"get_vmalloc_info", (void**) &ax8swap_get_vmalloc_info},
+	{"exit_aio", (void**) &ax8swap_exit_aio},
+	{"set_mm_exe_file", (void**) &ax8swap_set_mm_exe_file},
+	{"lru_add_drain", (void**) &ax8swap_lru_add_drain},
+	{"rotate_reclaimable_page", (void**) &ax8swap_rotate_reclaimable_page},
 	{NULL,				0},
 };
 

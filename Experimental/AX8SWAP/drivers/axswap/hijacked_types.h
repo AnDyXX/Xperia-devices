@@ -4,10 +4,21 @@
 #include <linux/pipe_fs_i.h>
 #include <linux/mmdebug.h>
 #include <linux/mm.h>
+#include <linux/swap.h>
+#include <linux/proportions.h>
 #include <linux/cgroup.h>
 #include <linux/shmem_fs.h>
 #include <linux/pagevec.h>
 #include <asm/tlb.h>
+#include <linux/mem_notify.h>
+#include <linux/security.h>
+#include <asm/cacheflush.h>
+#include <linux/fs.h>
+
+struct vmalloc_info {
+	unsigned long	used;
+	unsigned long	largest_chunk;
+};
 
 extern struct mutex * ax8swap_mm_all_locks_mutex;
 #define mm_all_locks_mutex (*ax8swap_mm_all_locks_mutex)
@@ -85,9 +96,7 @@ extern struct list_head * ax8swap_shmem_swaplist;
 #define shmem_swaplist (*ax8swap_shmem_swaplist)
 
 /*  URES REF */
-typedef void (*ax8swap_update_mmu_cache_type)(struct vm_area_struct * vma,
-			     unsigned long address, pte_t pte); 
-extern ax8swap_update_mmu_cache_type ax8swap_update_mmu_cache;
+void ax8swap_update_mmu_cache(struct vm_area_struct *vma, unsigned long addr, pte_t pte);
 
 typedef void (*ax8swap_flush_ptrace_access_type)(struct vm_area_struct *vma, struct page *page,
 				unsigned long uaddr, void *kaddr,
@@ -128,12 +137,13 @@ extern ax8swap_prop_descriptor_init_type ax8swap_prop_descriptor_init;
 typedef void (*ax8swap_prop_fraction_single_type)(struct prop_descriptor *pd, struct prop_local_single *pl,
 		long *numerator, long *denominator);
 extern ax8swap_prop_fraction_single_type ax8swap_prop_fraction_single;
-
+/*
 typedef struct zoneref * (*ax8swap_next_zones_zonelist_type)(struct zoneref *z,
 					enum zone_type highest_zoneidx,
 					nodemask_t *nodes,
 					struct zone **zone);
 extern ax8swap_next_zones_zonelist_type ax8swap_next_zones_zonelist;
+*/
 
 typedef void (*ax8swap___clear_page_mlock_type)(struct page *page);
 extern ax8swap___clear_page_mlock_type ax8swap___clear_page_mlock;
@@ -145,7 +155,7 @@ typedef void (*ax8swap_vma_prio_tree_remove_type) (struct vm_area_struct *, stru
 extern ax8swap_vma_prio_tree_remove_type ax8swap_vma_prio_tree_remove;
 #define vma_prio_tree_remove ax8swap_vma_prio_tree_remove
 
-extern int * ax8swap_sysctl_lowmem_reserve_ratio;
+extern int ** ax8swap_sysctl_lowmem_reserve_ratio;
 #define sysctl_lowmem_reserve_ratio (*ax8swap_sysctl_lowmem_reserve_ratio)
 
 typedef long (*ax8swap_nr_blockdev_pages_type)(void);
@@ -157,24 +167,23 @@ typedef struct vm_area_struct * (*ax8swap_vma_prio_tree_next_type)(struct vm_are
 extern ax8swap_vma_prio_tree_next_type ax8swap_vma_prio_tree_next;
 #define vma_prio_tree_next ax8swap_vma_prio_tree_next
 
-typedef void (*ax8swap___memory_pressure_notify_type)(struct zone *zone, int pressure);
+//typedef void (*ax8swap___memory_pressure_notify_type)(struct zone *zone, int pressure);
 extern ax8swap___memory_pressure_notify_type ax8swap___memory_pressure_notify;
-#define __memory_pressure_notify ax8swap___memory_pressure_notify
+//#define __memory_pressure_notify ax8swap___memory_pressure_notify
 
-typedef int (*ax8swap_cap_inode_need_killpriv_type)(struct dentry *dentry);
+//typedef int (*ax8swap_cap_inode_need_killpriv_type)(struct dentry *dentry);
 extern ax8swap_cap_inode_need_killpriv_type ax8swap_cap_inode_need_killpriv;
-#define cap_inode_need_killpriv ax8swap_cap_inode_need_killpriv
+//#define cap_inode_need_killpriv ax8swap_cap_inode_need_killpriv
 
 
-extern pgprot_t * ax8swap_protection_map;
+extern pgprot_t ** ax8swap_protection_map;
 #define protection_map (*ax8swap_protection_map)
 
 typedef void (*ax8swap_flush_cache_mm_type)(struct mm_struct *mm);
 extern ax8swap_flush_cache_mm_type ax8swap_flush_cache_mm;
 #define flush_cache_mm ax8swap_flush_cache_mm
 
-typedef void (*ax8swap_show_mem_type) (void);
-extern ax8swap_show_mem_type ax8swap_show_mem;
+void ax8swap_show_mem(void);
 #define show_mem ax8swap_show_mem
 
 typedef void (*ax8swap___pgd_error_type)(const char *file, int line, unsigned long val);
@@ -197,9 +206,9 @@ typedef int (*ax8swap_pdflush_operation_type)(void (*fn)(unsigned long), unsigne
 extern ax8swap_pdflush_operation_type ax8swap_pdflush_operation;
 #define pdflush_operation ax8swap_pdflush_operation
 
-typedef void (*ax8swap_flush_cache_range_type)(struct vm_area_struct *vma, unsigned long start, unsigned long end);
+//typedef void (*ax8swap_flush_cache_range_type)(struct vm_area_struct *vma, unsigned long start, unsigned long end);
 extern ax8swap_flush_cache_range_type ax8swap_flush_cache_range;
-#define flush_cache_range ax8swap_flush_cache_range
+//#define flush_cache_range ax8swap_flush_cache_range
 
 typedef void (*ax8swap_added_exe_file_vma_type)(struct mm_struct *mm);
 extern ax8swap_added_exe_file_vma_type ax8swap_added_exe_file_vma;
@@ -219,32 +228,32 @@ typedef int (*ax8swap_slab_is_available_type)(void);
 extern ax8swap_slab_is_available_type ax8swap_slab_is_available;
 #define slab_is_available ax8swap_slab_is_available
 
-typedef void (*ax8swap___prop_inc_single_type)(struct prop_descriptor *pd, struct prop_local_single *pl);
+//typedef void (*ax8swap___prop_inc_single_type)(struct prop_descriptor *pd, struct prop_local_single *pl);
 extern ax8swap___prop_inc_single_type ax8swap___prop_inc_single;
-#define __prop_inc_single ax8swap___prop_inc_single
+//#define __prop_inc_single ax8swap___prop_inc_single
 
 typedef int (*ax8swap_user_shm_lock_type)(size_t, struct user_struct *);
 extern ax8swap_user_shm_lock_type ax8swap_user_shm_lock;
 #define user_shm_lock ax8swap_user_shm_lock
 
-typedef void (*ax8swap_v6wbi_flush_user_tlb_range_type)(unsigned long, unsigned long, struct vm_area_struct *);
+//typedef void (*ax8swap_v6wbi_flush_user_tlb_range_type)(unsigned long, unsigned long, struct vm_area_struct *);
 extern ax8swap_v6wbi_flush_user_tlb_range_type ax8swap_v6wbi_flush_user_tlb_range;
-#define v6wbi_flush_user_tlb_range ax8swap_v6wbi_flush_user_tlb_range
+//#define v6wbi_flush_user_tlb_range ax8swap_v6wbi_flush_user_tlb_range
 
 extern int * ax8swap_buffer_heads_over_limit;
 #define buffer_heads_over_limit (*ax8swap_buffer_heads_over_limit)
 
-typedef int (*ax8swap_cap_inode_killpriv_type)(struct dentry *dentry);
+//typedef int (*ax8swap_cap_inode_killpriv_type)(struct dentry *dentry);
 extern ax8swap_cap_inode_killpriv_type ax8swap_cap_inode_killpriv;
-#define cap_inode_killpriv ax8swap_cap_inode_killpriv
+//#define cap_inode_killpriv ax8swap_cap_inode_killpriv
 
 typedef void (*ax8swap_vma_prio_tree_insert_type)(struct vm_area_struct *, struct prio_tree_root *);
 extern ax8swap_vma_prio_tree_insert_type ax8swap_vma_prio_tree_insert;
 #define vma_prio_tree_insert ax8swap_vma_prio_tree_insert
 
-typedef int (*ax8swap_locks_mandatory_locked_type)(struct inode *);
+//typedef int (*ax8swap_locks_mandatory_locked_type)(struct inode *);
 extern ax8swap_locks_mandatory_locked_type ax8swap_locks_mandatory_locked;
-#define locks_mandatory_locked ax8swap_locks_mandatory_locked
+//#define locks_mandatory_locked ax8swap_locks_mandatory_locked
 
 
 extern int * ax8swap_sysctl_overcommit_memory;
@@ -292,10 +301,10 @@ typedef void (*ax8swap___pmd_error_type)(const char *file, int line, unsigned lo
 extern ax8swap___pmd_error_type ax8swap___pmd_error;
 #define __pmd_error ax8swap___pmd_error
 
-typedef void (*ax8swap___flush_anon_page_type)(struct vm_area_struct *vma,
-				struct page *, unsigned long);
+//typedef void (*ax8swap___flush_anon_page_type)(struct vm_area_struct *vma,
+//				struct page *, unsigned long);
 extern ax8swap___flush_anon_page_type ax8swap___flush_anon_page;
-#define __flush_anon_page ax8swap___flush_anon_page
+//#define __flush_anon_page ax8swap___flush_anon_page
 
 typedef int (*ax8swap_writeback_in_progress_type)(struct backing_dev_info *bdi);
 extern ax8swap_writeback_in_progress_type ax8swap_writeback_in_progress;
@@ -318,9 +327,9 @@ extern ax8swap_removed_exe_file_vma_type ax8swap_removed_exe_file_vma;
 extern struct kmem_cache ** ax8swap_vm_area_cachep;
 #define vm_area_cachep (*ax8swap_vm_area_cachep)
 
-typedef int (*ax8swap_cap_vm_enough_memory_type)(struct mm_struct *mm, long pages);
+//typedef int (*ax8swap_cap_vm_enough_memory_type)(struct mm_struct *mm, long pages);
 extern ax8swap_cap_vm_enough_memory_type ax8swap_cap_vm_enough_memory;
-#define cap_vm_enough_memory ax8swap_cap_vm_enough_memory
+//#define cap_vm_enough_memory ax8swap_cap_vm_enough_memory
 
 typedef asmlinkage long (*ax8swap_sys_sync_type)(void);
 extern ax8swap_sys_sync_type ax8swap_sys_sync;
@@ -363,19 +372,42 @@ extern ax8swap___alloc_bootmem_node_type ax8swap___alloc_bootmem_node;
 #define __alloc_bootmem_node ax8swap___alloc_bootmem_node
 
 extern atomic_long_t * ax8swap_vm_committed_space;
-#define vm_committed_space (*ax8swap_vm_committed_space)
 
 typedef void (*ax8swap_sync_supers_type)(void);
 extern ax8swap_sync_supers_type ax8swap_sync_supers;
 #define sync_supers ax8swap_sync_supers
 
+typedef void (*ax8swap_mlock_vma_page_type)(struct page *page);
+extern ax8swap_mlock_vma_page_type ax8swap_mlock_vma_page;
+#define mlock_vma_page ax8swap_mlock_vma_page
 
+//typedef void (*ax8swap___lru_cache_add_type)(struct page *page, enum lru_list lru);
+extern ax8swap___lru_cache_add_type ax8swap___lru_cache_add;
+//#define __lru_cache_add_type ax8swap___lru_cache_add
 
+typedef int (*ax8swap_adjust_pte_type)(struct vm_area_struct *vma, unsigned long address);
+extern ax8swap_adjust_pte_type ax8swap_adjust_pte;
+#define adjust_pte ax8swap_adjust_pte
 
+typedef void (*ax8swap___flush_dcache_page_type)(struct address_space *mapping, struct page *page);
+extern ax8swap___flush_dcache_page_type ax8swap___flush_dcache_page;
+#define __flush_dcache_page ax8swap___flush_dcache_page
 
+extern struct meminfo *ax8swap_meminfo;
 
+typedef void (*ax8swap_get_vmalloc_info_type)(struct vmalloc_info *vmi);
+extern ax8swap_get_vmalloc_info_type ax8swap_get_vmalloc_info;
 
+typedef void (*ax8swap_exit_aio_type)(struct mm_struct *mm);
+extern ax8swap_exit_aio_type ax8swap_exit_aio;
 
+typedef void (*ax8swap_set_mm_exe_file_type)(struct mm_struct *mm, struct file *new_exe_file);
+extern ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
 
+typedef void (*ax8swap_lru_add_drain_type)(void); 
+extern ax8swap_lru_add_drain_type ax8swap_lru_add_drain;
+#define lru_add_drain ax8swap_lru_add_drain
+
+extern ax8swap_rotate_reclaimable_page_type ax8swap_rotate_reclaimable_page;
 
 #endif
