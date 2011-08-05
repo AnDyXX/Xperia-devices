@@ -49,7 +49,13 @@ extern void putback_lru_page(struct page *page);
 /*
  * in mm/page_alloc.c
  */
+#ifdef  EXTERNAL_SWAP_MODULE
+extern unsigned long * ax8swap_highest_memmap_pfn;
+#define highest_memmap_pfn (*ax8swap_highest_memmap_pfn)
+#else
 extern unsigned long highest_memmap_pfn;
+#endif
+
 extern void __free_pages_bootmem(struct page *page, unsigned int order);
 
 /*
@@ -65,12 +71,13 @@ static inline unsigned long page_order(struct page *page)
 
 #ifdef EXTERNAL_SWAP_MODULE
 #define mlock_vma_pages_range ax8swap_mlock_vma_pages_range
+#define munlock_vma_pages_range ax8swap_munlock_vma_pages_range
 #else 
 extern long mlock_vma_pages_range(struct vm_area_struct *vma,
 			unsigned long start, unsigned long end);
-#endif
 extern void munlock_vma_pages_range(struct vm_area_struct *vma,
 			unsigned long start, unsigned long end);
+#endif
 static inline void munlock_vma_pages_all(struct vm_area_struct *vma)
 {
 	munlock_vma_pages_range(vma, vma->vm_start, vma->vm_end);
@@ -128,7 +135,11 @@ extern void mlock_vma_page(struct page *page);
  * If called for a page that is still mapped by mlocked vmas, all we do
  * is revert to lazy LRU behaviour -- semantics are not broken.
  */
+#ifdef EXTERNAL_SWAP_MODULE
+#define __clear_page_mlock ax8swap___clear_page_mlock
+#else
 extern void __clear_page_mlock(struct page *page);
+#endif
 static inline void clear_page_mlock(struct page *page)
 {
 	if (unlikely(TestClearPageMlocked(page)))

@@ -77,6 +77,81 @@ ax8swap_update_mmu_cache_type ax8swap_update_mmu_cache;
 ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
 ax8swap_mlock_vma_pages_range_type ax8swap_mlock_vma_pages_range;
 ax8swap_writeback_inodes_type ax8swap_writeback_inodes;
+struct mmu_gather * ax8swap_per_cpu_mmu_gathers;
+ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
+long * ax8swap_highest_memmap_pfn;
+ax8swap_max_sane_readahead_type ax8swap_max_sane_readahead;
+ax8swap_clear_zonelist_oom_type ax8swap_clear_zonelist_oom;
+int * ax8swap_page_cluster;
+unsigned long __meminitdata * ax8swap_nr_kernel_pages;
+ax8swap_munlock_vma_pages_range_type ax8swap_munlock_vma_pages_range;
+ax8swap_prop_descriptor_init_type ax8swap_prop_descriptor_init;
+int * ax8swap_percpu_pagelist_fraction;
+ax8swap_prop_fraction_single_type ax8swap_prop_fraction_single;
+ax8swap_next_zones_zonelist_type ax8swap_next_zones_zonelist;
+ax8swap___clear_page_mlock_type ax8swap___clear_page_mlock;
+int * ax8swap_page_group_by_mobility_disabled;
+ax8swap_vma_prio_tree_remove_type ax8swap_vma_prio_tree_remove;
+int * ax8swap_sysctl_lowmem_reserve_ratio;
+ax8swap_nr_blockdev_pages_type ax8swap_nr_blockdev_pages;
+ax8swap_vma_prio_tree_next_type ax8swap_vma_prio_tree_next;
+ax8swap___memory_pressure_notify_type ax8swap___memory_pressure_notify;
+ax8swap_cap_inode_need_killpriv_type ax8swap_cap_inode_need_killpriv;
+pgprot_t * ax8swap_protection_map;
+ax8swap_flush_cache_mm_type ax8swap_flush_cache_mm;
+ax8swap_show_mem_type ax8swap_show_mem;
+ax8swap___pgd_error_type ax8swap___pgd_error;
+ax8swap_first_online_pgdat_type ax8swap_first_online_pgdat;
+ax8swap_user_shm_unlock_type ax8swap_user_shm_unlock;
+ax8swap_prop_change_shift_type ax8swap_prop_change_shift;
+ax8swap_pdflush_operation_type ax8swap_pdflush_operation;
+ax8swap_flush_cache_range_type ax8swap_flush_cache_range;
+ax8swap_added_exe_file_vma_type ax8swap_added_exe_file_vma;
+long *  ax8swap_vm_total_pages;
+struct inodes_stat_t * ax8swap_inodes_stat;
+unsigned long * ax8swap_scan_unevictable_pages;
+ax8swap_slab_is_available_type ax8swap_slab_is_available;
+ax8swap___prop_inc_single_type ax8swap___prop_inc_single;
+ax8swap_user_shm_lock_type ax8swap_user_shm_lock;
+ax8swap_v6wbi_flush_user_tlb_range_type ax8swap_v6wbi_flush_user_tlb_range;
+int * ax8swap_buffer_heads_over_limit;
+ax8swap_cap_inode_killpriv_type ax8swap_cap_inode_killpriv;
+ax8swap_vma_prio_tree_insert_type ax8swap_vma_prio_tree_insert;
+ax8swap_locks_mandatory_locked_type ax8swap_locks_mandatory_locked;
+int * ax8swap_sysctl_overcommit_memory;
+int * ax8swap_sysctl_max_map_count;
+ax8swap_next_online_pgdat_type ax8swap_next_online_pgdat;
+ax8swap_force_page_cache_readahead_type ax8swap_force_page_cache_readahead;
+int * ax8swap_sysctl_overcommit_ratio;
+unsigned long * ax8swap_totalreserve_pages;
+unsigned long __meminitdata * ax8swap_nr_all_pages;
+ax8swap_prop_fraction_percpu_type ax8swap_prop_fraction_percpu;
+ax8swap_flush_cache_page_type ax8swap_flush_cache_page;
+ax8swap_try_set_zone_oom_type ax8swap_try_set_zone_oom;
+ax8swap_next_zone_type ax8swap_next_zone;
+ax8swap___pmd_error_type ax8swap___pmd_error;
+ax8swap___flush_anon_page_type ax8swap___flush_anon_page;
+ax8swap_writeback_in_progress_type ax8swap_writeback_in_progress;
+ax8swap_out_of_memory_type ax8swap_out_of_memory;
+ax8swap___alloc_bootmem_nopanic_type ax8swap___alloc_bootmem_nopanic;
+ax8swap_removed_exe_file_vma_type ax8swap_removed_exe_file_vma;
+struct kmem_cache ** ax8swap_vm_area_cachep;
+ax8swap_cap_vm_enough_memory_type ax8swap_cap_vm_enough_memory;
+ax8swap_sys_sync_type ax8swap_sys_sync;
+ax8swap_shmem_zero_setup_type ax8swap_shmem_zero_setup;
+int * ax8swap_vm_swappiness;
+ax8swap_mlock_vma_pages_range_type ax8swap_mlock_vma_pages_range;
+ax8swap_arch_get_unmapped_area_type ax8swap_arch_get_unmapped_area;
+unsigned long * ax8swap_mmap_min_addr;
+ax8swap_deny_write_access_type ax8swap_deny_write_access;
+ax8swap___prop_inc_percpu_max_type ax8swap___prop_inc_percpu_max;
+ax8swap_do_page_cache_readahead_type ax8swap_do_page_cache_readahead;
+ax8swap___alloc_bootmem_node_type ax8swap___alloc_bootmem_node;
+atomic_long_t * ax8swap_vm_committed_space;
+ax8swap_sync_supers_type ax8swap_sync_supers;
+
+
+
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -141,6 +216,77 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"flush_ptrace_access", 	(void**) &ax8swap_flush_ptrace_access},
 	{"mlock_vma_pages_range", 	(void**) &ax8swap_mlock_vma_pages_range},
 	{"writeback_inodes", 		(void**) &ax8swap_writeback_inodes},
+	{"per_cpu_mmu_gathers", 	(void**) &ax8swap_per_cpu_mmu_gathers},
+	{"highest_memmap_pfn", 		(void**) &ax8swap_highest_memmap_pfn},
+	{"max_sane_readahead", 		(void**) &ax8swap_max_sane_readahead},
+	{"clear_zonelist_oom", 		(void**) &ax8swap_clear_zonelist_oom},
+	{"page_cluster", 		(void**) &ax8swap_page_cluster},
+	{"nr_kernel_pages", 		(void**) &ax8swap_nr_kernel_pages},
+	{"munlock_vma_pages_range",	(void**) &ax8swap_munlock_vma_pages_range},
+	{"prop_descriptor_init", 	(void**) &ax8swap_prop_descriptor_init},
+	{"percpu_pagelist_fraction", 	(void**) &ax8swap_percpu_pagelist_fraction},
+	{"prop_fraction_single", 	(void**) &ax8swap_prop_fraction_single},
+	{"next_zones_zonelist", 	(void**) &ax8swap_next_zones_zonelist},
+	{"__clear_page_mlock", 		(void**) &ax8swap___clear_page_mlock},
+	{"page_group_by_mobility_disabled",(void**) &ax8swap_page_group_by_mobility_disabled },
+	{"vma_prio_tree_remove",(void**) &ax8swap_vma_prio_tree_remove },
+	{"sysctl_lowmem_reserve_ratio",(void**) &ax8swap_sysctl_lowmem_reserve_ratio },
+	{"nr_blockdev_pages",(void**) &ax8swap_nr_blockdev_pages },
+	{"vma_prio_tree_next",(void**) &ax8swap_vma_prio_tree_next },
+	{"__memory_pressure_notify",(void**) &ax8swap___memory_pressure_notify },
+	{"cap_inode_need_killpriv",(void**) &ax8swap_cap_inode_need_killpriv },
+	{"protection_map",(void**) &ax8swap_protection_map },
+	{"flush_cache_mm",(void**) &ax8swap_flush_cache_mm },
+	{"show_mem",(void**) &ax8swap_show_mem },
+	{"__pgd_error",(void**) &ax8swap___pgd_error },
+	{"first_online_pgdat",(void**) &ax8swap_first_online_pgdat },
+	{"user_shm_unlock",(void**) &ax8swap_user_shm_unlock },
+	{"prop_change_shift",(void**) &ax8swap_prop_change_shift },
+	{"pdflush_operation",(void**) &ax8swap_pdflush_operation },
+	{"flush_cache_range",(void**) &ax8swap_flush_cache_range },
+	{"added_exe_file_vma",(void**) &ax8swap_added_exe_file_vma },
+	{"vm_total_pages",(void**) &ax8swap_vm_total_pages },
+	{"inodes_stat",(void**) &ax8swap_inodes_stat },
+	{"scan_unevictable_pages",(void**) &ax8swap_scan_unevictable_pages },
+	{"slab_is_available",(void**) &ax8swap_slab_is_available },
+	{"__prop_inc_single",(void**) &ax8swap___prop_inc_single },
+	{"user_shm_lock",(void**) &ax8swap_user_shm_lock },
+	{"v6wbi_flush_user_tlb_range",(void**) &ax8swap_v6wbi_flush_user_tlb_range },
+	{"buffer_heads_over_limit",(void**) &ax8swap_buffer_heads_over_limit },
+	{"cap_inode_killpriv",(void**) &ax8swap_cap_inode_killpriv },
+	{"vma_prio_tree_insert",(void**) &ax8swap_vma_prio_tree_insert },
+	{"locks_mandatory_locked",(void**) &ax8swap_locks_mandatory_locked },
+	{"sysctl_overcommit_memory",(void**) &ax8swap_sysctl_overcommit_memory },
+	{"sysctl_max_map_count",(void**) &ax8swap_sysctl_max_map_count },
+	{"next_online_pgdat",(void**) &ax8swap_next_online_pgdat },
+	{"force_page_cache_readahead",(void**) &ax8swap_force_page_cache_readahead },
+	{"sysctl_overcommit_ratio",(void**) &ax8swap_sysctl_overcommit_ratio },
+	{"totalreserve_pages",(void**) &ax8swap_totalreserve_pages },
+	{"nr_all_pages",(void**) &ax8swap_nr_all_pages },
+	{"prop_fraction_percpu",(void**) &ax8swap_prop_fraction_percpu },
+	{"flush_cache_page",(void**) &ax8swap_flush_cache_page },
+	{"try_set_zone_oom",(void**) &ax8swap_try_set_zone_oom },
+	{"next_zone",(void**) &ax8swap_next_zone },
+	{"__pmd_error",(void**) &ax8swap___pmd_error },
+	{"__flush_anon_page",(void**) &ax8swap___flush_anon_page },
+	{"writeback_in_progress",(void**) &ax8swap_writeback_in_progress },
+	{"out_of_memory",(void**) &ax8swap_out_of_memory },
+	{"__alloc_bootmem_nopanic",(void**) &ax8swap___alloc_bootmem_nopanic },
+	{"removed_exe_file_vma",(void**) &ax8swap_removed_exe_file_vma },
+	{"vm_area_cachep",(void**) &ax8swap_vm_area_cachep },
+	{"cap_vm_enough_memory",(void**) &ax8swap_cap_vm_enough_memory },
+	{"sys_sync",(void**) &ax8swap_sys_sync },
+	{"shmem_zero_setup",(void**) &ax8swap_shmem_zero_setup },
+	{"vm_swappiness",(void**) &ax8swap_vm_swappiness },
+	{"mlock_vma_pages_range",(void**) &ax8swap_mlock_vma_pages_range },
+	{"arch_get_unmapped_area",(void**) &ax8swap_arch_get_unmapped_area },
+	{"mmap_min_addr",(void**) &ax8swap_mmap_min_addr },
+	{"deny_write_access",(void**) &ax8swap_deny_write_access },
+	{"__prop_inc_percpu_max",(void**) &ax8swap___prop_inc_percpu_max },
+	{"do_page_cache_readahead",(void**) &ax8swap_do_page_cache_readahead },
+	{"__alloc_bootmem_node",(void**) &ax8swap___alloc_bootmem_node },
+	{"vm_committed_space",(void**) &ax8swap_vm_committed_space },
+	{"sync_supers",(void**) &ax8swap_sync_supers },
 	{NULL,				0},
 };
 
