@@ -372,7 +372,7 @@ int sync_page_range_nolock(struct inode *inode, struct address_space *mapping,
 		ret = wait_on_page_writeback_range(mapping, start, end);
 	return ret;
 }
-EXPORT_SYMBOL(sync_page_range_nolock);
+
 
 /**
  * filemap_fdatawait - wait for all under-writeback pages to complete
@@ -391,7 +391,7 @@ int filemap_fdatawait(struct address_space *mapping)
 	return wait_on_page_writeback_range(mapping, 0,
 				(i_size - 1) >> PAGE_CACHE_SHIFT);
 }
-EXPORT_SYMBOL(filemap_fdatawait);
+
 
 int filemap_write_and_wait(struct address_space *mapping)
 {
@@ -596,7 +596,7 @@ void unlock_page(struct page *page)
 void end_page_writeback(struct page *page)
 {
 	if (TestClearPageReclaim(page))
-		rotate_reclaimable_page(page);
+		ax8swap_rotate_reclaimable_page(page);
 
 	if (!test_clear_page_writeback(page))
 		BUG();

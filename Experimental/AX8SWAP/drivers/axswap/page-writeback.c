@@ -1067,7 +1067,7 @@ int write_one_page(struct page *page, int wait)
 	}
 	return ret;
 }
-EXPORT_SYMBOL(write_one_page);
+
 
 /*
  * For address_spaces which do not use buffers nor write back.

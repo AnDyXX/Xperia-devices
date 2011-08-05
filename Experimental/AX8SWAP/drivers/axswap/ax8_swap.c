@@ -220,7 +220,7 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"flush_ptrace_access", 	(void**) &ax8swap_flush_ptrace_access},
 	{"mlock_vma_pages_range", 	(void**) &ax8swap_mlock_vma_pages_range},
 	{"writeback_inodes", 		(void**) &ax8swap_writeback_inodes},
-	{"per_cpu_mmu_gathers", 	(void**) &ax8swap_per_cpu_mmu_gathers},
+	{"per_cpu__mmu_gathers", 	(void**) &ax8swap_per_cpu_mmu_gathers},
 	{"highest_memmap_pfn", 		(void**) &ax8swap_highest_memmap_pfn},
 	{"max_sane_readahead", 		(void**) &ax8swap_max_sane_readahead},
 	{"clear_zonelist_oom", 		(void**) &ax8swap_clear_zonelist_oom},
