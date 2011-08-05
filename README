@@ -6,5 +6,8 @@ Git contains following active projects:
 - X8 Modules/Screen Off Modules/AX8SMARTASS - modified 'smartass' governor that works on X8,
 - X8 Modules/AX8NETFILTER - netfilter for X8.
 
+- Tools/Iptables - iptables for X8
+- Tools/Postmark - postmark benchmark
+
 
 - Experimental directory contains some experiments with kernel :)

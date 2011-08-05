@@ -41,6 +41,7 @@
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #include <netinet/in.h>
+#include <sys/stat.h>
 
 #ifndef TRUE
 #define TRUE 1
@@ -225,6 +226,13 @@ struct pprot {
 #endif
 #endif
 
+const int READ_BUF_SIZE = 50;
+
+struct cfg_value_map {
+	const char * parent_name;
+	const char * child_name;
+};
+
 static const struct pprot chain_protos[] = {
 	{ "tcp", IPPROTO_TCP },
 	{ "udp", IPPROTO_UDP },
@@ -234,6 +242,205 @@ static const struct pprot chain_protos[] = {
 	{ "ah", IPPROTO_AH },
 	{ "sctp", IPPROTO_SCTP },
 };
+
+static const struct cfg_value_map module_mapping_table[] = {
+{"nfnetlink", "nfnetlink_queue"} ,
+{"nfnetlink", "nfnetlink_log"},
+{"nf_conntrack_tftp", "nf_nat_tftp"},
+{"nf_conntrack_sip", "nf_nat_sip"},
+{"nf_conntrack_irc", "nf_nat_irc"},
+{"nf_conntrack_h323", "nf_nat_h323"},
+{"nf_conntrack_ftp", "nf_nat_ftp"},
+{"xt_RATEEST", "xt_rateest"},
+{"nf_nat", "ipt_REDIRECT"},
+{"nf_nat", "ipt_NETMAP"},
+{"nf_nat", "nf_nat_tftp"},
+{"nf_nat", "nf_nat_sip"},
+{"nf_nat", "nf_nat_proto_udplite"},
+{"nf_nat", "nf_nat_proto_gre"},
+{"nf_nat", "nf_nat_proto_dccp"},
+{"nf_nat", "nf_nat_irc"},
+{"nf_nat", "nf_nat_h323"},
+{"nf_nat", "nf_nat_ftp"},
+{"nf_nat", "ipt_MASQUERADE"},
+{"nf_nat", "iptable_nat"}, 
+{"nf_conntrack_ipv4", "iptable_nat"},
+{"nf_conntrack_ipv4", "nf_nat"},
+{"nf_defrag_ipv4", "nf_conntrack_ipv4"},
+{"nf_conntrack", "ipt_CLUSTERIP"},
+{"nf_conntrack", "nf_nat_tftp"},
+{"nf_conntrack", "nf_nat_snmp_basic"},
+{"nf_conntrack", "nf_nat_sip"},
+{"nf_conntrack", "nf_nat_irc"},
+{"nf_conntrack", "nf_nat_h323"},
+{"nf_conntrack", "nf_nat_ftp"},
+{"nf_conntrack", "nf_conntrack_tftp"},
+{"nf_conntrack", "nf_conntrack_sip"},
+{"nf_conntrack", "nf_conntrack_sane"},
+{"nf_conntrack", "nf_conntrack_proto_udplite"},
+{"nf_conntrack", "nf_conntrack_proto_sctp"},
+{"nf_conntrack", "nf_conntrack_proto_gre"},
+{"nf_conntrack", "nf_conntrack_proto_dccp"},
+{"nf_conntrack", "nf_conntrack_netbios_ns"},
+{"nf_conntrack", "nf_conntrack_irc"},
+{"nf_conntrack", "nf_conntrack_h323"},
+{"nf_conntrack", "nf_conntrack_ftp"},
+{"nf_conntrack", "xt_helper"},
+{"nf_conntrack", "xt_conntrack"},
+{"nf_conntrack", "xt_connmark"},
+{"nf_conntrack", "xt_connlimit"},
+{"nf_conntrack", "xt_connbytes"},
+{"nf_conntrack", "xt_NOTRACK"},
+{"nf_conntrack", "xt_CONNMARK"},
+{"nf_conntrack", "ipt_MASQUERADE"},
+{"nf_conntrack", "iptable_nat"},
+{"nf_conntrack", "nf_nat"},
+{"nf_conntrack", "nf_conntrack_ipv4"},
+{"nf_conntrack", "xt_state"},
+{"ip_tables", "iptable_nat"},
+{"ip_tables", "iptable_filter"},
+{"x_tables", "iptable_nat"}, 
+{"x_tables", "ip_tables"},
+{"ax8netfilter", "iptable_nat"},
+{"ax8netfilter", "nf_nat"},
+{"ax8netfilter", "nf_conntrack_ipv4"},
+{"ax8netfilter", "nf_defrag_ipv4"},
+{"ax8netfilter", "nf_conntrack"},
+{"ax8netfilter", "iptable_filter"},
+{"ax8netfilter", "ip_tables"},
+{"ax8netfilter", "x_tables"},
+{NULL, NULL},
+};
+
+const char * netfilter_dir = "/system/lib/modules/netfilter";
+
+static void *read_file(const char *filename, ssize_t *_size) {
+  int ret, fd;
+  struct stat sb;
+  ssize_t size;
+  void *buffer = NULL;
+
+  /* open the file */
+  fd = open(filename, O_RDONLY);
+  if (fd < 0)
+    return NULL;
+
+  /* find out how big it is */
+  if (fstat(fd, &sb) < 0)
+    goto bail;
+  size = sb.st_size;
+
+  /* allocate memory for it to be read into */
+  buffer = malloc(size);
+  if (!buffer)
+    goto bail;
+
+  /* slurp it into our buffer */
+  ret = read(fd, buffer, size);
+  if (ret != size)
+    goto bail;
+
+  /* let the caller know how big it is */
+  *_size = size;
+
+bail:
+  close(fd);
+  return buffer;
+}
+
+int InsModuleFn(const char * module_name) {
+    ssize_t len;
+    void *image;
+    int rc;
+
+    len = INT_MAX - 4095;
+    errno = ENOMEM;
+    image = read_file(module_name, &len);
+
+    if (!image)
+      return  0;
+
+    errno = 0;
+    fprintf(stderr, "%s: Automatically loads module: %s\n",
+			program_name, module_name);
+    init_module(image, len, "");
+    rc = errno;
+    free(image);
+    return rc == 0;
+}
+
+int FileExistsFn(char *filename) {
+    FILE *file = NULL;
+    if (! (file = fopen(filename, "r")) )
+      return 0;
+    fclose(file);
+    return 1;
+}
+
+int ModuleLoadedFn(const char* module_name) {
+    int module_found = -1;
+    FILE *modules;
+    char buffer[READ_BUF_SIZE];
+    char mname[READ_BUF_SIZE];
+
+    if (! (modules = fopen("/proc/modules", "r")) ) {
+      fprintf(stderr, "Can't open /proc/modules for read \n");
+      return 0;
+    }
+
+    while(fgets(buffer, sizeof(buffer), modules)) {
+      /* process the line */
+        sscanf(buffer, "%s %*s", mname);
+        if ((strstr(mname, module_name)) != NULL) {
+          module_found = 0;
+        }
+    }
+    fclose(modules);
+
+    return module_found == 0;
+}
+
+void netfilter_modules_try_load(const char * module_name)
+{
+	char path[255];
+	const struct cfg_value_map * t = module_mapping_table;
+
+
+	if(ModuleLoadedFn(module_name))
+		return;
+
+	if(strncmp(module_name, "ipt_", 4) == 0)
+	{
+		netfilter_modules_try_load("x_tables");	
+	} else if(strncmp(module_name, "xt_", 4) == 0)
+	{
+		netfilter_modules_try_load("nf_conntrack");
+		netfilter_modules_try_load("x_tables");	
+	} else if(strncmp(module_name, "nf_nat_", 7) == 0)
+	{
+		netfilter_modules_try_load("nf_nat");
+	} else if(strncmp(module_name, "nf_conntrack_", 13) == 0)
+	{
+		netfilter_modules_try_load("nf_conntrack");
+	}
+
+	while (t->child_name) {
+		
+		if(strcmp(module_name, t->child_name) == 0)
+		{
+			if(t->parent_name != NULL)
+			{
+				netfilter_modules_try_load(t->parent_name);
+			}
+		}
+
+		t++;
+	}
+
+	sprintf(path, "%s/%s.ko", netfilter_dir, module_name);
+	if(FileExistsFn(path))
+		InsModuleFn(path);
+}
 
 static char *
 proto_to_name(u_int8_t proto, int nolookup)
@@ -755,6 +962,13 @@ find_match(const char *name, enum ipt_tryload tryload, struct iptables_rule_matc
 		}
 	}		
 
+	if (!ptr && tryload != DONT_LOAD && tryload != DURING_LOAD) {
+		char path[1 + sizeof("xt_") + strlen(name)];
+		sprintf(path, "xt_%s", name);
+		netfilter_modules_try_load(path);
+		ptr = find_match(name, DONT_LOAD, NULL);		
+	}
+
 #ifndef NO_SHARED_LIBS
 	if (!ptr && tryload != DONT_LOAD && tryload != DURING_LOAD) {
 		char path[strlen(lib_dir) + sizeof("/libipt_.so")
@@ -1073,6 +1287,13 @@ find_target(const char *name, enum ipt_tryload tryload)
 	for (ptr = iptables_targets; ptr; ptr = ptr->next) {
 		if (strcmp(name, ptr->name) == 0)
 			break;
+	}
+
+	if (!ptr && tryload != DONT_LOAD && tryload != DURING_LOAD) {
+		char path[1 + sizeof("ipt_") + strlen(name)];
+		sprintf(path, "ipt_%s", name);
+		netfilter_modules_try_load(path);
+		ptr = find_target(name, DONT_LOAD);
 	}
 
 #ifndef NO_SHARED_LIBS
@@ -2446,6 +2667,14 @@ int do_command(int argc, char *argv[], char **table, iptc_handle_t *handle)
 	/* try to insmod the module if iptc_init failed */
 	if (!*handle && load_iptables_ko(modprobe) != -1)
 		*handle = iptc_init(*table);
+
+	if (!*handle)
+	{
+		char path[1 + sizeof("iptable_") + strlen(*table)];
+		sprintf(path, "iptable_%s", *table);
+		netfilter_modules_try_load(path);
+		*handle = iptc_init(*table);
+	}
 
 	if (!*handle)
 		exit_error(VERSION_PROBLEM,
