@@ -157,6 +157,7 @@ ax8swap_exit_aio_type ax8swap_exit_aio;
 ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
 ax8swap_lru_add_drain_type ax8swap_lru_add_drain;
 ax8swap_rotate_reclaimable_page_type ax8swap_rotate_reclaimable_page;
+ax8swap_shmem_truncate_address_only_type ax8swap_shmem_truncate_address_only;
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -228,7 +229,7 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"shrink_zone",			&ax8swap_shrink_zone},
 	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
 	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
-	{"unmap_vmas", 			&ax8swap_unmap_vmas},
+	/*{"unmap_vmas", 			&ax8swap_unmap_vmas},
 	{"zap_page_range", 		&ax8swap_zap_page_range},
 	{"exit_mmap", 			&ax8swap_exit_mmap},
 	{"show_free_areas", 		&ax8swap_show_free_areas},
@@ -237,7 +238,7 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
 	{"mmput", 			&ax8swap_mmput},
 	{"page_referenced_one", 	&ax8swap_page_referenced_one},
-	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},
+	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},*/
 	{NULL, 				0},
 };
 
@@ -350,14 +351,16 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"set_mm_exe_file", (void**) &ax8swap_set_mm_exe_file},
 	{"lru_add_drain", (void**) &ax8swap_lru_add_drain},
 	{"rotate_reclaimable_page", (void**) &ax8swap_rotate_reclaimable_page},
+	{"shmem_truncate", (void**) &ax8swap_shmem_truncate_address_only},
 	{NULL,				0},
 };
 
 static int hijack_functions(int check_only)
 {	
 	const struct cfg_value_map * t = func_mapping_table;
-	int func;
+	int func, func_ax;
 	int ret = 1;
+	char path[256];
 
 	while (t->name) {
 		func = kallsyms_lookup_name_ax(t->name);
@@ -367,6 +370,16 @@ static int hijack_functions(int check_only)
 			{
 				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s not found!!!\n", t->name);	
 				ret = 0;
+			}
+			else
+			{
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s: %d\n", t->name,  func);
+				sprintf(path, "ax8swap_%s", t->name);
+				func_ax = kallsyms_lookup_name_ax(path);
+				if(func_ax && abs(func - func_ax) < 200000 )
+				{
+					printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s something wrong: %d %d !!!\n", t->name, func, func_ax);	
+				}	
 			}
 		}
 		else if(func)
@@ -385,8 +398,9 @@ static int hijack_functions(int check_only)
 static int hijack_fields(int check_only)
 {	
 	const struct cfg_value_map2 * t = field_mapping_table;
-	int func;
+	int func, func_ax;
 	int ret = 1;
+	char path[256];
 
 	while (t->name) {
 		func = kallsyms_lookup_name_ax(t->name);
@@ -396,6 +410,16 @@ static int hijack_fields(int check_only)
 			{
 				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s not found!!!\n", t->name);	
 				ret = 0;
+			}
+			else
+			{
+				printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s: %d\n", t->name,  func);
+				sprintf(path, "ax8swap_%s", t->name);
+				func_ax = kallsyms_lookup_name_ax(path);
+				if(func_ax && abs(func - func_ax) < 200000 )
+				{
+					printk(KERN_ERR AX_MODULE_NAME ": Pointer to %s something wrong: %d %d !!!\n", t->name, func, func_ax);	
+				}	
 			}
 		} else if(func)
 		{
@@ -417,6 +441,8 @@ static int __init ax8swap_init(void)
 	int ret = -1;
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " for device " DEVICE_NAME " loaded\n");
   
+	printk(KERN_ERR AX_MODULE_NAME ": Pointer to ax8swap_init %d\n", (int)&ax8swap_init);
+
 	// our 'GetProcAddress' :D
 	kallsyms_lookup_name_ax = (void*) OFS_KALLSYMS_LOOKUP_NAME;
 
@@ -436,7 +462,7 @@ static int __init ax8swap_init(void)
 		goto eof;
 	}
 
-	//hijack_functions(0);
+	hijack_functions(0);
 
 	bdi_init(swapper_space.backing_dev_info);
 

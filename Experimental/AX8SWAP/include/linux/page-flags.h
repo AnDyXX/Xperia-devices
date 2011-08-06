@@ -303,7 +303,16 @@ CLEARPAGEFLAG(Uptodate, uptodate)
 
 extern void cancel_dirty_page(struct page *page, unsigned int account_size);
 
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_test_clear_page_writeback(struct page *page);
+static inline int test_clear_page_writeback(struct page *page)
+{
+	return ax8swap_test_clear_page_writeback(page);
+} 
+#else
 int test_clear_page_writeback(struct page *page);
+#endif
+
 int test_set_page_writeback(struct page *page);
 
 static inline void set_page_writeback(struct page *page)

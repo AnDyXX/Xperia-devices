@@ -187,6 +187,11 @@ int ax8swap_sync_page(void *word)
 	return 0;
 }
 
+int inline sync_page(void *word)
+{
+	return ax8swap_sync_page(word);
+}
+
 static int sync_page_killable(void *word)
 {
 	sync_page(word);

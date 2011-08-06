@@ -58,7 +58,7 @@
 #include "internal.h"
 
 
-static void __free_pages_ok(struct page *page, unsigned int order);
+//static void __free_pages_ok(struct page *page, unsigned int order);
 
 static char * const zone_names[MAX_NR_ZONES] = {
 #ifdef CONFIG_ZONE_DMA
@@ -190,6 +190,11 @@ out:
 	/* Leave bad fields for debug, except PageBuddy could make trouble */
 	__ClearPageBuddy(page);
 	add_taint(TAINT_BAD_PAGE);
+}
+
+void inline bad_page(struct page *page)
+{
+	ax8swap_bad_page(page);
 }
 
 /*
@@ -969,6 +974,11 @@ void ax8swap_free_hot_cold_page(struct page *page, int cold)
 	}
 	local_irq_restore(flags);
 	put_cpu();
+}
+
+void inline free_hot_cold_page(struct page *page, int cold)
+{
+	ax8swap_free_hot_cold_page(page, cold);
 }
 
 void free_hot_page(struct page *page)

@@ -123,7 +123,7 @@ static int populate_range(struct mm_struct *mm, struct vm_area_struct *vma,
  * and the vma's default protection is used. Arbitrary protections
  * might be implemented in the future.
  */
-asmlinkage long ax8swap_sys_remap_file_pages(unsigned long start, unsigned long size,
+asmlinkage long sys_ax8swap_remap_file_pages(unsigned long start, unsigned long size,
 			unsigned long prot, unsigned long pgoff,
 			unsigned long flags)
 {

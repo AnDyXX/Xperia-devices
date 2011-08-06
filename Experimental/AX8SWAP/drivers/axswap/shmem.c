@@ -86,13 +86,7 @@
 /* Pretend that each entry is of this size in directory's i_size */
 #define BOGO_DIRENT_SIZE 20
 
-/* Flag allocation requirements to shmem_getpage and shmem_swp_alloc */
-enum sgp_type {
-	SGP_READ,	/* don't exceed i_size, don't allocate page */
-	SGP_CACHE,	/* don't exceed i_size, may allocate page */
-	SGP_DIRTY,	/* like SGP_CACHE, but set new page dirty */
-	SGP_WRITE,	/* may exceed i_size, may allocate page */
-};
+
 
 #ifdef CONFIG_TMPFS
 unsigned long shmem_default_max_blocks(void)
@@ -792,7 +786,7 @@ void ax8swap_shmem_delete_inode(struct inode *inode)
 {
 	struct shmem_inode_info *info = SHMEM_I(inode);
 
-	if (inode->i_op->truncate == shmem_truncate) {
+	if (inode->i_op->truncate == shmem_truncate || inode->i_op->truncate == *ax8swap_shmem_truncate_address_only) {
 		truncate_inode_pages(inode->i_mapping, 0);
 		shmem_unacct_size(info->flags, inode->i_size);
 		inode->i_size = 0;
@@ -973,7 +967,7 @@ out:
 /*
  * shmem_unuse() search for an eventually swapped out shmem page.
  */
-int shmem_unuse(swp_entry_t entry, struct page *page)
+int ax8swap_shmem_unuse(swp_entry_t entry, struct page *page)
 {
 	struct list_head *p, *next;
 	struct shmem_inode_info *info;

@@ -51,42 +51,7 @@
 #include "hijacked_types.h"
 #include "internal.h"
 
-struct scan_control {
-	/* Incremented by the number of inactive pages that were scanned */
-	unsigned long nr_scanned;
 
-	/* Number of pages freed so far during a call to shrink_zones() */
-	unsigned long nr_reclaimed;
-
-	/* This context's GFP mask */
-	gfp_t gfp_mask;
-
-	int may_writepage;
-
-	/* Can pages be swapped as part of reclaim? */
-	int may_swap;
-
-	/* This context's SWAP_CLUSTER_MAX. If freeing memory for
-	 * suspend, we effectively ignore SWAP_CLUSTER_MAX.
-	 * In this context, it doesn't matter that we scan the
-	 * whole list at once. */
-	int swap_cluster_max;
-
-	int swappiness;
-
-	int all_unreclaimable;
-
-	int order;
-
-	/* Which cgroup do we reclaim from */
-	struct mem_cgroup *mem_cgroup;
-
-	/* Pluggable isolate pages callback */
-	unsigned long (*isolate_pages)(unsigned long nr, struct list_head *dst,
-			unsigned long *scanned, int order, int mode,
-			struct zone *z, struct mem_cgroup *mem_cont,
-			int active, int file);
-};
 
 #define lru_to_page(_head) (list_entry((_head)->prev, struct page, lru))
 
@@ -285,11 +250,7 @@ static void handle_write_error(struct address_space *mapping,
 	unlock_page(page);
 }
 
-/* Request for sync pageout. */
-enum pageout_io {
-	PAGEOUT_IO_ASYNC,
-	PAGEOUT_IO_SYNC,
-};
+
 
 /* possible outcome of pageout() */
 typedef enum {

@@ -385,6 +385,12 @@ out:
 	return referenced;
 }
 
+int inline page_referenced_one(struct page *page,
+	struct vm_area_struct *vma, unsigned int *mapcount)
+{
+	return ax8swap_page_referenced_one(page, vma, mapcount);
+}
+
 static int page_referenced_anon(struct page *page,
 				struct mem_cgroup *mem_cont)
 {
@@ -843,6 +849,14 @@ out_unmap:
 	pte_unmap_unlock(pte, ptl);
 out:
 	return ret;
+}
+
+int inline try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
+				int migration)
+{
+	return  ax8swap_try_to_unmap_one(page, vma,
+				migration);
+
 }
 
 /*

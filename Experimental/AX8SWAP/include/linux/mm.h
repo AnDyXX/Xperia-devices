@@ -718,7 +718,15 @@ extern void pagefault_out_of_memory(void);
 
 #define offset_in_page(p)	((unsigned long)(p) & ~PAGE_MASK)
 
+#ifdef  EXTERNAL_SWAP_MODULE
+void ax8swap_show_free_areas(void);
+static inline void show_free_areas(void)
+{
+	ax8swap_show_free_areas();
+}
+#else
 extern void show_free_areas(void);
+#endif
 
 #ifdef CONFIG_SHMEM
 extern int shmem_lock(struct file *file, int lock, struct user_struct *user);
@@ -763,12 +771,40 @@ struct page *vm_normal_page(struct vm_area_struct *vma, unsigned long addr,
 
 int zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
 		unsigned long size);
+
+#ifdef EXTERNAL_SWAP_MODULE
+
+unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
+		struct vm_area_struct *vma, unsigned long start_addr,
+		unsigned long end_addr, unsigned long *nr_accounted,
+		struct zap_details *details);
+static inline unsigned long unmap_vmas(struct mmu_gather **tlbp,
+		struct vm_area_struct *vma, unsigned long start_addr,
+		unsigned long end_addr, unsigned long *nr_accounted,
+		struct zap_details *details)
+{
+	return ax8swap_unmap_vmas(tlbp,
+		vma,  start_addr,
+		end_addr, nr_accounted,
+		details);
+}
+unsigned long ax8swap_zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details *details);
+static inline unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details *details)
+{
+	return ax8swap_zap_page_range(vma,  address,
+		 size, details);
+}
+#else
 unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
 		unsigned long size, struct zap_details *);
 unsigned long unmap_vmas(struct mmu_gather **tlb,
 		struct vm_area_struct *start_vma, unsigned long start_addr,
 		unsigned long end_addr, unsigned long *nr_accounted,
 		struct zap_details *);
+#endif
+
 
 /**
  * mm_walk - callbacks for walk_page_range
@@ -813,8 +849,19 @@ extern int vmtruncate(struct inode * inode, loff_t offset);
 extern int vmtruncate_range(struct inode * inode, loff_t offset, loff_t end);
 
 #ifdef CONFIG_MMU
+#ifdef EXTERNAL_SWAP_MODULE
+int ax8swap_handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, int write_access);
+static inline int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, int write_access)
+{
+	return ax8swap_handle_mm_fault(mm, vma,
+		 address, write_access);
+}
+#else
 extern int handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 			unsigned long address, int write_access);
+#endif
 #else
 static inline int handle_mm_fault(struct mm_struct *mm,
 			struct vm_area_struct *vma, unsigned long address,
@@ -1119,7 +1166,16 @@ extern void __vma_link_rb(struct mm_struct *, struct vm_area_struct *,
 extern void unlink_file_vma(struct vm_area_struct *);
 extern struct vm_area_struct *copy_vma(struct vm_area_struct **,
 	unsigned long addr, unsigned long len, pgoff_t pgoff);
+#ifdef  EXTERNAL_SWAP_MODULE
+void ax8swap_exit_mmap(struct mm_struct *mm);
+static inline void exit_mmap(struct mm_struct *mm)
+{
+	ax8swap_exit_mmap(mm);
+}
+#else
 extern void exit_mmap(struct mm_struct *);
+#endif
+
 
 extern int mm_take_all_locks(struct mm_struct *mm);
 extern void mm_drop_all_locks(struct mm_struct *mm);

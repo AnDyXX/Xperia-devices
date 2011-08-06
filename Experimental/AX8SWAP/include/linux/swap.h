@@ -225,8 +225,18 @@ static inline void lru_cache_add_active_file(struct page *page)
 }
 
 /* linux/mm/vmscan.c */
+#ifdef  EXTERNAL_SWAP_MODULE
+unsigned long ax8swap_try_to_free_pages(struct zonelist *zonelist, int order,
+								gfp_t gfp_mask);
+static inline unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
+								gfp_t gfp_mask)
+{
+	return ax8swap_try_to_free_pages(zonelist,  order, gfp_mask);
+}
+#else
 extern unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 					gfp_t gfp_mask);
+#endif
 extern unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *mem,
 						  gfp_t gfp_mask, bool noswap,
 						  unsigned int swappiness);
@@ -250,7 +260,15 @@ static inline int zone_reclaim(struct zone *z, gfp_t mask, unsigned int order)
 #endif
 
 #ifdef CONFIG_UNEVICTABLE_LRU
+#ifdef  EXTERNAL_SWAP_MODULE
+int ax8swap_page_evictable(struct page *page, struct vm_area_struct *vma);
+static inline int page_evictable(struct page *page, struct vm_area_struct *vma)
+{
+	return ax8swap_page_evictable(page, vma);
+}
+#else
 extern int page_evictable(struct page *page, struct vm_area_struct *vma);
+#endif
 extern void scan_mapping_unevictable_pages(struct address_space *);
 
 extern unsigned long scan_unevictable_pages;
