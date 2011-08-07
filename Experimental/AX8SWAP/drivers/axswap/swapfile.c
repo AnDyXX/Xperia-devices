@@ -1000,7 +1000,7 @@ static int try_to_unuse(unsigned int type)
 		swcount = *swap_map;
 		if (swcount > 1) {
 			if (start_mm == &init_mm)
-				shmem = shmem_unuse(entry, page);
+				shmem = ax8swap_shmem_unuse(entry, page);
 			else
 				retval = unuse_mm(start_mm, entry, page);
 		}
@@ -1030,7 +1030,7 @@ static int try_to_unuse(unsigned int type)
 					;
 				else if (mm == &init_mm) {
 					set_start_mm = 1;
-					shmem = shmem_unuse(entry, page);
+					shmem = ax8swap_shmem_unuse(entry, page);
 				} else
 					retval = unuse_mm(mm, entry, page);
 				if (set_start_mm && *swap_map < swcount) {

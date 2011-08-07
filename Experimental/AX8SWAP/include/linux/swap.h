@@ -299,7 +299,11 @@ extern int kswapd_run(int nid);
 
 #ifdef CONFIG_MMU
 /* linux/mm/shmem.c */
+#ifdef  EXTERNAL_SWAP_MODULE
+extern int ax8swap_shmem_unuse(swp_entry_t entry, struct page *page);
+#else
 extern int shmem_unuse(swp_entry_t entry, struct page *page);
+#endif
 #endif /* CONFIG_MMU */
 
 extern void swap_unplug_io_fn(struct backing_dev_info *, struct page *);

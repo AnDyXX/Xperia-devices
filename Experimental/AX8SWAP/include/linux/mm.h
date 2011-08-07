@@ -729,7 +729,15 @@ extern void show_free_areas(void);
 #endif
 
 #ifdef CONFIG_SHMEM
+#ifdef  EXTERNAL_SWAP_MODULE
+int ax8swap_shmem_lock(struct file *file, int lock, struct user_struct *user);
+static inline int shmem_lock(struct file *file, int lock, struct user_struct *user)
+{
+	return ax8swap_shmem_lock(file, lock, user);
+}
+#else
 extern int shmem_lock(struct file *file, int lock, struct user_struct *user);
+#endif
 #else
 static inline int shmem_lock(struct file *file, int lock,
 			    struct user_struct *user)
@@ -738,9 +746,15 @@ static inline int shmem_lock(struct file *file, int lock,
 }
 #endif
 
+#ifdef  EXTERNAL_SWAP_MODULE
+struct file *ax8swap_shmem_file_setup(char *name, loff_t size, unsigned long flags);
+void ax8swap_shmem_set_file(struct vm_area_struct *vma, struct file *file);
+int ax8swap_shmem_zero_setup(struct vm_area_struct *);
+#else
 struct file *shmem_file_setup(char *name, loff_t size, unsigned long flags);
 void shmem_set_file(struct vm_area_struct *vma, struct file *file);
 int shmem_zero_setup(struct vm_area_struct *);
+#endif
 
 #ifndef CONFIG_MMU
 extern unsigned long shmem_get_unmapped_area(struct file *file,

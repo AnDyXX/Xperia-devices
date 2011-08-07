@@ -136,7 +136,6 @@ ax8swap_removed_exe_file_vma_type ax8swap_removed_exe_file_vma;
 struct kmem_cache ** ax8swap_vm_area_cachep;
 ax8swap_cap_vm_enough_memory_type ax8swap_cap_vm_enough_memory;
 ax8swap_sys_sync_type ax8swap_sys_sync;
-ax8swap_shmem_zero_setup_type ax8swap_shmem_zero_setup;
 int * ax8swap_vm_swappiness;
 ax8swap_mlock_vma_pages_range_type ax8swap_mlock_vma_pages_range;
 ax8swap_arch_get_unmapped_area_type ax8swap_arch_get_unmapped_area;
@@ -158,6 +157,10 @@ ax8swap_set_mm_exe_file_type ax8swap_set_mm_exe_file;
 ax8swap_lru_add_drain_type ax8swap_lru_add_drain;
 ax8swap_rotate_reclaimable_page_type ax8swap_rotate_reclaimable_page;
 ax8swap_shmem_truncate_address_only_type ax8swap_shmem_truncate_address_only;
+struct vfsmount **ax8swap_shm_mnt;
+struct kmem_cache ** ax8swap_shmem_inode_cachep; 
+ax8swap_put_filp_type ax8swap_put_filp;
+
 
 // for get proc address
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
@@ -189,7 +192,6 @@ struct cfg_value_map2 {
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
-	{"sys_mincore", 		&sys_ax8swap_mincore},
 	{"update_mmu_cache", 		&ax8swap_update_mmu_cache},
 	{"flush_dcache_page",		&ax8swap_flush_dcache_page},
 	{"__set_page_dirty_buffers",	&ax8swap___set_page_dirty_buffers},
@@ -208,37 +210,38 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"__remove_mapping",		&ax8swap___remove_mapping},
 	{"shrink_active_list",		&ax8swap_shrink_active_list},
 	{"page_evictable",		&ax8swap_page_evictable},
-	{"shmem_swp_entry", 		&ax8swap_shmem_swp_entry},
-	{"shmem_swp_alloc", 		&ax8swap_shmem_swp_alloc},
-	{"shmem_free_swp", 		&ax8swap_shmem_free_swp},
-	{"shmem_truncate_range", 	&ax8swap_shmem_truncate_range},
-	{"shmem_truncate",		&ax8swap_shmem_truncate},
-	{"shmem_notify_change", 	&ax8swap_shmem_notify_change},
-	{"shmem_delete_inode", 		&ax8swap_shmem_delete_inode},
-	{"shmem_unuse", 		&ax8swap_shmem_unuse},
-	{"shmem_writepage", 		&ax8swap_shmem_writepage},
-	{"shmem_getpage", 		&ax8swap_shmem_getpage},
-	{"shmem_fault", 		&ax8swap_shmem_fault},
-	{"shmem_lock", 			&ax8swap_shmem_lock},
 	{"pagevec_swap_free",		&ax8swap_pagevec_swap_free},
 	{"__set_page_dirty", 		&ax8swap___set_page_dirty},
 	{"__free_pages_ok",		&ax8swap___free_pages_ok},
 	{"free_hot_cold_page",		&ax8swap_free_hot_cold_page},
 	{"bad_page",			&ax8swap_bad_page},
 	{"__vm_enough_memory",		&ax8swap___vm_enough_memory},
-	{"shrink_zone",			&ax8swap_shrink_zone},
-	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
-	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
-	/*{"unmap_vmas", 			&ax8swap_unmap_vmas},
 	{"zap_page_range", 		&ax8swap_zap_page_range},
 	{"exit_mmap", 			&ax8swap_exit_mmap},
 	{"show_free_areas", 		&ax8swap_show_free_areas},
-	{"sys_remap_file_pages", 	&sys_ax8swap_remap_file_pages},
 	{"copy_page_range", 		&ax8swap_copy_page_range},
 	{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
 	{"mmput", 			&ax8swap_mmput},
 	{"page_referenced_one", 	&ax8swap_page_referenced_one},
-	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},*/
+	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},
+	{"sys_remap_file_pages", 	&sys_ax8swap_remap_file_pages},
+	{"sys_mincore", 		&sys_ax8swap_mincore},
+	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
+	{"shrink_zone",			&ax8swap_shrink_zone},
+	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
+	{"unmap_vmas", 			&ax8swap_unmap_vmas},
+//	{"shmem_swp_entry", 		&ax8swap_shmem_swp_entry},
+//	{"shmem_swp_alloc", 		&ax8swap_shmem_swp_alloc},
+//	{"shmem_free_swp", 		&ax8swap_shmem_free_swp},
+//	{"shmem_truncate_range", 	&ax8swap_shmem_truncate_range},
+//	{"shmem_truncate",		&ax8swap_shmem_truncate},
+//	{"shmem_notify_change", 	&ax8swap_shmem_notify_change},
+//	{"shmem_delete_inode", 		&ax8swap_shmem_delete_inode},
+//	{"shmem_unuse", 		&ax8swap_shmem_unuse},
+//	{"shmem_writepage", 		&ax8swap_shmem_writepage},
+//	{"shmem_getpage", 		&ax8swap_shmem_getpage},
+//	{"shmem_fault", 		&ax8swap_shmem_fault},
+//	{"shmem_lock", 			&ax8swap_shmem_lock},
 	{NULL, 				0},
 };
 
@@ -330,7 +333,6 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"vm_area_cachep",(void**) &ax8swap_vm_area_cachep },
 	{"cap_vm_enough_memory",(void**) &ax8swap_cap_vm_enough_memory },
 	{"sys_sync",(void**) &ax8swap_sys_sync },
-	{"shmem_zero_setup",(void**) &ax8swap_shmem_zero_setup },
 	{"vm_swappiness",(void**) &ax8swap_vm_swappiness },
 	{"mlock_vma_pages_range",(void**) &ax8swap_mlock_vma_pages_range },
 	{"arch_get_unmapped_area",(void**) &ax8swap_arch_get_unmapped_area },
@@ -352,6 +354,9 @@ static const struct cfg_value_map2 field_mapping_table[] = {
 	{"lru_add_drain", (void**) &ax8swap_lru_add_drain},
 	{"rotate_reclaimable_page", (void**) &ax8swap_rotate_reclaimable_page},
 	{"shmem_truncate", (void**) &ax8swap_shmem_truncate_address_only},
+	{"shm_mnt", (void**) &ax8swap_shm_mnt},
+	{"shmem_inode_cachep", (void**) &ax8swap_shmem_inode_cachep},
+	{"put_filp", 		(void**) &ax8swap_put_filp},
 	{NULL,				0},
 };
 

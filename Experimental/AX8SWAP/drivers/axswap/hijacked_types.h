@@ -15,6 +15,14 @@
 #include <asm/cacheflush.h>
 #include <linux/fs.h>
 
+#ifndef DBG
+#define DBG(x) x
+#endif
+
+#ifndef DBG_FUNC
+#define DBG_FUNC DBG(printk("%s(%d) file: %s\n", __func__, __LINE__, __FILE__);)
+#endif
+
 struct vmalloc_info {
 	unsigned long	used;
 	unsigned long	largest_chunk;
@@ -389,10 +397,6 @@ typedef asmlinkage long (*ax8swap_sys_sync_type)(void);
 extern ax8swap_sys_sync_type ax8swap_sys_sync;
 #define sys_sync ax8swap_sys_sync
 
-typedef int (*ax8swap_shmem_zero_setup_type)(struct vm_area_struct *);
-extern ax8swap_shmem_zero_setup_type ax8swap_shmem_zero_setup;
-#define shmem_zero_setup ax8swap_shmem_zero_setup
-
 extern int * ax8swap_vm_swappiness;
 #define vm_swappiness (*ax8swap_vm_swappiness)
 
@@ -530,59 +534,26 @@ static inline void shrink_active_list(unsigned long nr_pages, struct zone *zone,
 int ax8swap_page_evictable(struct page *page, struct vm_area_struct *vma);
 
 swp_entry_t *ax8swap_shmem_swp_entry(struct shmem_inode_info *info, unsigned long index, struct page **page);
-static inline swp_entry_t *shmem_swp_entry(struct shmem_inode_info *info, unsigned long index, struct page **page)
-{
-	return ax8swap_shmem_swp_entry(info, index, page);
-}
 
 swp_entry_t *ax8swap_shmem_swp_alloc(struct shmem_inode_info *info, unsigned long index, enum sgp_type sgp);
-static inline swp_entry_t * shmem_swp_alloc(struct shmem_inode_info *info, unsigned long index, enum sgp_type sgp)
-{
-	return ax8swap_shmem_swp_alloc(info, index, sgp);
-}
 
 int ax8swap_shmem_free_swp(swp_entry_t *dir, swp_entry_t *edir,
 						spinlock_t *punch_lock);
-static inline int shmem_free_swp(swp_entry_t *dir, swp_entry_t *edir,
-						spinlock_t *punch_lock)
-{
-	return ax8swap_shmem_free_swp(dir, edir,
-						punch_lock);
-
-}
 
 void ax8swap_shmem_truncate_range(struct inode *inode, loff_t start, loff_t end);
-static inline void shmem_truncate_range(struct inode *inode, loff_t start, loff_t end)
-{
-	ax8swap_shmem_truncate_range(inode, start, end);
-}
 
 void ax8swap_shmem_truncate(struct inode *inode);
-static inline void shmem_truncate(struct inode *inode)
-{
-	ax8swap_shmem_truncate(inode);
-}
 
 int ax8swap_shmem_notify_change(struct dentry *dentry, struct iattr *attr);
 
 void ax8swap_shmem_delete_inode(struct inode *inode);
 
 int ax8swap_shmem_unuse_inode(struct shmem_inode_info *info, swp_entry_t entry, struct page *page);
-static inline int shmem_unuse_inode(struct shmem_inode_info *info, swp_entry_t entry, struct page *page)
-{
-	return ax8swap_shmem_unuse_inode(info, entry, page);
-}
 
 int ax8swap_shmem_writepage(struct page *page, struct writeback_control *wbc);
 
 int ax8swap_shmem_getpage(struct inode *inode, unsigned long idx,
 			struct page **pagep, enum sgp_type sgp, int *type);
-static inline int shmem_getpage(struct inode *inode, unsigned long idx,
-			struct page **pagep, enum sgp_type sgp, int *type)
-{
-	return ax8swap_shmem_getpage(inode,  idx,
-			pagep,  sgp, type);
-}
 
 int ax8swap_shmem_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
 
@@ -652,6 +623,16 @@ unsigned long ax8swap_try_to_free_pages(struct zonelist *zonelist, int order,
 
 
 int ax8swap_shmem_unuse(swp_entry_t entry, struct page *page);
-#define shmem_unuse ax8swap_shmem_unuse
+
+extern struct vfsmount **ax8swap_shm_mnt;
+#define shm_mnt (*ax8swap_shm_mnt)
+
+extern struct kmem_cache ** ax8swap_shmem_inode_cachep; 
+#define shmem_inode_cachep (*ax8swap_shmem_inode_cachep)
+
+typedef void (*ax8swap_put_filp_type)(struct file *); 
+extern ax8swap_put_filp_type ax8swap_put_filp;
+#define put_filp ax8swap_put_filp
+
 
 #endif

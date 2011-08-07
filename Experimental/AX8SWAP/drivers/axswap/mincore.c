@@ -181,12 +181,14 @@ none_mapped:
  *		mapped
  *  -EAGAIN - A kernel resource was temporarily unavailable.
  */
-asmlinkage long sys_ax8swap_mincore(unsigned long start, size_t len,
-				unsigned char __user * vec)
+SYSCALL_DEFINE3(ax8swap_mincore, unsigned long, start, size_t, len,
+		unsigned char __user *, vec) 
 {
 	long retval;
 	unsigned long pages;
 	unsigned char *tmp;
+
+	DBG_FUNC
 
 	/* Check the start address: needs to be page-aligned.. */
  	if (start & ~PAGE_CACHE_MASK)

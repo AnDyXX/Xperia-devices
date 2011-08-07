@@ -928,19 +928,24 @@ unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
 	int fullmm = (*tlbp)->fullmm;
 	struct mm_struct *mm = vma->vm_mm;
 
+
 	mmu_notifier_invalidate_range_start(mm, start_addr, end_addr);
+
 	for ( ; vma && vma->vm_start < end_addr; vma = vma->vm_next) {
 		unsigned long end;
 
 		start = max(vma->vm_start, start_addr);
 		if (start >= vma->vm_end)
 			continue;
+
 		end = min(vma->vm_end, end_addr);
 		if (end <= vma->vm_start)
 			continue;
 
+
 		if (vma->vm_flags & VM_ACCOUNT)
 			*nr_accounted += (end - start) >> PAGE_SHIFT;
+
 
 		if (unlikely(is_pfn_mapping(vma)))
 			untrack_pfn_vma(vma, 0, 0);
@@ -963,18 +968,24 @@ unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
 				 * Since no pte has actually been setup, it is
 				 * safe to do nothing in this case.
 				 */
+
 				if (vma->vm_file) {
+
 					unmap_hugepage_range(vma, start, end, NULL);
 					zap_work -= (end - start) /
 					pages_per_huge_page(hstate_vma(vma));
+
 				}
+
 
 				start = end;
 			} else
+
 				start = unmap_page_range(*tlbp, vma,
 						start, end, &zap_work, details);
 
 			if (zap_work > 0) {
+
 				BUG_ON(start != end);
 				break;
 			}
@@ -993,10 +1004,13 @@ unsigned long ax8swap_unmap_vmas(struct mmu_gather **tlbp,
 			*tlbp = tlb_gather_mmu(vma->vm_mm, fullmm);
 			tlb_start_valid = 0;
 			zap_work = ZAP_BLOCK_SIZE;
+
 		}
 	}
 out:
+
 	mmu_notifier_invalidate_range_end(mm, start_addr, end_addr);
+
 	return start;	/* which is now the end (or restart) address */
 }
 
@@ -2818,11 +2832,14 @@ int ax8swap_handle_mm_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 
 	pgd = pgd_offset(mm, address);
 	pud = pud_alloc(mm, pgd, address);
+
 	if (!pud)
 		return VM_FAULT_OOM;
+
 	pmd = pmd_alloc(mm, pud, address);
 	if (!pmd)
 		return VM_FAULT_OOM;
+
 	pte = pte_alloc_map(mm, pmd, address);
 	if (!pte)
 		return VM_FAULT_OOM;

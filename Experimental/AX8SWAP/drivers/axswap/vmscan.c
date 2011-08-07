@@ -1413,18 +1413,20 @@ void ax8swap_shrink_zone(int priority, struct zone *zone,
 	enum lru_list l;
 	unsigned long nr_reclaimed = sc->nr_reclaimed;
 	unsigned long swap_cluster_max = sc->swap_cluster_max;
-
+DBG_FUNC
 	get_scan_ratio(zone, sc, percent);
-
+DBG_FUNC
 	for_each_evictable_lru(l) {
 		int file = is_file_lru(l);
 		int scan;
-
+DBG_FUNC
 		scan = zone_nr_pages(zone, sc, l);
+DBG_FUNC
 		if (priority) {
 			scan >>= priority;
 			scan = (scan * percent[file]) / 100;
 		}
+DBG_FUNC
 		if (scanning_global_lru(sc)) {
 			zone->lru[l].nr_scan += scan;
 			nr[l] = zone->lru[l].nr_scan;
@@ -1435,11 +1437,12 @@ void ax8swap_shrink_zone(int priority, struct zone *zone,
 		} else
 			nr[l] = scan;
 	}
-
+DBG_FUNC
 	while (nr[LRU_INACTIVE_ANON] || nr[LRU_ACTIVE_FILE] ||
 					nr[LRU_INACTIVE_FILE]) {
 		for_each_evictable_lru(l) {
 			if (nr[l]) {
+DBG_FUNC
 				nr_to_scan = min(nr[l], swap_cluster_max);
 				nr[l] -= nr_to_scan;
 
@@ -1455,11 +1458,12 @@ void ax8swap_shrink_zone(int priority, struct zone *zone,
 		 * with multiple processes reclaiming pages, the total
 		 * freeing target can get unreasonably large.
 		 */
+DBG_FUNC
 		if (nr_reclaimed > swap_cluster_max &&
 			priority < DEF_PRIORITY && !current_is_kswapd())
 			break;
 	}
-
+DBG_FUNC
 	sc->nr_reclaimed = nr_reclaimed;
 
 	/*
@@ -1468,8 +1472,9 @@ void ax8swap_shrink_zone(int priority, struct zone *zone,
 	 */
 	if (inactive_anon_is_low(zone, sc))
 		shrink_active_list(SWAP_CLUSTER_MAX, zone, sc, priority, 0);
-
+DBG_FUNC
 	throttle_vm_writeout(sc->gfp_mask);
+DBG_FUNC
 }
 
 /*

@@ -1189,7 +1189,7 @@ munmap_back:
 		if (vm_flags & VM_EXECUTABLE)
 			added_exe_file_vma(mm);
 	} else if (vm_flags & VM_SHARED) {
-		error = shmem_zero_setup(vma);
+		error = ax8swap_shmem_zero_setup(vma);
 		if (error)
 			goto free_vma;
 	}
