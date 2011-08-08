@@ -163,8 +163,7 @@ ax8swap_put_filp_type ax8swap_put_filp;
 
 
 // for get proc address
-typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
-static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
+kallsyms_lookup_name_type kallsyms_lookup_name_ax;
 
 static void patch(unsigned int addr, unsigned int value) {
 	*(unsigned int*)addr = value;
@@ -192,6 +191,19 @@ struct cfg_value_map2 {
 };
 
 static const struct cfg_value_map func_mapping_table[] = {
+	{"shmem_swp_entry", 		&ax8swap_shmem_swp_entry},
+	{"shmem_swp_alloc", 		&ax8swap_shmem_swp_alloc},
+	{"shmem_free_swp", 		&ax8swap_shmem_free_swp},
+	{"shmem_truncate_range", 	&ax8swap_shmem_truncate_range},
+	{"shmem_truncate",		&ax8swap_shmem_truncate},
+	{"shmem_notify_change", 	&ax8swap_shmem_notify_change},
+	{"shmem_delete_inode", 		&ax8swap_shmem_delete_inode},
+	{"shmem_unuse", 		&ax8swap_shmem_unuse},
+	{"shmem_writepage", 		&ax8swap_shmem_writepage},
+	{"shmem_getpage", 		&ax8swap_shmem_getpage},
+	{"shmem_fault", 		&ax8swap_shmem_fault},
+	{"shmem_lock", 			&ax8swap_shmem_lock},
+
 	{"update_mmu_cache", 		&ax8swap_update_mmu_cache},
 	{"flush_dcache_page",		&ax8swap_flush_dcache_page},
 	{"__set_page_dirty_buffers",	&ax8swap___set_page_dirty_buffers},
@@ -220,7 +232,7 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"exit_mmap", 			&ax8swap_exit_mmap},
 	{"show_free_areas", 		&ax8swap_show_free_areas},
 	{"copy_page_range", 		&ax8swap_copy_page_range},
-	{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
+	/*{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
 	{"mmput", 			&ax8swap_mmput},
 	{"page_referenced_one", 	&ax8swap_page_referenced_one},
 	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},
@@ -229,19 +241,7 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"meminfo_proc_show", 		&ax8swap_meminfo_proc_show},
 	{"shrink_zone",			&ax8swap_shrink_zone},
 	{"handle_mm_fault",	 	&ax8swap_handle_mm_fault},
-	{"unmap_vmas", 			&ax8swap_unmap_vmas},
-//	{"shmem_swp_entry", 		&ax8swap_shmem_swp_entry},
-//	{"shmem_swp_alloc", 		&ax8swap_shmem_swp_alloc},
-//	{"shmem_free_swp", 		&ax8swap_shmem_free_swp},
-//	{"shmem_truncate_range", 	&ax8swap_shmem_truncate_range},
-//	{"shmem_truncate",		&ax8swap_shmem_truncate},
-//	{"shmem_notify_change", 	&ax8swap_shmem_notify_change},
-//	{"shmem_delete_inode", 		&ax8swap_shmem_delete_inode},
-//	{"shmem_unuse", 		&ax8swap_shmem_unuse},
-//	{"shmem_writepage", 		&ax8swap_shmem_writepage},
-//	{"shmem_getpage", 		&ax8swap_shmem_getpage},
-//	{"shmem_fault", 		&ax8swap_shmem_fault},
-//	{"shmem_lock", 			&ax8swap_shmem_lock},
+	{"unmap_vmas", 			&ax8swap_unmap_vmas},*/
 	{NULL, 				0},
 };
 
@@ -440,6 +440,7 @@ static int hijack_fields(int check_only)
 }
 
 int procswaps_init(void);
+int ax8swap_reinit_tmpfs(void);
 
 static int __init ax8swap_init(void)
 {
@@ -459,6 +460,8 @@ static int __init ax8swap_init(void)
 
 	hijack_fields(0);
 
+	printk(KERN_ERR AX_MODULE_NAME ": procswaps_init()\n");
+
 	ret = procswaps_init();
 	
 	if(ret < 0)
@@ -467,7 +470,15 @@ static int __init ax8swap_init(void)
 		goto eof;
 	}
 
+	printk(KERN_ERR AX_MODULE_NAME ": hijack_functions(0);\n");
+
 	hijack_functions(0);
+
+	printk(KERN_ERR AX_MODULE_NAME ": ax8swap_reinit_tmpfs()\n");
+
+	ax8swap_reinit_tmpfs();
+
+	printk(KERN_ERR AX_MODULE_NAME ": bdi_init(swapper_space.backing_dev_info);\n");
 
 	bdi_init(swapper_space.backing_dev_info);
 

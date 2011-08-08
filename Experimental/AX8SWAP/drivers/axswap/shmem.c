@@ -196,7 +196,7 @@ static inline void ax8swap_shmem_unacct_blocks(unsigned long flags, long pages)
 
 static const struct inode_operations ax8swap_shmem_symlink_inline_operations;
 
-static struct backing_dev_info shmem_backing_dev_info  __read_mostly = {
+static struct backing_dev_info ax8swap_shmem_backing_dev_info  __read_mostly = {
 	.ra_pages	= 0,	/* No readahead */
 	.capabilities	= BDI_CAP_NO_ACCT_AND_WRITEBACK | BDI_CAP_SWAP_BACKED,
 	.unplug_io_fn	= default_unplug_io_fn,
@@ -445,6 +445,8 @@ int ax8swap_shmem_free_swp(swp_entry_t *dir, swp_entry_t *edir,
 	spinlock_t *punch_unlock = NULL;
 	swp_entry_t *ptr;
 	int freed = 0;
+
+DBG_FUNC
 
 	for (ptr = dir; ptr < edir; ptr++) {
 		if (ptr->val) {
@@ -747,6 +749,8 @@ int ax8swap_shmem_notify_change(struct dentry *dentry, struct iattr *attr)
 	struct page *page = NULL;
 	int error;
 
+DBG_FUNC
+
 	if (S_ISREG(inode->i_mode) && (attr->ia_valid & ATTR_SIZE)) {
 		if (attr->ia_size < inode->i_size) {
 			/*
@@ -795,7 +799,8 @@ void ax8swap_shmem_delete_inode(struct inode *inode)
 {
 	struct shmem_inode_info *info = SHMEM_I(inode);
 
-	if (inode->i_op->truncate == ax8swap_shmem_truncate || inode->i_op->truncate == *ax8swap_shmem_truncate_address_only) {
+	if (inode->i_op->truncate == ax8swap_shmem_truncate || 
+		inode->i_op->truncate == *ax8swap_shmem_truncate_address_only) {
 		truncate_inode_pages(inode->i_mapping, 0);
 		ax8swap_shmem_unacct_size(info->flags, inode->i_size);
 		inode->i_size = 0;
@@ -834,6 +839,8 @@ int ax8swap_shmem_unuse_inode(struct shmem_inode_info *info, swp_entry_t entry, 
 	swp_entry_t *ptr;
 	int offset;
 	int error;
+
+DBG_FUNC
 
 	idx = 0;
 	ptr = info->i_direct;
@@ -981,6 +988,8 @@ int ax8swap_shmem_unuse(swp_entry_t entry, struct page *page)
 	struct list_head *p, *next;
 	struct shmem_inode_info *info;
 	int found = 0;
+
+DBG_FUNC
 
 	mutex_lock(&shmem_swaplist_mutex);
 	list_for_each_safe(p, next, &shmem_swaplist) {
@@ -1522,7 +1531,7 @@ static struct inode *ax8swap_shmem_get_inode(struct super_block *sb, int mode,
 		inode->i_uid = current_fsuid();
 		inode->i_gid = current_fsgid();
 		inode->i_blocks = 0;
-		inode->i_mapping->backing_dev_info = &shmem_backing_dev_info;
+		inode->i_mapping->backing_dev_info = &ax8swap_shmem_backing_dev_info;
 		inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 		inode->i_generation = get_seconds();
 		info = SHMEM_I(inode);
@@ -2349,6 +2358,9 @@ failed:
 static struct inode *ax8swap_shmem_alloc_inode(struct super_block *sb)
 {
 	struct shmem_inode_info *p;
+
+	DBG_FUNC
+
 	p = (struct shmem_inode_info *)kmem_cache_alloc(shmem_inode_cachep, GFP_KERNEL);
 	if (!p)
 		return NULL;
@@ -2357,6 +2369,7 @@ static struct inode *ax8swap_shmem_alloc_inode(struct super_block *sb)
 
 static void ax8swap_shmem_destroy_inode(struct inode *inode)
 {
+	DBG_FUNC
 	if ((inode->i_mode & S_IFMT) == S_IFREG) {
 		/* only struct inode is valid if it's an inline symlink */
 		mpol_free_shared_policy(&SHMEM_I(inode)->policy);
@@ -2489,7 +2502,7 @@ static int ax8swap_shmem_get_sb(struct file_system_type *fs_type,
 	return get_sb_nodev(fs_type, flags, data, ax8swap_shmem_fill_super, mnt);
 }
 
-static struct file_system_type tmpfs_fs_type = {
+static struct file_system_type ax8swap_tmpfs_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= "tmpfs",
 	.get_sb		= ax8swap_shmem_get_sb,
@@ -2500,7 +2513,7 @@ int __init ax8swap_init_tmpfs(void)
 {
 	int error;
 
-	error = bdi_init(&shmem_backing_dev_info);
+	error = bdi_init(&ax8swap_shmem_backing_dev_info);
 	if (error)
 		goto out4;
 
@@ -2508,14 +2521,14 @@ int __init ax8swap_init_tmpfs(void)
 	if (error)
 		goto out3;
 
-	error = register_filesystem(&tmpfs_fs_type);
+	error = register_filesystem(&ax8swap_tmpfs_fs_type);
 	if (error) {
 		printk(KERN_ERR "Could not register tmpfs\n");
 		goto out2;
 	}
 
-	shm_mnt = vfs_kern_mount(&tmpfs_fs_type, MS_NOUSER,
-				tmpfs_fs_type.name, NULL);
+	shm_mnt = vfs_kern_mount(&ax8swap_tmpfs_fs_type, MS_NOUSER,
+				ax8swap_tmpfs_fs_type.name, NULL);
 	if (IS_ERR(shm_mnt)) {
 		error = PTR_ERR(shm_mnt);
 		printk(KERN_ERR "Could not kern_mount tmpfs\n");
@@ -2524,14 +2537,44 @@ int __init ax8swap_init_tmpfs(void)
 	return 0;
 
 out1:
-	unregister_filesystem(&tmpfs_fs_type);
+	unregister_filesystem(&ax8swap_tmpfs_fs_type);
 out2:
 	ax8swap_destroy_inodecache();
 out3:
-	bdi_destroy(&shmem_backing_dev_info);
+	bdi_destroy(&ax8swap_shmem_backing_dev_info);
 out4:
 	shm_mnt = ERR_PTR(error);
 	return error;
+}
+
+int ax8swap_reinit_tmpfs(void)
+{
+	struct super_operations * ax8swap_shmem_ops_old;
+	struct inode_operations * ax8swap_shmem_inode_operations_old;
+
+	long tmp = kallsyms_lookup_name_ax("shmem_ops");
+	if(!tmp)
+	{
+		printk("ax8swap_reinit_tmpfs()\n");
+		ax8swap_shmem_ops_old = (struct super_operations *) tmp;
+		ax8swap_shmem_ops_old->alloc_inode	= ax8swap_shmem_alloc_inode;
+		ax8swap_shmem_ops_old->destroy_inode	= ax8swap_shmem_destroy_inode;
+		ax8swap_shmem_ops_old->delete_inode	= ax8swap_shmem_delete_inode;
+		ax8swap_shmem_ops_old->put_super	= ax8swap_shmem_put_super;
+	}
+
+	tmp = kallsyms_lookup_name_ax("shmem_inode_operations");
+	if(!tmp)
+	{
+		printk("ax8swap_reinit_tmpfs()\n");
+		ax8swap_shmem_inode_operations_old = (struct inode_operations *) tmp;
+		ax8swap_shmem_inode_operations_old->truncate	= ax8swap_shmem_truncate;
+		ax8swap_shmem_inode_operations_old->setattr	= ax8swap_shmem_notify_change;
+		ax8swap_shmem_inode_operations_old->truncate_range	= ax8swap_shmem_truncate_range;
+	}
+
+
+	return 0;
 }
 
 #else /* !CONFIG_SHMEM */

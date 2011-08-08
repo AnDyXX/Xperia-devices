@@ -79,6 +79,9 @@ enum sgp_type {
 	SGP_WRITE,	/* may exceed i_size, may allocate page */
 };
 
+typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
+extern kallsyms_lookup_name_type kallsyms_lookup_name_ax;
+
 typedef void (*ax8swap_shmem_truncate_address_only_type)(struct inode *inode);
 extern ax8swap_shmem_truncate_address_only_type ax8swap_shmem_truncate_address_only;
 
