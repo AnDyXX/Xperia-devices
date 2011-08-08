@@ -962,7 +962,7 @@ find_match(const char *name, enum ipt_tryload tryload, struct iptables_rule_matc
 		}
 	}		
 
-	if (!ptr && tryload != DONT_LOAD && tryload != DURING_LOAD) {
+	if (tryload != DONT_LOAD && tryload != DURING_LOAD) {
 		char path[1 + sizeof("xt_") + strlen(name)];
 		sprintf(path, "xt_%s", name);
 		netfilter_modules_try_load(path);
@@ -1289,7 +1289,7 @@ find_target(const char *name, enum ipt_tryload tryload)
 			break;
 	}
 
-	if (!ptr && tryload != DONT_LOAD && tryload != DURING_LOAD) {
+	if (tryload != DONT_LOAD && tryload != DURING_LOAD) {
 		char path[1 + sizeof("ipt_") + strlen(name)];
 		sprintf(path, "ipt_%s", name);
 		netfilter_modules_try_load(path);
