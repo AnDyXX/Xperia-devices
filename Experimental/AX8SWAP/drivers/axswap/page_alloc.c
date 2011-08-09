@@ -1798,7 +1798,7 @@ void ax8swap_show_free_areas(void)
 {
 	int cpu;
 	struct zone *zone;
-
+DBG_FUNC
 	for_each_zone(zone) {
 		if (!populated_zone(zone))
 			continue;
@@ -1816,7 +1816,7 @@ void ax8swap_show_free_areas(void)
 			       pageset->pcp.batch, pageset->pcp.count);
 		}
 	}
-
+DBG_FUNC
 	printk("Active_anon:%lu active_file:%lu inactive_anon:%lu\n"
 		" inactive_file:%lu"
 //TODO:  check/adjust line lengths
@@ -1844,10 +1844,10 @@ void ax8swap_show_free_areas(void)
 
 	for_each_zone(zone) {
 		int i;
-
+DBG_FUNC
 		if (!populated_zone(zone))
 			continue;
-
+DBG_FUNC
 		show_node(zone);
 		printk("%s"
 			" free:%lukB"
@@ -1886,7 +1886,7 @@ void ax8swap_show_free_areas(void)
 			printk(" %lu", zone->lowmem_reserve[i]);
 		printk("\n");
 	}
-
+DBG_FUNC
 	for_each_zone(zone) {
  		unsigned long nr[MAX_ORDER], flags, order, total = 0;
 
@@ -1906,9 +1906,9 @@ void ax8swap_show_free_areas(void)
 			printk("%lu*%lukB ", nr[order], K(1UL) << order);
 		printk("= %lukB\n", K(total));
 	}
-
+DBG_FUNC
 	printk("%ld total pagecache pages\n", global_page_state(NR_FILE_PAGES));
-
+DBG_FUNC
 	show_swap_cache_info();
 }
 

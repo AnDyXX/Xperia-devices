@@ -19,6 +19,7 @@
 #include <linux/backing-dev.h>
 #include <linux/pagevec.h>
 #include <linux/swap.h>
+#include <asm/setup.h>
 
 #include "hijacked_types.h"
 
@@ -77,7 +78,6 @@ ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
 ax8swap_mlock_vma_pages_range_type ax8swap_mlock_vma_pages_range;
 ax8swap_writeback_inodes_type ax8swap_writeback_inodes;
 struct mmu_gather * ax8swap_per_cpu_mmu_gathers;
-ax8swap_flush_ptrace_access_type ax8swap_flush_ptrace_access;
 long * ax8swap_highest_memmap_pfn;
 ax8swap_max_sane_readahead_type ax8swap_max_sane_readahead;
 ax8swap_clear_zonelist_oom_type ax8swap_clear_zonelist_oom;
@@ -161,6 +161,7 @@ struct vfsmount **ax8swap_shm_mnt;
 struct kmem_cache ** ax8swap_shmem_inode_cachep; 
 ax8swap_put_filp_type ax8swap_put_filp;
 
+int ax8swap_swap_enabled = 0;
 
 // for get proc address
 kallsyms_lookup_name_type kallsyms_lookup_name_ax;
@@ -230,9 +231,9 @@ static const struct cfg_value_map func_mapping_table[] = {
 	{"__vm_enough_memory",		&ax8swap___vm_enough_memory},
 	{"zap_page_range", 		&ax8swap_zap_page_range},
 	{"exit_mmap", 			&ax8swap_exit_mmap},
+	{"copy_page_range", 		&ax8swap_copy_page_range},
 	{"show_free_areas", 		&ax8swap_show_free_areas},
-	/*{"copy_page_range", 		&ax8swap_copy_page_range},
-	{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
+	/*{"try_to_unmap_one", 		&ax8swap_try_to_unmap_one},
 	{"mmput", 			&ax8swap_mmput},
 	{"page_referenced_one", 	&ax8swap_page_referenced_one},
 	{"try_to_free_pages", 		&ax8swap_try_to_free_pages},
@@ -439,6 +440,38 @@ static int hijack_fields(int check_only)
 	return ret;
 }
 
+void check_pages(void)
+{
+	int node, i;
+	struct meminfo * mi = &meminfo;
+
+	for_each_online_node(node) {
+		pg_data_t *n = NODE_DATA(node);
+		struct page *map = pgdat_page_nr(n, 0) - n->node_start_pfn;
+
+		for_each_nodebank (i,mi,node) {
+			struct membank *bank = &mi->bank[i];
+			unsigned int pfn1, pfn2;
+			struct page *page, *end;
+
+			pfn1 = bank_pfn_start(bank);
+			pfn2 = bank_pfn_end(bank);
+
+			page = map + pfn1;
+			end  = map + pfn2;
+
+			do {
+			        if (PageSwapCache(page))
+				{
+					printk(KERN_ERR AX_MODULE_NAME ": Page cached before cache \n");
+				}
+
+				page++;
+			} while (page < end);
+		}
+	}
+}
+
 int procswaps_init(void);
 int ax8swap_reinit_tmpfs(void);
 
@@ -447,6 +480,8 @@ static int __init ax8swap_init(void)
 	int ret = -1;
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " for device " DEVICE_NAME " loaded\n");
   
+	check_pages();
+
 	printk(KERN_ERR AX_MODULE_NAME ": Pointer to ax8swap_init %d\n", (int)&ax8swap_init);
 
 	// our 'GetProcAddress' :D
