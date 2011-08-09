@@ -383,6 +383,14 @@ swp_entry_t get_swap_page(void)
 	pgoff_t offset;
 	int type, next;
 	int wrapped = 0;
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+	{
+		swp_entry_t entry;
+		entry.val = 0;
+		return entry;
+	}
 
 	spin_lock(&swap_lock);
 	if (nr_swap_pages <= 0)
@@ -505,6 +513,11 @@ void swap_free(swp_entry_t entry)
 {
 	struct swap_info_struct * p;
 
+	DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return;
+
 	p = swap_info_get(entry);
 	if (p) {
 		swap_entry_free(p, entry);
@@ -541,6 +554,11 @@ int reuse_swap_page(struct page *page)
 {
 	int count;
 
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return (page_mapcount(page) == 1);
+
 	VM_BUG_ON(!PageLocked(page));
 	count = page_mapcount(page);
 	if (count <= 1 && PageSwapCache(page)) {
@@ -559,6 +577,11 @@ int reuse_swap_page(struct page *page)
  */
 int try_to_free_swap(struct page *page)
 {
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return 0;
+
 	VM_BUG_ON(!PageLocked(page));
 
 	if (!PageSwapCache(page))
@@ -582,8 +605,13 @@ int free_swap_and_cache(swp_entry_t entry)
 	struct swap_info_struct *p;
 	struct page *page = NULL;
 
+	DBG_FUNC
+
 	if (is_migration_entry(entry))
 		return 1;
+	
+	if(!ax8swap_swap_enabled)
+		return 0;	
 
 	p = swap_info_get(entry);
 	if (p) {
@@ -1952,8 +1980,13 @@ int swap_duplicate(swp_entry_t entry)
 	unsigned long offset, type;
 	int result = 0;
 
+	DBG_FUNC
+
 	if (is_migration_entry(entry))
 		return 1;
+
+	if(!ax8swap_swap_enabled)
+		return 0;
 
 	type = swp_type(entry);
 	if (type >= nr_swapfiles)

@@ -23,6 +23,8 @@
 #define DBG_FUNC DBG(printk("%s(%d) file: %s\n", __func__, __LINE__, __FILE__);)
 #endif
 
+extern int ax8swap_swap_enabled;
+
 struct vmalloc_info {
 	unsigned long	used;
 	unsigned long	largest_chunk;
@@ -636,7 +638,5 @@ extern struct kmem_cache ** ax8swap_shmem_inode_cachep;
 typedef void (*ax8swap_put_filp_type)(struct file *); 
 extern ax8swap_put_filp_type ax8swap_put_filp;
 #define put_filp ax8swap_put_filp
-
-extern int ax8swap_swap_enabled;
 
 #endif

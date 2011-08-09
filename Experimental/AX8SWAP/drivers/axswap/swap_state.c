@@ -77,6 +77,11 @@ int add_to_swap_cache(struct page *page, swp_entry_t entry, gfp_t gfp_mask)
 {
 	int error;
 
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return -1;
+
 	VM_BUG_ON(!PageLocked(page));
 	VM_BUG_ON(PageSwapCache(page));
 	VM_BUG_ON(!PageSwapBacked(page));
@@ -115,6 +120,11 @@ void __delete_from_swap_cache(struct page *page)
 {
 	swp_entry_t ent = {.val = page_private(page)};
 
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return;
+
 	VM_BUG_ON(!PageLocked(page));
 	VM_BUG_ON(!PageSwapCache(page));
 	VM_BUG_ON(PageWriteback(page));
@@ -140,6 +150,11 @@ int add_to_swap(struct page *page)
 {
 	swp_entry_t entry;
 	int err;
+
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return 0;
 
 	VM_BUG_ON(!PageLocked(page));
 	VM_BUG_ON(!PageUptodate(page));
@@ -188,6 +203,11 @@ int add_to_swap(struct page *page)
 void delete_from_swap_cache(struct page *page)
 {
 	swp_entry_t entry;
+
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return;
 
 	entry.val = page_private(page);
 
@@ -255,6 +275,11 @@ void free_pages_and_swap_cache(struct page **pages, int nr)
 struct page * lookup_swap_cache(swp_entry_t entry)
 {
 	struct page *page;
+
+DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return NULL;
 
 	page = find_get_page(&swapper_space, entry.val);
 
@@ -357,6 +382,11 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 	struct page *page;
 	unsigned long offset;
 	unsigned long end_offset;
+
+	DBG_FUNC
+
+	if(!ax8swap_swap_enabled)
+		return NULL;
 
 	/*
 	 * Get starting offset for readaround, and number of pages to read.
