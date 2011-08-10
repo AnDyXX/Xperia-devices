@@ -224,7 +224,7 @@ PAGEFLAG(Readahead, reclaim)		/* Reminder to do async read-ahead */
 PAGEFLAG_FALSE(HighMem)
 #endif
 
-#if defined(CONFIG_SWAP) || defined(CONFIG_AX8_SWAP_MODULE)
+#if defined(CONFIG_SWAP) || defined(EXTERNAL_SWAP_MODULE)
 PAGEFLAG(SwapCache, swapcache)
 #else
 PAGEFLAG_FALSE(SwapCache)

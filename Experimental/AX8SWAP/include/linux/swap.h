@@ -308,7 +308,7 @@ extern int shmem_unuse(swp_entry_t entry, struct page *page);
 
 extern void swap_unplug_io_fn(struct backing_dev_info *, struct page *);
 
-#if defined(CONFIG_SWAP) || defined(CONFIG_AX8_SWAP_MODULE)
+#if defined(CONFIG_SWAP) || defined(EXTERNAL_SWAP_MODULE)
 /* linux/mm/page_io.c */
 extern int swap_readpage(struct file *, struct page *);
 extern int swap_writepage(struct page *page, struct writeback_control *wbc);
