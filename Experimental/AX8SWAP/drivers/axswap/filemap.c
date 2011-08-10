@@ -10,6 +10,8 @@
  * the NFS filesystem used to do this differently, for example)
  */
 #define EXTERNAL_SWAP_MODULE
+//#undef CONFIG_SWAP
+//#undef CONFIG_AX8_SWAP
 
 #include <linux/module.h>
 #include <linux/slab.h>

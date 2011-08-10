@@ -20,6 +20,8 @@
 #include <linux/pagevec.h>
 #include <linux/swap.h>
 #include <asm/setup.h>
+#include <linux/kprobes.h>
+#include <linux/ftrace.h>
 
 #include "hijacked_types.h"
 
@@ -443,7 +445,7 @@ static int hijack_fields(int check_only)
 void check_pages(void)
 {
 	int node, i;
-	struct meminfo * mi = &meminfo;
+	struct meminfo * mi = ax8swap_meminfo;
 
 	for_each_online_node(node) {
 		pg_data_t *n = NODE_DATA(node);
@@ -472,6 +474,138 @@ void check_pages(void)
 	}
 }
 
+/* printk's without a loglevel use this.. */
+#define DEFAULT_MESSAGE_LOGLEVEL 4 /* KERN_WARNING */
+
+/* We show everything that is MORE important than this.. */
+#define MINIMUM_CONSOLE_LOGLEVEL 1 /* Minimum loglevel we let people use */
+#define DEFAULT_CONSOLE_LOGLEVEL 7 /* anything MORE serious than KERN_DEBUG */
+
+int console_printk[4] = {
+	DEFAULT_CONSOLE_LOGLEVEL,	/* console_loglevel */
+	DEFAULT_MESSAGE_LOGLEVEL,	/* default_message_loglevel */
+	MINIMUM_CONSOLE_LOGLEVEL,	/* minimum_console_loglevel */
+	DEFAULT_CONSOLE_LOGLEVEL,	/* default_console_loglevel */
+};
+
+/*
+ * We want to turn all lock-debugging facilities on/off at once,
+ * via a global flag. The reason is that once a single bug has been
+ * detected and reported, there might be cascade of followup bugs
+ * that would just muddy the log. So we report the first one and
+ * shut up after that.
+ */
+int debug_locks = 1;
+
+/*
+ * The locking-testsuite uses <debug_locks_silent> to get a
+ * 'silent failure': nothing is printed to the console when
+ * a locking bug is detected.
+ */
+int debug_locks_silent;
+
+/*
+ * Generic 'turn off all lock debugging' function:
+ */
+int debug_locks_off(void)
+{
+	if (xchg(&debug_locks, 0)) {
+		if (!debug_locks_silent) {
+			oops_in_progress = 1;
+			console_verbose();
+			return 1;
+		}
+	}
+	return 0;
+}
+
+void __kprobes add_preempt_count(int val)
+{
+#ifdef CONFIG_DEBUG_PREEMPT
+	/*
+	 * Underflow?
+	 */
+	if (DEBUG_LOCKS_WARN_ON((preempt_count() < 0)))
+		return;
+#endif
+	preempt_count() += val;
+#ifdef CONFIG_DEBUG_PREEMPT
+	/*
+	 * Spinlock count overflowing soon?
+	 */
+	DEBUG_LOCKS_WARN_ON((preempt_count() & PREEMPT_MASK) >=
+				PREEMPT_MASK - 10);
+#endif
+	if (preempt_count() == val)
+		trace_preempt_off(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
+}
+
+
+void __kprobes sub_preempt_count(int val)
+{
+#ifdef CONFIG_DEBUG_PREEMPT
+	/*
+	 * Underflow?
+	 */
+	if (DEBUG_LOCKS_WARN_ON(val > preempt_count()))
+		return;
+	/*
+	 * Is the spinlock portion underflowing?
+	 */
+	if (DEBUG_LOCKS_WARN_ON((val < PREEMPT_MASK) &&
+			!(preempt_count() & PREEMPT_MASK)))
+		return;
+#endif
+
+	if (preempt_count() == val)
+		trace_preempt_on(CALLER_ADDR0, get_parent_ip(CALLER_ADDR1));
+	preempt_count() -= val;
+}
+
+notrace unsigned int debug_smp_processor_id(void)
+{
+	unsigned long preempt_count = preempt_count();
+	int this_cpu = raw_smp_processor_id();
+
+	if (likely(preempt_count))
+		goto out;
+
+	if (irqs_disabled())
+		goto out;
+
+	/*
+	 * Kernel threads bound to a single CPU can safely use
+	 * smp_processor_id():
+	 */
+	if (cpumask_equal(&current->cpus_allowed, cpumask_of(this_cpu)))
+		goto out;
+
+	/*
+	 * It is valid to assume CPU-locality during early bootup:
+	 */
+	if (system_state != SYSTEM_RUNNING)
+		goto out;
+
+	/*
+	 * Avoid recursion:
+	 */
+	preempt_disable_notrace();
+
+	if (!printk_ratelimit())
+		goto out_enable;
+
+	printk(KERN_ERR "BUG: using smp_processor_id() in preemptible [%08x] "
+			"code: %s/%d\n",
+			preempt_count() - 1, current->comm, current->pid);
+	print_symbol("caller is %s\n", (long)__builtin_return_address(0));
+	dump_stack();
+
+out_enable:
+	preempt_enable_no_resched_notrace();
+out:
+	return this_cpu;
+}
+
 int procswaps_init(void);
 int ax8swap_reinit_tmpfs(void);
 
@@ -480,7 +614,7 @@ static int __init ax8swap_init(void)
 	int ret = -1;
 	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " for device " DEVICE_NAME " loaded\n");
   
-	check_pages();
+	//check_pages();
 
 	printk(KERN_ERR AX_MODULE_NAME ": Pointer to ax8swap_init %d\n", (int)&ax8swap_init);
 

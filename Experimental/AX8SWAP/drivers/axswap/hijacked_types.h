@@ -23,6 +23,7 @@
 #define DBG_FUNC DBG(printk("%s(%d) file: %s\n", __func__, __LINE__, __FILE__);)
 #endif
 
+
 extern int ax8swap_swap_enabled;
 
 struct vmalloc_info {
@@ -80,6 +81,8 @@ enum sgp_type {
 	SGP_DIRTY,	/* like SGP_CACHE, but set new page dirty */
 	SGP_WRITE,	/* may exceed i_size, may allocate page */
 };
+
+#if defined(CONFIG_SWAP) || defined(CONFIG_AX8_SWAP_MODULE)
 
 typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
 extern kallsyms_lookup_name_type kallsyms_lookup_name_ax;
@@ -638,5 +641,7 @@ extern struct kmem_cache ** ax8swap_shmem_inode_cachep;
 typedef void (*ax8swap_put_filp_type)(struct file *); 
 extern ax8swap_put_filp_type ax8swap_put_filp;
 #define put_filp ax8swap_put_filp
+
+#endif
 
 #endif
