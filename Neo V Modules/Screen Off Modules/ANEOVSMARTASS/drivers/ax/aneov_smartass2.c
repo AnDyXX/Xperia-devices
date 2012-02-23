@@ -35,6 +35,26 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
+#define AX_MODULE_NAME 			"aneov_smartass2"
+#define AX_MODULE_VER			"v001"
+
+#define DEVICE_NAME			"Xperia Neo V"
+
+#define OFS_KALLSYMS_LOOKUP_NAME	0x801056F0			// kallsyms_lookup_name
+
+static long lookup_address = OFS_KALLSYMS_LOOKUP_NAME;
+
+// for get proc address
+typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
+static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
+
+typedef long  (*nr_running_type) (void);
+static nr_running_type nr_running_ax;
+
+typedef void  (*default_idle_type) (void);
+static default_idle_type default_idle_ax;
+
+
 
 /******************** Tunable parameters: ********************/
 
@@ -43,7 +63,7 @@
  * towards the ideal frequency and slower after it has passed it. Similarly,
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
-#define DEFAULT_AWAKE_IDEAL_FREQ 768000
+#define DEFAULT_AWAKE_IDEAL_FREQ 368640
 static unsigned int awake_ideal_freq;
 
 /*
@@ -52,7 +72,7 @@ static unsigned int awake_ideal_freq;
  * that practically when sleep_ideal_freq==0 the awake_ideal_freq is used
  * also when suspended).
  */
-#define DEFAULT_SLEEP_IDEAL_FREQ 245000
+#define DEFAULT_SLEEP_IDEAL_FREQ 245760
 static unsigned int sleep_ideal_freq;
 
 /*
@@ -355,20 +375,29 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 		reset_timer(cpu,this_smartass);
 }
 
+static void execute_pm_idle_old(void)
+{
+	if(pm_idle_old)
+		pm_idle_old();
+	else
+		default_idle_ax();
+}
+
+
 static void cpufreq_idle(void)
 {
 	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
 
 	if (!this_smartass->enable) {
-		pm_idle_old();
+		execute_pm_idle_old();
 		return;
 	}
 
 	if (policy->cur == policy->min && timer_pending(&this_smartass->timer))
 		del_timer(&this_smartass->timer);
 
-	pm_idle_old();
+	execute_pm_idle_old();
 
 	if (!timer_pending(&this_smartass->timer))
 		reset_timer(smp_processor_id(), this_smartass);
@@ -401,7 +430,7 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 			       old_freq,policy->cur);
 			new_freq = old_freq;
 		}
-		else if (ramp_dir > 0 && nr_running() > 1) {
+		else if (ramp_dir > 0 && nr_running_ax() > 1) {
 			// ramp up logic:
 			if (old_freq < this_smartass->ideal_speed)
 				new_freq = this_smartass->ideal_speed;
@@ -440,7 +469,7 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 		       // This may also happen if we refused to ramp up because the nr_running()==1
 			new_freq = old_freq;
 			dprintk(SMARTASS_DEBUG_ALG,"smartassQ @ %d nothing: ramp_dir=%d nr_running=%lu\n",
-				old_freq,ramp_dir,nr_running());
+				old_freq,ramp_dir,nr_running_ax());
 		}
 
 		// do actual ramp up (returns 0, if frequency change failed):
@@ -821,6 +850,14 @@ static int __init cpufreq_smartass_init(void)
 
 	suspended = 0;
 
+	kallsyms_lookup_name_ax = (void*) lookup_address;
+	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
+	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
+
+	if(!nr_running_ax || !default_idle_ax)
+		return -1;
+
+
 	/* Initalize per-cpu data: */
 	for_each_possible_cpu(i) {
 		this_smartass = &per_cpu(smartass_info, i);
@@ -840,14 +877,21 @@ static int __init cpufreq_smartass_init(void)
 	}
 
 	// Scale up is high priority
-	up_wq = alloc_workqueue("ksmartass_up", WQ_HIGHPRI, 1);
-	down_wq = alloc_workqueue("ksmartass_down", 0, 1);
+        //was
+	//up_wq = alloc_workqueue("ksmartass_up", WQ_HIGHPRI, 1);
+	//down_wq = alloc_workqueue("ksmartass_down", 0, 1);
+
+        up_wq = create_rt_workqueue("ksmartass_up");
+        down_wq = create_workqueue("ksmartass_down");
+
 	if (!up_wq || !down_wq)
 		return -ENOMEM;
 
 	INIT_WORK(&freq_scale_work, cpufreq_smartass_freq_change_time_work);
 
 	register_early_suspend(&smartass_power_suspend);
+
+	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
 
 	return cpufreq_register_governor(&cpufreq_gov_smartass2);
 }
@@ -866,7 +910,10 @@ static void __exit cpufreq_smartass_exit(void)
 }
 
 module_exit(cpufreq_smartass_exit);
+module_param(lookup_address, long, S_IRUGO);
 
 MODULE_AUTHOR ("Erasmux");
 MODULE_DESCRIPTION ("'cpufreq_smartass2' - A smart cpufreq governor");
+MODULE_AUTHOR ("AnDyX - fixes for lot of things");
+MODULE_DESCRIPTION ("A smartass cpufreq governor. Now optimized for the " DEVICE_NAME);
 MODULE_LICENSE ("GPL");
