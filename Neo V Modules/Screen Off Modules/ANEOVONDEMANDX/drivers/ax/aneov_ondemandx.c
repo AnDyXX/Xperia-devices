@@ -58,7 +58,7 @@
 
 static unsigned int min_sampling_rate;
 
-static unsigned int suspendfreq = 400000;
+static unsigned int suspendfreq = 245760;
 
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
@@ -185,7 +185,7 @@ static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
 
 static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 {
-	u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
+	u64 idle_time = get_cpu_idle_time_us(cpu, wall);
 
 	if (idle_time == -1ULL)
 		return get_cpu_idle_time_jiffy(cpu, wall);
@@ -777,7 +777,7 @@ static int __init cpufreq_gov_dbs_init(void)
 			MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
 	}
 
-	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
+	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " for device " DEVICE_NAME " loaded\n");
 
 	return cpufreq_register_governor(&cpufreq_gov_ondemand);
 }
@@ -790,7 +790,7 @@ static void __exit cpufreq_gov_dbs_exit(void)
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
-MODULE_AUTHOR ("AnDyX - make it work on Neo V");
+MODULE_AUTHOR ("AnDyX - changes to work with Neo V");
 MODULE_DESCRIPTION("'cpufreq_ondemand' - A dynamic cpufreq governor for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPL");

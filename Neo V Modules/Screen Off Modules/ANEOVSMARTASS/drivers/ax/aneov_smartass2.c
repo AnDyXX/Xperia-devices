@@ -40,6 +40,9 @@
 
 #define DEVICE_NAME			"Xperia Neo V"
 
+//for NEO V
+//insmod lookup_address=0x801056F0
+
 #define OFS_KALLSYMS_LOOKUP_NAME	0x801056F0			// kallsyms_lookup_name
 
 static long lookup_address = OFS_KALLSYMS_LOOKUP_NAME;
@@ -891,7 +894,7 @@ static int __init cpufreq_smartass_init(void)
 
 	register_early_suspend(&smartass_power_suspend);
 
-	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " loaded\n");
+	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " for device " DEVICE_NAME " loaded\n");
 
 	return cpufreq_register_governor(&cpufreq_gov_smartass2);
 }
