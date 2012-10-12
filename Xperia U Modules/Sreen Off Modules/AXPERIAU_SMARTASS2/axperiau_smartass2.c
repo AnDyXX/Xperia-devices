@@ -79,7 +79,7 @@ static unsigned int sleep_ideal_freq;
  * Zero disables and causes to always jump straight to max frequency.
  * When below the ideal freqeuncy we always ramp up to the ideal freq.
  */
-#define DEFAULT_RAMP_UP_STEP 200000
+#define DEFAULT_RAMP_UP_STEP 400000
 static unsigned int ramp_up_step;
 
 /*
@@ -120,7 +120,7 @@ static unsigned long down_rate_us;
  * The frequency to set when waking up from sleep.
  * When sleep_ideal_freq=0 this will have no effect.
  */
-#define DEFAULT_SLEEP_WAKEUP_FREQ 99999999
+#define DEFAULT_SLEEP_WAKEUP_FREQ 400000
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -134,6 +134,7 @@ static unsigned int sample_rate_jiffies;
 
 
 static void (*pm_idle_old)(void);
+
 static atomic_t active_count = ATOMIC_INIT(0);
 
 struct smartass_info_s {
@@ -211,7 +212,9 @@ inline static void smartass_update_min_max_allcpus(void) {
 	}
 }
 
-inline static unsigned int validate_freq(struct cpufreq_policy *policy, int freq) {
+inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy, int freq) {
+	if (suspended && freq > this_smartass->ideal_speed)
+		return this_smartass->ideal_speed;
 	if (freq > (int)policy->max)
 		return policy->max;
 	if (freq < (int)policy->min)
@@ -240,6 +243,10 @@ inline static int work_cpumask_test_and_clear(unsigned long cpu) {
 	return res;
 }
 
+inline static int isTimerNeeded(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
+	return !suspended || (policy->min != this_smartass->ideal_speed) || (policy->min != policy->cur);
+}
+
 inline static int target_freq(struct cpufreq_policy *policy, struct smartass_info_s *this_smartass,
 			      int new_freq, int old_freq, int prefered_relation) {
 	int index, target;
@@ -247,7 +254,7 @@ inline static int target_freq(struct cpufreq_policy *policy, struct smartass_inf
 
 	if (new_freq == old_freq)
 		return 0;
-	new_freq = validate_freq(policy,new_freq);
+	new_freq = validate_freq(this_smartass,policy,new_freq);
 	if (new_freq == old_freq)
 		return 0;
 
@@ -305,6 +312,9 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	old_freq = policy->cur;
 
 	if (this_smartass->idle_exit_time == 0 || update_time == this_smartass->idle_exit_time)
+		return;
+
+	if(!isTimerNeeded(this_smartass, policy))
 		return;
 
 	delta_idle = cputime64_sub(now_idle, this_smartass->time_in_idle);
@@ -383,7 +393,7 @@ static void cpufreq_idle(void)
 	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
 
-	if (!this_smartass->enable) {
+	if (!this_smartass->enable || !isTimerNeeded(this_smartass, policy)) {
 		execute_pm_idle_old();
 		return;
 	}
@@ -778,7 +788,7 @@ static void smartass_suspend(int cpu, int suspend)
 
 	smartass_update_min_max(this_smartass,policy,suspend);
 	if (!suspend) { // resume at max speed:
-		new_freq = validate_freq(policy,sleep_wakeup_freq);
+		new_freq = validate_freq(this_smartass,policy,sleep_wakeup_freq);
 
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
 
@@ -901,6 +911,6 @@ module_exit(cpufreq_smartass_exit);
 
 MODULE_AUTHOR ("Erasmux");
 MODULE_DESCRIPTION ("'cpufreq_smartass2' - A smart cpufreq governor");
-MODULE_AUTHOR ("AnDyX - fixes for lot of things");
+MODULE_AUTHOR ("AnDyX - some imprevent");
 MODULE_DESCRIPTION ("A smartass cpufreq governor. Now optimized for the " DEVICE_NAME);
 MODULE_LICENSE ("GPL");
