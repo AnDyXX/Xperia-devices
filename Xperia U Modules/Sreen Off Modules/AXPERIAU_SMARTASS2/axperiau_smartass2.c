@@ -36,7 +36,7 @@
 #include <linux/earlysuspend.h>
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v001"
+#define AX_MODULE_VER "v002"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -93,7 +93,7 @@ static unsigned int ramp_down_step;
 /*
  * CPU freq will be increased if measured load > max_cpu_load;
  */
-#define DEFAULT_MAX_CPU_LOAD 50
+#define DEFAULT_MAX_CPU_LOAD 75
 static unsigned long max_cpu_load;
 
 /*
@@ -129,6 +129,20 @@ static unsigned int sleep_wakeup_freq;
 #define DEFAULT_SAMPLE_RATE_JIFFIES 2
 static unsigned int sample_rate_jiffies;
 
+
+/*
+ * Sampling rate when screen is off. Current value forces governor to behave like conservative governor.
+ */
+#define DEFAULT_SLEEP_RATE_JIFFIES (usecs_to_jiffies(500 * 1000))
+static unsigned int sleep_rate_jiffies;
+
+/*
+ * When sleep_max_freq>0 the frequency when suspended will be capped
+ * by this frequency.
+ * Set sleep_max_freq=0 to disable this behavior.
+ */
+#define DEFAULT_SLEEP_MAX_FREQ 200000
+static unsigned int sleep_max_freq;
 
 /*************** End of tunables ***************/
 
@@ -213,8 +227,8 @@ inline static void smartass_update_min_max_allcpus(void) {
 }
 
 inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy, int freq) {
-	if (suspended && freq > this_smartass->ideal_speed)
-		return this_smartass->ideal_speed;
+	if (suspended && sleep_max_freq > (int)policy->min && freq > sleep_max_freq)
+		return sleep_max_freq;
 	if (freq > (int)policy->max)
 		return policy->max;
 	if (freq < (int)policy->min)
@@ -224,7 +238,7 @@ inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, 
 
 inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass) {
 	this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
-	mod_timer(&this_smartass->timer, jiffies + sample_rate_jiffies);
+	mod_timer(&this_smartass->timer, jiffies + (suspended ? sleep_rate_jiffies : sample_rate_jiffies));
 }
 
 inline static void work_cpumask_set(unsigned long cpu) {
@@ -244,7 +258,7 @@ inline static int work_cpumask_test_and_clear(unsigned long cpu) {
 }
 
 inline static int isTimerNeeded(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
-	return !suspended || (policy->min != this_smartass->ideal_speed) || (policy->min != policy->cur);
+	return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
 }
 
 inline static int target_freq(struct cpufreq_policy *policy, struct smartass_info_s *this_smartass,
@@ -570,6 +584,21 @@ static ssize_t store_sleep_wakeup_freq(struct kobject *kobj, struct attribute *a
 	return res;
 }
 
+static ssize_t show_sleep_max_freq(struct kobject *kobj, struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", sleep_max_freq);
+}
+
+static ssize_t store_sleep_max_freq(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
+{
+	ssize_t res;
+	unsigned long input;
+	res = strict_strtoul(buf, 0, &input);
+	if (res >= 0 && input >= 0)
+		sleep_max_freq = input;
+	return res;
+}
+
 static ssize_t show_awake_ideal_freq(struct kobject *kobj, struct attribute *attr, char *buf)
 {
 	return sprintf(buf, "%u\n", awake_ideal_freq);
@@ -600,6 +629,21 @@ static ssize_t store_sample_rate_jiffies(struct kobject *kobj, struct attribute 
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input > 0 && input <= 1000)
 		sample_rate_jiffies = input;
+	return res;
+}
+
+static ssize_t show_sleep_rate_jiffies(struct kobject *kobj, struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", sleep_rate_jiffies);
+}
+
+static ssize_t store_sleep_rate_jiffies(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
+{
+	ssize_t res;
+	unsigned long input;
+	res = strict_strtoul(buf, 0, &input);
+	if (res >= 0 && input > 0 && input <= 1000)
+		sleep_rate_jiffies = input;
 	return res;
 }
 
@@ -678,6 +722,8 @@ define_global_rw_attr(ramp_up_step);
 define_global_rw_attr(ramp_down_step);
 define_global_rw_attr(max_cpu_load);
 define_global_rw_attr(min_cpu_load);
+define_global_rw_attr(sleep_max_freq);
+define_global_rw_attr(sleep_rate_jiffies);
 
 static struct attribute * smartass_attributes[] = {
 	&debug_mask_attr.attr,
@@ -691,6 +737,8 @@ static struct attribute * smartass_attributes[] = {
 	&ramp_down_step_attr.attr,
 	&max_cpu_load_attr.attr,
 	&min_cpu_load_attr.attr,
+        &sleep_max_freq_attr.attr,
+	&sleep_rate_jiffies_attr.attr,
 	NULL,
 };
 
@@ -849,6 +897,8 @@ static int __init cpufreq_smartass_init(void)
 	ramp_down_step = DEFAULT_RAMP_DOWN_STEP;
 	max_cpu_load = DEFAULT_MAX_CPU_LOAD;
 	min_cpu_load = DEFAULT_MIN_CPU_LOAD;
+	sleep_rate_jiffies = DEFAULT_SLEEP_RATE_JIFFIES;
+	sleep_max_freq = DEFAULT_SLEEP_MAX_FREQ;
 
 	spin_lock_init(&cpumask_lock);
 
@@ -911,6 +961,9 @@ module_exit(cpufreq_smartass_exit);
 
 MODULE_AUTHOR ("Erasmux");
 MODULE_DESCRIPTION ("'cpufreq_smartass2' - A smart cpufreq governor");
-MODULE_AUTHOR ("AnDyX - some imprevent");
-MODULE_DESCRIPTION ("A smartass cpufreq governor. Now optimized for the " DEVICE_NAME);
+
+MODULE_AUTHOR ("AnDyX - some improvement");
+MODULE_DESCRIPTION ("A smartassV2 cpufreq governor. Now optimized for the " DEVICE_NAME);
+
 MODULE_LICENSE ("GPL");
+
