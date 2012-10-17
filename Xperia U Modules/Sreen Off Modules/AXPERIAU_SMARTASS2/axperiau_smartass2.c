@@ -119,7 +119,7 @@ static unsigned long up_rate_us;
  * The minimum amount of time to spend at a frequency before we can ramp down.
  * Notice we ignore this when we are above the ideal frequency.
  */
-#define DEFAULT_DOWN_RATE_US 49000;
+#define DEFAULT_DOWN_RATE_US 99000;
 static unsigned long down_rate_us;
 
 /*
