@@ -55,6 +55,12 @@ static nr_running_type nr_running_ax;
 typedef void (*default_idle_type) (void);
 static default_idle_type default_idle_ax;
 
+typedef int (*cpu_up_type)(unsigned int cpu);
+static cpu_up_type cpu_up_ax;
+
+typedef int (*cpu_down_type)(unsigned int cpu);
+static cpu_down_type cpu_down_ax;
+
 /******************** Tunable parameters: ********************/
 
 /*
@@ -62,7 +68,7 @@ static default_idle_type default_idle_ax;
  * towards the ideal frequency and slower after it has passed it. Similarly,
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
-#define DEFAULT_AWAKE_IDEAL_FREQ 400000
+#define DEFAULT_AWAKE_IDEAL_FREQ 600000
 static unsigned int awake_ideal_freq;
 
 /*
@@ -106,14 +112,14 @@ static unsigned long min_cpu_load;
  * The minimum amount of time to spend at a frequency before we can ramp up.
  * Notice we ignore this when we are below the ideal frequency.
  */
-#define DEFAULT_UP_RATE_US 48000;
+#define DEFAULT_UP_RATE_US 24000;
 static unsigned long up_rate_us;
 
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  * Notice we ignore this when we are above the ideal frequency.
  */
-#define DEFAULT_DOWN_RATE_US 99000;
+#define DEFAULT_DOWN_RATE_US 49000;
 static unsigned long down_rate_us;
 
 /*
@@ -143,6 +149,12 @@ static unsigned int sleep_rate_jiffies;
  */
 #define DEFAULT_SLEEP_MAX_FREQ 200000
 static unsigned int sleep_max_freq;
+
+/*
+ * Determines whether we can use cpu hotplug feature
+ */
+#define DEFAULT_USE_CPU_HOTPLUG 1
+static unsigned int use_cpu_hotplug;
 
 /*************** End of tunables ***************/
 
@@ -174,6 +186,7 @@ static struct work_struct freq_scale_work;
 
 static cpumask_t work_cpumask;
 static spinlock_t cpumask_lock;
+static struct mutex set_speed_lock;
 
 static unsigned int suspended;
 
@@ -227,7 +240,7 @@ inline static void smartass_update_min_max_allcpus(void) {
 }
 
 inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy, int freq) {
-	if (suspended && sleep_max_freq > (int)policy->min && freq > sleep_max_freq)
+	if (suspended && sleep_max_freq >= (int)policy->min && freq > sleep_max_freq)
 		return sleep_max_freq;
 	if (freq > (int)policy->max)
 		return policy->max;
@@ -707,6 +720,21 @@ static ssize_t store_min_cpu_load(struct kobject *kobj, struct attribute *attr, 
 	return res;
 }
 
+static ssize_t show_use_cpu_hotplug(struct kobject *kobj, struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", use_cpu_hotplug);
+}
+
+static ssize_t store_use_cpu_hotplug(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
+{
+	ssize_t res;
+	unsigned long input;
+	res = strict_strtoul(buf, 0, &input);
+	if (res >= 0 && input > 0)
+		use_cpu_hotplug = input > 0 ? 1 : 0;
+	return res;
+}
+
 #define define_global_rw_attr(_name)		\
 static struct global_attr _name##_attr =	\
 	__ATTR(_name, 0644, show_##_name, store_##_name)
@@ -724,6 +752,7 @@ define_global_rw_attr(max_cpu_load);
 define_global_rw_attr(min_cpu_load);
 define_global_rw_attr(sleep_max_freq);
 define_global_rw_attr(sleep_rate_jiffies);
+define_global_rw_attr(use_cpu_hotplug);
 
 static struct attribute * smartass_attributes[] = {
 	&debug_mask_attr.attr,
@@ -739,6 +768,7 @@ static struct attribute * smartass_attributes[] = {
 	&min_cpu_load_attr.attr,
         &sleep_max_freq_attr.attr,
 	&sleep_rate_jiffies_attr.attr,
+	&use_cpu_hotplug_attr.attr,
 	NULL,
 };
 
@@ -836,13 +866,17 @@ static void smartass_suspend(int cpu, int suspend)
 
 	smartass_update_min_max(this_smartass,policy,suspend);
 	if (!suspend) { // resume at max speed:
+		mutex_lock(&set_speed_lock);
+		if (num_online_cpus() < 2) cpu_up_ax(1);
 		new_freq = validate_freq(this_smartass,policy,sleep_wakeup_freq);
 
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
 
 		__cpufreq_driver_target(policy, new_freq,
 					CPUFREQ_RELATION_L);
+		mutex_unlock(&set_speed_lock);
 	} else {
+		mutex_lock(&set_speed_lock);
 		// to avoid wakeup issues with quick sleep/wakeup don't change actual frequency when entering sleep
 		// to allow some time to settle down. Instead we just reset our statistics (and reset the timer).
 		// Eventually, the timer will adjust the frequency if necessary.
@@ -850,7 +884,9 @@ static void smartass_suspend(int cpu, int suspend)
 		this_smartass->freq_change_time_in_idle =
 			get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
+		if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
+		mutex_unlock(&set_speed_lock);
 	}
 
 	reset_timer(smp_processor_id(),this_smartass);
@@ -899,16 +935,20 @@ static int __init cpufreq_smartass_init(void)
 	min_cpu_load = DEFAULT_MIN_CPU_LOAD;
 	sleep_rate_jiffies = DEFAULT_SLEEP_RATE_JIFFIES;
 	sleep_max_freq = DEFAULT_SLEEP_MAX_FREQ;
+	use_cpu_hotplug = DEFAULT_USE_CPU_HOTPLUG;
 
 	spin_lock_init(&cpumask_lock);
+	mutex_init(&set_speed_lock);
 
 	suspended = 0;
 
 	kallsyms_lookup_name_ax = (void*) lookup_address;
 	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
+	cpu_up_ax = (void*) kallsyms_lookup_name_ax("cpu_up");
+	cpu_down_ax = (void*) kallsyms_lookup_name_ax("cpu_down");
 
-	if(!nr_running_ax || !default_idle_ax)
+	if(!nr_running_ax || !default_idle_ax || !cpu_up_ax || !cpu_down_ax)
 		return -1;
 
 	/* Initalize per-cpu data: */
