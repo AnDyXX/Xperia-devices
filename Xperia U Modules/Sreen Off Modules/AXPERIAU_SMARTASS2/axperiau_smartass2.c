@@ -36,7 +36,7 @@
 #include <linux/earlysuspend.h>
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v002"
+#define AX_MODULE_VER "v003"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -68,7 +68,7 @@ static cpu_down_type cpu_down_ax;
  * towards the ideal frequency and slower after it has passed it. Similarly,
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
-#define DEFAULT_AWAKE_IDEAL_FREQ 600000
+#define DEFAULT_AWAKE_IDEAL_FREQ 400000
 static unsigned int awake_ideal_freq;
 
 /*
@@ -112,7 +112,7 @@ static unsigned long min_cpu_load;
  * The minimum amount of time to spend at a frequency before we can ramp up.
  * Notice we ignore this when we are below the ideal frequency.
  */
-#define DEFAULT_UP_RATE_US 24000;
+#define DEFAULT_UP_RATE_US 49000;
 static unsigned long up_rate_us;
 
 /*
@@ -126,7 +126,7 @@ static unsigned long down_rate_us;
  * The frequency to set when waking up from sleep.
  * When sleep_ideal_freq=0 this will have no effect.
  */
-#define DEFAULT_SLEEP_WAKEUP_FREQ 400000
+#define DEFAULT_SLEEP_WAKEUP_FREQ 200000
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -867,7 +867,7 @@ static void smartass_suspend(int cpu, int suspend)
 	smartass_update_min_max(this_smartass,policy,suspend);
 	if (!suspend) { // resume at max speed:
 		mutex_lock(&set_speed_lock);
-		if (num_online_cpus() < 2) cpu_up_ax(1);
+		//if (num_online_cpus() < 2) cpu_up_ax(1);
 		new_freq = validate_freq(this_smartass,policy,sleep_wakeup_freq);
 
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
@@ -884,7 +884,7 @@ static void smartass_suspend(int cpu, int suspend)
 		this_smartass->freq_change_time_in_idle =
 			get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
-		if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
+		//if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
 		mutex_unlock(&set_speed_lock);
 	}
@@ -913,9 +913,9 @@ static void smartass_late_resume(struct early_suspend *handler) {
 static struct early_suspend smartass_power_suspend = {
 	.suspend = smartass_early_suspend,
 	.resume = smartass_late_resume,
-#ifdef CONFIG_MACH_HERO
+//#ifdef CONFIG_MACH_HERO
 	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
-#endif
+//#endif
 };
 
 static int __init cpufreq_smartass_init(void)
