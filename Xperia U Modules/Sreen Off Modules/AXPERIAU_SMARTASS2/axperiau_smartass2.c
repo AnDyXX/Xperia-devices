@@ -867,7 +867,7 @@ static void smartass_suspend(int cpu, int suspend)
 	smartass_update_min_max(this_smartass,policy,suspend);
 	if (!suspend) { // resume at max speed:
 		mutex_lock(&set_speed_lock);
-		//if (num_online_cpus() < 2) cpu_up_ax(1);
+		if (num_online_cpus() < 2) cpu_up_ax(1);
 		new_freq = validate_freq(this_smartass,policy,sleep_wakeup_freq);
 
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
@@ -884,7 +884,7 @@ static void smartass_suspend(int cpu, int suspend)
 		this_smartass->freq_change_time_in_idle =
 			get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
-		//if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
+		if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
 		mutex_unlock(&set_speed_lock);
 	}
