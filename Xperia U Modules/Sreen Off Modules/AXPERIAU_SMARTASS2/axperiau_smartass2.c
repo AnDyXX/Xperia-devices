@@ -35,11 +35,22 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
+#include <linux/device.h>
+#include <video/mcde_dss.h>
+#include <video/mcde_display.h>
+#include <video/mcde_display-panel_dsi.h>
+
+#ifndef DBG
+#define DBG(x) x
+#endif
+
+#define to_mcde_display_driver(__drv) \
+	container_of((__drv), struct mcde_display_driver, driver)
+
 #define AX_MODULE_NAME "axperiau_smartass2"
 #define AX_MODULE_VER "v003"
 
 #define DEVICE_NAME "Xperia U"
-
 
 #define OFS_KALLSYMS_LOOKUP_NAME 0xC00DB534 // kallsyms_lookup_name
 
@@ -60,6 +71,7 @@ static cpu_up_type cpu_up_ax;
 
 typedef int (*cpu_down_type)(unsigned int cpu);
 static cpu_down_type cpu_down_ax;
+
 
 /******************** Tunable parameters: ********************/
 
@@ -187,8 +199,10 @@ static struct work_struct freq_scale_work;
 static cpumask_t work_cpumask;
 static spinlock_t cpumask_lock;
 static struct mutex set_speed_lock;
+static struct mutex supend_resume_lock;
 
 static unsigned int suspended;
+static unsigned int hijacked = 0;
 
 #define dprintk(flag,msg...) do { \
 	if (debug_mask & flag) printk(KERN_DEBUG msg); \
@@ -347,8 +361,8 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	delta_idle = cputime64_sub(now_idle, this_smartass->time_in_idle);
 	delta_time = cputime64_sub(update_time, this_smartass->idle_exit_time);
 
-	// If timer ran less than 1ms after short-term sample started, retry.
-	if (delta_time < 1000) {
+	// If timer ran less than 5ms after short-term sample started, retry.
+	if (delta_time < 5000) {
 		if (!timer_pending(&this_smartass->timer))
 			reset_timer(cpu,this_smartass);
 		return;
@@ -864,12 +878,15 @@ static void smartass_suspend(int cpu, int suspend)
 	if (!this_smartass->enable)
 		return;
 
+	mutex_lock(&supend_resume_lock);
+
 	smartass_update_min_max(this_smartass,policy,suspend);
 	if (!suspend) { // resume at max speed:
 		mutex_lock(&set_speed_lock);
-		if (num_online_cpus() < 2) cpu_up_ax(1);
+		//if (num_online_cpus() < 2) cpu_up_ax(1);
 		new_freq = validate_freq(this_smartass,policy,sleep_wakeup_freq);
-
+		
+	
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
 
 		__cpufreq_driver_target(policy, new_freq,
@@ -884,10 +901,12 @@ static void smartass_suspend(int cpu, int suspend)
 		this_smartass->freq_change_time_in_idle =
 			get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
-		if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
+		//if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
 		mutex_unlock(&set_speed_lock);
 	}
+	
+	mutex_unlock(&supend_resume_lock);
 
 	reset_timer(smp_processor_id(),this_smartass);
 }
@@ -896,6 +915,9 @@ static void smartass_early_suspend(struct early_suspend *handler) {
 	int i;
 	if (suspended || sleep_ideal_freq==0) // disable behavior for sleep_ideal_freq==0
 		return;
+
+	DBG(printk(KERN_INFO"%s: Susupend started now.\n", AX_MODULE_NAME);)
+
 	suspended = 1;
 	for_each_online_cpu(i)
 		smartass_suspend(i,1);
@@ -905,6 +927,9 @@ static void smartass_late_resume(struct early_suspend *handler) {
 	int i;
 	if (!suspended) // already not suspended so nothing to do
 		return;
+			
+	if(hijacked)
+		return; //let other fun will do this
 	suspended = 0;
 	for_each_online_cpu(i)
 		smartass_suspend(i,0);
@@ -918,10 +943,68 @@ static struct early_suspend smartass_power_suspend = {
 //#endif
 };
 
+
+/*        DUMMY MCDE DEVICE */
+
+static int __devinit dummy_panel_probe(struct mcde_display_device *ddev) {
+ 	return -EINVAL;
+}
+
+static struct mcde_display_driver panel_driver = {
+	.probe	= dummy_panel_probe,
+	.driver = {
+		.name	= "AAALLDJSKJDJKJDKDKHJKHJKHJHJKHKJHJKKJH",
+	},
+};
+
+/*         HIJACKING DISPLAY PM   */ 
+
+typedef int (*panel_set_power_mode_type)(struct mcde_display_device *ddev, enum mcde_display_power_mode power_mode);
+static panel_set_power_mode_type panel_set_power_mode_ax;
+
+/* this method is called instead of original one */
+static int panel_set_power_mode_hijacked(struct mcde_display_device *ddev,
+					enum mcde_display_power_mode power_mode)
+{ 
+	int ret = panel_set_power_mode_ax(ddev, power_mode);
+	
+	if (!ret && ddev) {
+		if(ddev->power_mode == MCDE_DISPLAY_PM_ON && suspended) {
+			int i;
+			DBG(printk(KERN_INFO"%s: Screen is on now.\n", AX_MODULE_NAME);)
+			suspended = 0;
+			for_each_online_cpu(i)
+				smartass_suspend(i,0);
+		} else if(ddev->power_mode != MCDE_DISPLAY_PM_ON && !suspended) {
+			int i;
+			DBG(printk(KERN_INFO"%s: Screen is off now.\n", AX_MODULE_NAME);)
+			suspended = 1;
+			for_each_online_cpu(i)
+				smartass_suspend(i,1);
+		}
+	}
+
+	return ret;
+}
+
+// our cypress device matcher
+int axperiau_device_match(struct device * dev, void* data)
+{
+	DBG(if (dev->driver && dev->driver->name) {  printk(KERN_INFO"%s: Device name '%s''.\n", __func__, dev->driver->name);})
+
+	if (dev->driver && dev->driver->name && strcmp(dev->driver->name,MCDE_DISPLAY_PANEL_NAME) == 0 )
+	{
+		return 1;
+	}
+	return 0;
+}
+
 static int __init cpufreq_smartass_init(void)
 {
 	unsigned int i;
 	struct smartass_info_s *this_smartass;
+	
+
 	debug_mask = 0;
 	up_rate_us = DEFAULT_UP_RATE_US;
 	down_rate_us = DEFAULT_DOWN_RATE_US;
@@ -939,6 +1022,7 @@ static int __init cpufreq_smartass_init(void)
 
 	spin_lock_init(&cpumask_lock);
 	mutex_init(&set_speed_lock);
+	mutex_init(&supend_resume_lock);
 
 	suspended = 0;
 
@@ -947,9 +1031,37 @@ static int __init cpufreq_smartass_init(void)
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
 	cpu_up_ax = (void*) kallsyms_lookup_name_ax("cpu_up");
 	cpu_down_ax = (void*) kallsyms_lookup_name_ax("cpu_down");
+	panel_set_power_mode_ax = (void*) kallsyms_lookup_name_ax("panel_set_power_mode");
 
-	if(!nr_running_ax || !default_idle_ax || !cpu_up_ax || !cpu_down_ax)
+	if(!nr_running_ax || !default_idle_ax || !cpu_up_ax || !cpu_down_ax || !panel_set_power_mode_ax)
 		return -1;
+
+	DBG(printk(KERN_INFO"%s: Hijacking 'display device'.\n", __func__);)
+	//we use this only for having bus type
+	mcde_display_driver_register(&panel_driver);	
+	struct bus_type * mcde_bus_type = panel_driver.driver.bus; 
+	
+	DBG(if(mcde_bus_type) {printk(KERN_INFO"%s: bus found: %s'.\n", __func__, mcde_bus_type->name); } )
+
+	mcde_display_driver_unregister(&panel_driver);
+
+	//find device
+	struct device * display_device = bus_find_device(mcde_bus_type, NULL, NULL, &axperiau_device_match);
+	if(display_device) {
+		DBG(printk(KERN_INFO"%s: Device found'.\n", __func__);)
+		
+		struct mcde_display_device * ddev = to_mcde_display_device(display_device);
+		if( ddev->set_power_mode == panel_set_power_mode_ax ) {
+			ddev->set_power_mode = panel_set_power_mode_hijacked;
+			DBG(printk(KERN_INFO"%s: Device hijacked'.\n", __func__);)
+			hijacked = 1;
+		} else {
+			DBG(printk(KERN_INFO"%s: Something strange happend'.\n", __func__);)
+		}
+	}
+
+	if(!hijacked)
+		return -ENOMEM;
 
 	/* Initalize per-cpu data: */
 	for_each_possible_cpu(i) {
