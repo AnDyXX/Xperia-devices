@@ -188,6 +188,7 @@ struct smartass_info_s {
 	int ramp_dir;
 	unsigned int enable;
 	int ideal_speed;
+	int maximum_speed;
 };
 static DEFINE_PER_CPU(struct smartass_info_s, smartass_info);
 
@@ -237,10 +238,12 @@ inline static void smartass_update_min_max(struct smartass_info_s *this_smartass
 		this_smartass->ideal_speed = // sleep_ideal_freq; but make sure it obeys the policy min/max
 			policy->max > sleep_ideal_freq ?
 			(sleep_ideal_freq > policy->min ? sleep_ideal_freq : policy->min) : policy->max;
+		this_smartass->maximum_speed = sleep_ideal_freq > policy->min ? sleep_ideal_freq : policy->max;
 	} else {
 		this_smartass->ideal_speed = // awake_ideal_freq; but make sure it obeys the policy min/max
 			policy->min < awake_ideal_freq ?
 			(awake_ideal_freq < policy->max ? awake_ideal_freq : policy->max) : policy->min;
+		this_smartass->maximum_speed = policy->max;
 	}
 }
 
@@ -263,9 +266,9 @@ inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, 
 	return freq;
 }
 
-inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass) {
+inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
 	this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
-	mod_timer(&this_smartass->timer, jiffies + (suspended ? sleep_rate_jiffies : sample_rate_jiffies));
+	mod_timer(&this_smartass->timer, jiffies + ((suspended && (policy->cur != this_smartass->maximum_speed)) ? sleep_rate_jiffies : sample_rate_jiffies));
 }
 
 inline static void work_cpumask_set(unsigned long cpu) {
@@ -285,7 +288,8 @@ inline static int work_cpumask_test_and_clear(unsigned long cpu) {
 }
 
 inline static int isTimerNeeded(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
-	return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
+	//return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
+	return true;
 }
 
 inline static int target_freq(struct cpufreq_policy *policy, struct smartass_info_s *this_smartass,
@@ -364,7 +368,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// If timer ran less than 5ms after short-term sample started, retry.
 	if (delta_time < 5000) {
 		if (!timer_pending(&this_smartass->timer))
-			reset_timer(cpu,this_smartass);
+			reset_timer(cpu,this_smartass, policy);
 		return;
 	}
 
@@ -417,8 +421,8 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// the idle loop will activate the timer.
 	// Additionally, if we queued some work, the work task will reset the timer
 	// after it has done its adjustments.
-	if (!queued_work && old_freq < policy->max)
-		reset_timer(cpu,this_smartass);
+	if (!queued_work && old_freq != this_smartass->maximum_speed)
+		reset_timer(cpu,this_smartass, policy);
 }
 
 static void execute_pm_idle_old(void)
@@ -445,7 +449,7 @@ static void cpufreq_idle(void)
 	execute_pm_idle_old();
 
 	if (!timer_pending(&this_smartass->timer))
-		reset_timer(smp_processor_id(), this_smartass);
+		reset_timer(smp_processor_id(), this_smartass, policy);
 }
 
 /* We use the same work function to sale up and down */
@@ -524,8 +528,9 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 				get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
 		// reset timer:
-		if (new_freq < policy->max)
-			reset_timer(cpu,this_smartass);
+		if (new_freq != this_smartass->maximum_speed)
+			reset_timer(cpu,this_smartass, policy);
+
 		// if we are maxed out, it is pointless to use the timer
 		// (idle cycles wake up the timer when the timer comes)
 		else if (timer_pending(&this_smartass->timer))
@@ -827,18 +832,18 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 			pm_idle = cpufreq_idle;
 		}
 
-		if (this_smartass->cur_policy->cur < new_policy->max && !timer_pending(&this_smartass->timer))
-			reset_timer(cpu,this_smartass);
+		if (this_smartass->cur_policy->cur != this_smartass->maximum_speed && !timer_pending(&this_smartass->timer))
+			reset_timer(cpu,this_smartass, new_policy);
 
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
-		smartass_update_min_max(this_smartass,new_policy,suspended);
+		smartass_update_min_max(this_smartass, new_policy, suspended);
 
-		if (this_smartass->cur_policy->cur > new_policy->max) {
-			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new max freq: %d\n",new_policy->max);
+		if (this_smartass->cur_policy->cur > this_smartass->maximum_speed) {
+			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new max freq: %d\n",this_smartass->maximum_speed);
 			__cpufreq_driver_target(this_smartass->cur_policy,
-						new_policy->max, CPUFREQ_RELATION_H);
+						this_smartass->maximum_speed, CPUFREQ_RELATION_H);
 		}
 		else if (this_smartass->cur_policy->cur < new_policy->min) {
 			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new min freq: %d\n",new_policy->min);
@@ -846,8 +851,8 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 						new_policy->min, CPUFREQ_RELATION_L);
 		}
 
-		if (this_smartass->cur_policy->cur < new_policy->max && !timer_pending(&this_smartass->timer))
-			reset_timer(cpu,this_smartass);
+		if (this_smartass->cur_policy->cur != this_smartass->maximum_speed && !timer_pending(&this_smartass->timer))
+			reset_timer(cpu,this_smartass, new_policy);
 
 		break;
 
@@ -871,7 +876,7 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 
 static void smartass_suspend(int cpu, int suspend)
 {
-	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
+	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, cpu);
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
 	unsigned int new_freq;
 
@@ -908,7 +913,7 @@ static void smartass_suspend(int cpu, int suspend)
 	
 	mutex_unlock(&supend_resume_lock);
 
-	reset_timer(smp_processor_id(),this_smartass);
+	reset_timer(smp_processor_id(),this_smartass, policy);
 }
 
 static void smartass_early_suspend(struct early_suspend *handler) {
@@ -928,8 +933,10 @@ static void smartass_late_resume(struct early_suspend *handler) {
 	if (!suspended) // already not suspended so nothing to do
 		return;
 			
-	if(hijacked)
-		return; //let other fun will do this
+	if(hijacked){
+		return; //let other func will do this
+	}
+
 	suspended = 0;
 	for_each_online_cpu(i)
 		smartass_suspend(i,0);
