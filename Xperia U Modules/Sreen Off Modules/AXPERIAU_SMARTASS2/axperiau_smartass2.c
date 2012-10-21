@@ -35,22 +35,11 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
-#include <linux/device.h>
-#include <video/mcde_dss.h>
-#include <video/mcde_display.h>
-#include <video/mcde_display-panel_dsi.h>
-
-#ifndef DBG
-#define DBG(x) x
-#endif
-
-#define to_mcde_display_driver(__drv) \
-	container_of((__drv), struct mcde_display_driver, driver)
-
 #define AX_MODULE_NAME "axperiau_smartass2"
 #define AX_MODULE_VER "v003"
 
 #define DEVICE_NAME "Xperia U"
+
 
 #define OFS_KALLSYMS_LOOKUP_NAME 0xC00DB534 // kallsyms_lookup_name
 
@@ -65,13 +54,6 @@ static nr_running_type nr_running_ax;
 
 typedef void (*default_idle_type) (void);
 static default_idle_type default_idle_ax;
-
-typedef int (*cpu_up_type)(unsigned int cpu);
-static cpu_up_type cpu_up_ax;
-
-typedef int (*cpu_down_type)(unsigned int cpu);
-static cpu_down_type cpu_down_ax;
-
 
 /******************** Tunable parameters: ********************/
 
@@ -124,7 +106,7 @@ static unsigned long min_cpu_load;
  * The minimum amount of time to spend at a frequency before we can ramp up.
  * Notice we ignore this when we are below the ideal frequency.
  */
-#define DEFAULT_UP_RATE_US 49000;
+#define DEFAULT_UP_RATE_US 48000;
 static unsigned long up_rate_us;
 
 /*
@@ -138,7 +120,7 @@ static unsigned long down_rate_us;
  * The frequency to set when waking up from sleep.
  * When sleep_ideal_freq=0 this will have no effect.
  */
-#define DEFAULT_SLEEP_WAKEUP_FREQ 200000
+#define DEFAULT_SLEEP_WAKEUP_FREQ 400000
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -162,12 +144,6 @@ static unsigned int sleep_rate_jiffies;
 #define DEFAULT_SLEEP_MAX_FREQ 200000
 static unsigned int sleep_max_freq;
 
-/*
- * Determines whether we can use cpu hotplug feature
- */
-#define DEFAULT_USE_CPU_HOTPLUG 1
-static unsigned int use_cpu_hotplug;
-
 /*************** End of tunables ***************/
 
 
@@ -188,7 +164,6 @@ struct smartass_info_s {
 	int ramp_dir;
 	unsigned int enable;
 	int ideal_speed;
-	int maximum_speed;
 };
 static DEFINE_PER_CPU(struct smartass_info_s, smartass_info);
 
@@ -199,11 +174,8 @@ static struct work_struct freq_scale_work;
 
 static cpumask_t work_cpumask;
 static spinlock_t cpumask_lock;
-static struct mutex set_speed_lock;
-static struct mutex supend_resume_lock;
 
 static unsigned int suspended;
-static unsigned int hijacked = 0;
 
 #define dprintk(flag,msg...) do { \
 	if (debug_mask & flag) printk(KERN_DEBUG msg); \
@@ -238,12 +210,10 @@ inline static void smartass_update_min_max(struct smartass_info_s *this_smartass
 		this_smartass->ideal_speed = // sleep_ideal_freq; but make sure it obeys the policy min/max
 			policy->max > sleep_ideal_freq ?
 			(sleep_ideal_freq > policy->min ? sleep_ideal_freq : policy->min) : policy->max;
-		this_smartass->maximum_speed = sleep_ideal_freq > policy->min ? sleep_ideal_freq : policy->max;
 	} else {
 		this_smartass->ideal_speed = // awake_ideal_freq; but make sure it obeys the policy min/max
 			policy->min < awake_ideal_freq ?
 			(awake_ideal_freq < policy->max ? awake_ideal_freq : policy->max) : policy->min;
-		this_smartass->maximum_speed = policy->max;
 	}
 }
 
@@ -266,9 +236,9 @@ inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, 
 	return freq;
 }
 
-inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
+inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass) {
 	this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
-	mod_timer(&this_smartass->timer, jiffies + ((suspended && (policy->cur != this_smartass->maximum_speed)) ? sleep_rate_jiffies : sample_rate_jiffies));
+	mod_timer(&this_smartass->timer, jiffies + (suspended ? sleep_rate_jiffies : sample_rate_jiffies));
 }
 
 inline static void work_cpumask_set(unsigned long cpu) {
@@ -288,8 +258,7 @@ inline static int work_cpumask_test_and_clear(unsigned long cpu) {
 }
 
 inline static int isTimerNeeded(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
-	//return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
-	return true;
+	return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
 }
 
 inline static int target_freq(struct cpufreq_policy *policy, struct smartass_info_s *this_smartass,
@@ -365,10 +334,10 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	delta_idle = cputime64_sub(now_idle, this_smartass->time_in_idle);
 	delta_time = cputime64_sub(update_time, this_smartass->idle_exit_time);
 
-	// If timer ran less than 5ms after short-term sample started, retry.
-	if (delta_time < 5000) {
+	// If timer ran less than 1ms after short-term sample started, retry.
+	if (delta_time < 1000) {
 		if (!timer_pending(&this_smartass->timer))
-			reset_timer(cpu,this_smartass, policy);
+			reset_timer(cpu,this_smartass);
 		return;
 	}
 
@@ -421,8 +390,8 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// the idle loop will activate the timer.
 	// Additionally, if we queued some work, the work task will reset the timer
 	// after it has done its adjustments.
-	if (!queued_work && old_freq != this_smartass->maximum_speed)
-		reset_timer(cpu,this_smartass, policy);
+	if (!queued_work && old_freq < policy->max)
+		reset_timer(cpu,this_smartass);
 }
 
 static void execute_pm_idle_old(void)
@@ -449,7 +418,7 @@ static void cpufreq_idle(void)
 	execute_pm_idle_old();
 
 	if (!timer_pending(&this_smartass->timer))
-		reset_timer(smp_processor_id(), this_smartass, policy);
+		reset_timer(smp_processor_id(), this_smartass);
 }
 
 /* We use the same work function to sale up and down */
@@ -528,9 +497,8 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 				get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
 		// reset timer:
-		if (new_freq != this_smartass->maximum_speed)
-			reset_timer(cpu,this_smartass, policy);
-
+		if (new_freq < policy->max)
+			reset_timer(cpu,this_smartass);
 		// if we are maxed out, it is pointless to use the timer
 		// (idle cycles wake up the timer when the timer comes)
 		else if (timer_pending(&this_smartass->timer))
@@ -739,21 +707,6 @@ static ssize_t store_min_cpu_load(struct kobject *kobj, struct attribute *attr, 
 	return res;
 }
 
-static ssize_t show_use_cpu_hotplug(struct kobject *kobj, struct attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", use_cpu_hotplug);
-}
-
-static ssize_t store_use_cpu_hotplug(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
-{
-	ssize_t res;
-	unsigned long input;
-	res = strict_strtoul(buf, 0, &input);
-	if (res >= 0 && input > 0)
-		use_cpu_hotplug = input > 0 ? 1 : 0;
-	return res;
-}
-
 #define define_global_rw_attr(_name)		\
 static struct global_attr _name##_attr =	\
 	__ATTR(_name, 0644, show_##_name, store_##_name)
@@ -771,7 +724,6 @@ define_global_rw_attr(max_cpu_load);
 define_global_rw_attr(min_cpu_load);
 define_global_rw_attr(sleep_max_freq);
 define_global_rw_attr(sleep_rate_jiffies);
-define_global_rw_attr(use_cpu_hotplug);
 
 static struct attribute * smartass_attributes[] = {
 	&debug_mask_attr.attr,
@@ -787,7 +739,6 @@ static struct attribute * smartass_attributes[] = {
 	&min_cpu_load_attr.attr,
         &sleep_max_freq_attr.attr,
 	&sleep_rate_jiffies_attr.attr,
-	&use_cpu_hotplug_attr.attr,
 	NULL,
 };
 
@@ -832,18 +783,18 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 			pm_idle = cpufreq_idle;
 		}
 
-		if (this_smartass->cur_policy->cur != this_smartass->maximum_speed && !timer_pending(&this_smartass->timer))
-			reset_timer(cpu,this_smartass, new_policy);
+		if (this_smartass->cur_policy->cur < new_policy->max && !timer_pending(&this_smartass->timer))
+			reset_timer(cpu,this_smartass);
 
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
-		smartass_update_min_max(this_smartass, new_policy, suspended);
+		smartass_update_min_max(this_smartass,new_policy,suspended);
 
-		if (this_smartass->cur_policy->cur > this_smartass->maximum_speed) {
-			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new max freq: %d\n",this_smartass->maximum_speed);
+		if (this_smartass->cur_policy->cur > new_policy->max) {
+			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new max freq: %d\n",new_policy->max);
 			__cpufreq_driver_target(this_smartass->cur_policy,
-						this_smartass->maximum_speed, CPUFREQ_RELATION_H);
+						new_policy->max, CPUFREQ_RELATION_H);
 		}
 		else if (this_smartass->cur_policy->cur < new_policy->min) {
 			dprintk(SMARTASS_DEBUG_JUMPS,"SmartassI: jumping to new min freq: %d\n",new_policy->min);
@@ -851,8 +802,8 @@ static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
 						new_policy->min, CPUFREQ_RELATION_L);
 		}
 
-		if (this_smartass->cur_policy->cur != this_smartass->maximum_speed && !timer_pending(&this_smartass->timer))
-			reset_timer(cpu,this_smartass, new_policy);
+		if (this_smartass->cur_policy->cur < new_policy->max && !timer_pending(&this_smartass->timer))
+			reset_timer(cpu,this_smartass);
 
 		break;
 
@@ -883,22 +834,15 @@ static void smartass_suspend(int cpu, int suspend)
 	if (!this_smartass->enable)
 		return;
 
-	mutex_lock(&supend_resume_lock);
-
 	smartass_update_min_max(this_smartass,policy,suspend);
 	if (!suspend) { // resume at max speed:
-		mutex_lock(&set_speed_lock);
-		//if (num_online_cpus() < 2) cpu_up_ax(1);
 		new_freq = validate_freq(this_smartass,policy,sleep_wakeup_freq);
-		
-	
+
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
 
 		__cpufreq_driver_target(policy, new_freq,
 					CPUFREQ_RELATION_L);
-		mutex_unlock(&set_speed_lock);
 	} else {
-		mutex_lock(&set_speed_lock);
 		// to avoid wakeup issues with quick sleep/wakeup don't change actual frequency when entering sleep
 		// to allow some time to settle down. Instead we just reset our statistics (and reset the timer).
 		// Eventually, the timer will adjust the frequency if necessary.
@@ -906,23 +850,16 @@ static void smartass_suspend(int cpu, int suspend)
 		this_smartass->freq_change_time_in_idle =
 			get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
 
-		//if (use_cpu_hotplug && num_online_cpus() > 1) cpu_down_ax(1);
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
-		mutex_unlock(&set_speed_lock);
 	}
-	
-	mutex_unlock(&supend_resume_lock);
 
-	reset_timer(smp_processor_id(),this_smartass, policy);
+	reset_timer(smp_processor_id(),this_smartass);
 }
 
 static void smartass_early_suspend(struct early_suspend *handler) {
 	int i;
 	if (suspended || sleep_ideal_freq==0) // disable behavior for sleep_ideal_freq==0
 		return;
-
-	DBG(printk(KERN_INFO"%s: Susupend started now.\n", AX_MODULE_NAME);)
-
 	suspended = 1;
 	for_each_online_cpu(i)
 		smartass_suspend(i,1);
@@ -932,11 +869,6 @@ static void smartass_late_resume(struct early_suspend *handler) {
 	int i;
 	if (!suspended) // already not suspended so nothing to do
 		return;
-			
-	if(hijacked){
-		return; //let other func will do this
-	}
-
 	suspended = 0;
 	for_each_online_cpu(i)
 		smartass_suspend(i,0);
@@ -945,73 +877,15 @@ static void smartass_late_resume(struct early_suspend *handler) {
 static struct early_suspend smartass_power_suspend = {
 	.suspend = smartass_early_suspend,
 	.resume = smartass_late_resume,
-//#ifdef CONFIG_MACH_HERO
+#ifdef CONFIG_MACH_HERO
 	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
-//#endif
+#endif
 };
-
-
-/*        DUMMY MCDE DEVICE */
-
-static int __devinit dummy_panel_probe(struct mcde_display_device *ddev) {
- 	return -EINVAL;
-}
-
-static struct mcde_display_driver panel_driver = {
-	.probe	= dummy_panel_probe,
-	.driver = {
-		.name	= "AAALLDJSKJDJKJDKDKHJKHJKHJHJKHKJHJKKJH",
-	},
-};
-
-/*         HIJACKING DISPLAY PM   */ 
-
-typedef int (*panel_set_power_mode_type)(struct mcde_display_device *ddev, enum mcde_display_power_mode power_mode);
-static panel_set_power_mode_type panel_set_power_mode_ax;
-
-/* this method is called instead of original one */
-static int panel_set_power_mode_hijacked(struct mcde_display_device *ddev,
-					enum mcde_display_power_mode power_mode)
-{ 
-	int ret = panel_set_power_mode_ax(ddev, power_mode);
-	
-	if (!ret && ddev) {
-		if(ddev->power_mode == MCDE_DISPLAY_PM_ON && suspended) {
-			int i;
-			DBG(printk(KERN_INFO"%s: Screen is on now.\n", AX_MODULE_NAME);)
-			suspended = 0;
-			for_each_online_cpu(i)
-				smartass_suspend(i,0);
-		} else if(ddev->power_mode != MCDE_DISPLAY_PM_ON && !suspended) {
-			int i;
-			DBG(printk(KERN_INFO"%s: Screen is off now.\n", AX_MODULE_NAME);)
-			suspended = 1;
-			for_each_online_cpu(i)
-				smartass_suspend(i,1);
-		}
-	}
-
-	return ret;
-}
-
-// our cypress device matcher
-int axperiau_device_match(struct device * dev, void* data)
-{
-	DBG(if (dev->driver && dev->driver->name) {  printk(KERN_INFO"%s: Device name '%s''.\n", __func__, dev->driver->name);})
-
-	if (dev->driver && dev->driver->name && strcmp(dev->driver->name,MCDE_DISPLAY_PANEL_NAME) == 0 )
-	{
-		return 1;
-	}
-	return 0;
-}
 
 static int __init cpufreq_smartass_init(void)
 {
 	unsigned int i;
 	struct smartass_info_s *this_smartass;
-	
-
 	debug_mask = 0;
 	up_rate_us = DEFAULT_UP_RATE_US;
 	down_rate_us = DEFAULT_DOWN_RATE_US;
@@ -1025,50 +899,17 @@ static int __init cpufreq_smartass_init(void)
 	min_cpu_load = DEFAULT_MIN_CPU_LOAD;
 	sleep_rate_jiffies = DEFAULT_SLEEP_RATE_JIFFIES;
 	sleep_max_freq = DEFAULT_SLEEP_MAX_FREQ;
-	use_cpu_hotplug = DEFAULT_USE_CPU_HOTPLUG;
 
 	spin_lock_init(&cpumask_lock);
-	mutex_init(&set_speed_lock);
-	mutex_init(&supend_resume_lock);
 
 	suspended = 0;
 
 	kallsyms_lookup_name_ax = (void*) lookup_address;
 	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
-	cpu_up_ax = (void*) kallsyms_lookup_name_ax("cpu_up");
-	cpu_down_ax = (void*) kallsyms_lookup_name_ax("cpu_down");
-	panel_set_power_mode_ax = (void*) kallsyms_lookup_name_ax("panel_set_power_mode");
 
-	if(!nr_running_ax || !default_idle_ax || !cpu_up_ax || !cpu_down_ax || !panel_set_power_mode_ax)
+	if(!nr_running_ax || !default_idle_ax)
 		return -1;
-
-	DBG(printk(KERN_INFO"%s: Hijacking 'display device'.\n", __func__);)
-	//we use this only for having bus type
-	mcde_display_driver_register(&panel_driver);	
-	struct bus_type * mcde_bus_type = panel_driver.driver.bus; 
-	
-	DBG(if(mcde_bus_type) {printk(KERN_INFO"%s: bus found: %s'.\n", __func__, mcde_bus_type->name); } )
-
-	mcde_display_driver_unregister(&panel_driver);
-
-	//find device
-	struct device * display_device = bus_find_device(mcde_bus_type, NULL, NULL, &axperiau_device_match);
-	if(display_device) {
-		DBG(printk(KERN_INFO"%s: Device found'.\n", __func__);)
-		
-		struct mcde_display_device * ddev = to_mcde_display_device(display_device);
-		if( ddev->set_power_mode == panel_set_power_mode_ax ) {
-			ddev->set_power_mode = panel_set_power_mode_hijacked;
-			DBG(printk(KERN_INFO"%s: Device hijacked'.\n", __func__);)
-			hijacked = 1;
-		} else {
-			DBG(printk(KERN_INFO"%s: Something strange happend'.\n", __func__);)
-		}
-	}
-
-	if(!hijacked)
-		return -ENOMEM;
 
 	/* Initalize per-cpu data: */
 	for_each_possible_cpu(i) {
