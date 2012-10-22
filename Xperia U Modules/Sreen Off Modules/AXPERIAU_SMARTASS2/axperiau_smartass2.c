@@ -853,7 +853,7 @@ static void smartass_suspend(int cpu, int suspend)
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
 	}
 
-	reset_timer(smp_processor_id(),this_smartass);
+	reset_timer(cpu,this_smartass);
 }
 
 static void smartass_early_suspend(struct early_suspend *handler) {
