@@ -36,7 +36,7 @@
 #include <linux/earlysuspend.h>
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v003"
+#define AX_MODULE_VER "v003 (2012.10.22 14:03)"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -120,7 +120,7 @@ static unsigned long down_rate_us;
  * The frequency to set when waking up from sleep.
  * When sleep_ideal_freq=0 this will have no effect.
  */
-#define DEFAULT_SLEEP_WAKEUP_FREQ 400000
+#define DEFAULT_SLEEP_WAKEUP_FREQ 200000
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -258,7 +258,8 @@ inline static int work_cpumask_test_and_clear(unsigned long cpu) {
 }
 
 inline static int isTimerNeeded(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
-	return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
+	//return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
+	return true;
 }
 
 inline static int target_freq(struct cpufreq_policy *policy, struct smartass_info_s *this_smartass,
