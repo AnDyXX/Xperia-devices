@@ -77,7 +77,7 @@ static unsigned int min_sampling_rate;
 /*
  * Sampling rate when screen is off. Current value forces governor to behave like conservative governor.
  */
-#define DEFAULT_SLEEP_RATE_JIFFIES (usecs_to_jiffies(500 * 1000))
+#define DEFAULT_SLEEP_RATE_US (500 * 1000)
 
 /*
  * When sleep_max_freq>0 the frequency when suspended will be capped
@@ -166,14 +166,14 @@ static void ondemand_suspend(int suspend)
                 __cpufreq_driver_target(dbs_info->cur_policy, dbs_info->cur_policy->max,
 CPUFREQ_RELATION_L);
 		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.awake_sampling_rate;			 
-                pr_info("[imoseyon] ondemand awake at %d\n", dbs_info->cur_policy->cur);
+                pr_info("[andyx] ondemand awake at %d\n", dbs_info->cur_policy->cur);
         } else {
                 suspended = 1;
 // let's give it a little breathing room
                 __cpufreq_driver_target(dbs_info->cur_policy, sleep_max_freq, CPUFREQ_RELATION_H);
 
 		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.sleep_sampling_rate;
-                pr_info("[imoseyon] ondemand suspended at %d\n", dbs_info->cur_policy->cur);
+                pr_info("[andyx] ondemand suspended at %d\n", dbs_info->cur_policy->cur);
         }
 }
 
@@ -860,7 +860,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				    latency * LATENCY_MULTIPLIER);
 			//store sampling rates
 			dbs_tuners_ins.awake_sampling_rate = dbs_tuners_ins.sampling_rate;
-			dbs_tuners_ins.sleep_sampling_rate = DEFAULT_SLEEP_RATE_JIFFIES;
+			dbs_tuners_ins.sleep_sampling_rate = DEFAULT_SLEEP_RATE_US;
 
 			dbs_tuners_ins.io_is_busy = should_io_be_busy();
 		}
