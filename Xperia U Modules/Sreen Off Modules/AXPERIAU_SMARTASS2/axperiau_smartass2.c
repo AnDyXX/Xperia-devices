@@ -36,7 +36,7 @@
 #include <linux/earlysuspend.h>
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v003 (2012.10.22 14:03)"
+#define AX_MODULE_VER "v004 (2012.10.30 18:23)"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -176,6 +176,7 @@ static cpumask_t work_cpumask;
 static spinlock_t cpumask_lock;
 
 static unsigned int suspended;
+static unsigned int use_ideal_freq = 0;
 
 #define dprintk(flag,msg...) do { \
 	if (debug_mask & flag) printk(KERN_DEBUG msg); \
@@ -359,7 +360,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	if (cpu_load > max_cpu_load || delta_idle == 0)
 	{
 		if (old_freq < policy->max &&
-			 (old_freq < this_smartass->ideal_speed || delta_idle == 0 ||
+			 ((use_ideal_freq && old_freq < this_smartass->ideal_speed) || delta_idle == 0 ||
 			  cputime64_sub(update_time, this_smartass->freq_change_time) >= up_rate_us))
 		{
 			dprintk(SMARTASS_DEBUG_ALG,"smartassT @ %d ramp up: load %d (delta_idle %llu)\n",
@@ -374,7 +375,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// Similarly for scale down: load should be below min and if we are at or below ideal
 	// frequency we require that we have been at this frequency for at least down_rate_us:
 	else if (cpu_load < min_cpu_load && old_freq > policy->min &&
-		 (old_freq > this_smartass->ideal_speed ||
+		 ((use_ideal_freq && old_freq > this_smartass->ideal_speed) ||
 		  cputime64_sub(update_time, this_smartass->freq_change_time) >= down_rate_us))
 	{
 		dprintk(SMARTASS_DEBUG_ALG,"smartassT @ %d ramp down: load %d (delta_idle %llu)\n",
@@ -451,7 +452,7 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 		}
 		else if (ramp_dir > 0 && nr_running_ax() > 1) {
 			// ramp up logic:
-			if (old_freq < this_smartass->ideal_speed)
+			if (use_ideal_freq && old_freq < this_smartass->ideal_speed)
 				new_freq = this_smartass->ideal_speed;
 			else if (ramp_up_step) {
 				new_freq = old_freq + ramp_up_step;
@@ -466,7 +467,7 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 		}
 		else if (ramp_dir < 0) {
 			// ramp down logic:
-			if (old_freq > this_smartass->ideal_speed) {
+			if (use_ideal_freq && old_freq > this_smartass->ideal_speed) {
 				new_freq = this_smartass->ideal_speed;
 				relation = CPUFREQ_RELATION_H;
 			}
@@ -708,6 +709,21 @@ static ssize_t store_min_cpu_load(struct kobject *kobj, struct attribute *attr, 
 	return res;
 }
 
+static ssize_t show_use_ideal_freq(struct kobject *kobj, struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", use_ideal_freq);
+}
+
+static ssize_t store_use_ideal_freq(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
+{
+	ssize_t res;
+	unsigned long input;
+	res = strict_strtoul(buf, 0, &input);
+	if (res >= 0 && input >= 0)
+		use_ideal_freq = (input !=0 );
+	return res;
+}
+
 #define define_global_rw_attr(_name)		\
 static struct global_attr _name##_attr =	\
 	__ATTR(_name, 0644, show_##_name, store_##_name)
@@ -725,6 +741,7 @@ define_global_rw_attr(max_cpu_load);
 define_global_rw_attr(min_cpu_load);
 define_global_rw_attr(sleep_max_freq);
 define_global_rw_attr(sleep_rate_jiffies);
+define_global_rw_attr(use_ideal_freq);
 
 static struct attribute * smartass_attributes[] = {
 	&debug_mask_attr.attr,
@@ -740,6 +757,7 @@ static struct attribute * smartass_attributes[] = {
 	&min_cpu_load_attr.attr,
         &sleep_max_freq_attr.attr,
 	&sleep_rate_jiffies_attr.attr,
+	&use_ideal_freq_attr.attr,
 	NULL,
 };
 
