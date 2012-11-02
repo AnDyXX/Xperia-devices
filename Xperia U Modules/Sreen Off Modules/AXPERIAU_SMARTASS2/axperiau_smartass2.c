@@ -45,7 +45,7 @@
 #endif
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v004 (2012.11.02 12:03)"
+#define AX_MODULE_VER "v004 ("__DATE__" "__TIME__")"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -966,7 +966,7 @@ static int __init cpufreq_smartass_init(void)
 
 	if(!nr_running_ax || !default_idle_ax || !panel_set_power_mode_ax)
 		return -1;
-
+/*
 	DBG(printk(KERN_INFO"%s: Hijacking 'display device'.\n", __func__);)
 	//we use this only for having bus type
 	
@@ -984,7 +984,7 @@ static int __init cpufreq_smartass_init(void)
 
 		struct mcde_display_device * ddev = to_mcde_display_device(display_device);
 		if( ddev->set_power_mode == panel_set_power_mode_ax ) {
-			//ddev->set_power_mode = panel_set_power_mode_hijacked;
+			ddev->set_power_mode = panel_set_power_mode_hijacked;
 			DBG(printk(KERN_INFO"%s: Device hijacked'.\n", __func__);)
 			hijacked = 1;
 		} else {
@@ -994,7 +994,7 @@ static int __init cpufreq_smartass_init(void)
 
 	if(!hijacked)
 		return -ENOMEM;
-
+*/
 	/* Initalize per-cpu data: */
 	for_each_possible_cpu(i) {
 		this_smartass = &per_cpu(smartass_info, i);
