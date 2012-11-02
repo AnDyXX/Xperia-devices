@@ -35,8 +35,17 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
+#include <linux/device.h>
+#include <video/mcde_dss.h>
+#include <video/mcde_display.h>
+#include <video/mcde_display-panel_dsi.h>
+
+#ifndef DBG
+#define DBG(x) 
+#endif
+
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v004 (2012.10.30 18:23)"
+#define AX_MODULE_VER "v004 (2012.11.02 12:03)"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -176,7 +185,6 @@ static cpumask_t work_cpumask;
 static spinlock_t cpumask_lock;
 
 static unsigned int suspended;
-static unsigned int use_ideal_freq = 0;
 
 #define dprintk(flag,msg...) do { \
 	if (debug_mask & flag) printk(KERN_DEBUG msg); \
@@ -238,8 +246,10 @@ inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, 
 }
 
 inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass) {
+	struct cpufreq_policy *policy = this_smartass->cur_policy;
+
 	this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
-	mod_timer(&this_smartass->timer, jiffies + (suspended ? sleep_rate_jiffies : sample_rate_jiffies));
+	mod_timer(&this_smartass->timer, jiffies + ( (suspended && policy->cur <= sleep_max_freq ) ? sleep_rate_jiffies : sample_rate_jiffies));
 }
 
 inline static void work_cpumask_set(unsigned long cpu) {
@@ -256,11 +266,6 @@ inline static int work_cpumask_test_and_clear(unsigned long cpu) {
 	res = cpumask_test_and_clear_cpu(cpu, &work_cpumask);
 	spin_unlock_irqrestore(&cpumask_lock, flags);
 	return res;
-}
-
-inline static int isTimerNeeded(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy) {
-	//return !suspended || (policy->min != sleep_max_freq) || (policy->min != policy->cur);
-	return true;
 }
 
 inline static int target_freq(struct cpufreq_policy *policy, struct smartass_info_s *this_smartass,
@@ -330,9 +335,6 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	if (this_smartass->idle_exit_time == 0 || update_time == this_smartass->idle_exit_time)
 		return;
 
-	if(!isTimerNeeded(this_smartass, policy))
-		return;
-
 	delta_idle = cputime64_sub(now_idle, this_smartass->time_in_idle);
 	delta_time = cputime64_sub(update_time, this_smartass->idle_exit_time);
 
@@ -360,7 +362,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	if (cpu_load > max_cpu_load || delta_idle == 0)
 	{
 		if (old_freq < policy->max &&
-			 ((use_ideal_freq && old_freq < this_smartass->ideal_speed) || delta_idle == 0 ||
+			 (old_freq < this_smartass->ideal_speed || delta_idle == 0 ||
 			  cputime64_sub(update_time, this_smartass->freq_change_time) >= up_rate_us))
 		{
 			dprintk(SMARTASS_DEBUG_ALG,"smartassT @ %d ramp up: load %d (delta_idle %llu)\n",
@@ -375,7 +377,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// Similarly for scale down: load should be below min and if we are at or below ideal
 	// frequency we require that we have been at this frequency for at least down_rate_us:
 	else if (cpu_load < min_cpu_load && old_freq > policy->min &&
-		 ((use_ideal_freq && old_freq > this_smartass->ideal_speed) ||
+		 (old_freq > this_smartass->ideal_speed ||
 		  cputime64_sub(update_time, this_smartass->freq_change_time) >= down_rate_us))
 	{
 		dprintk(SMARTASS_DEBUG_ALG,"smartassT @ %d ramp down: load %d (delta_idle %llu)\n",
@@ -409,7 +411,7 @@ static void cpufreq_idle(void)
 	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
 
-	if (!this_smartass->enable || !isTimerNeeded(this_smartass, policy)) {
+	if (!this_smartass->enable) {
 		execute_pm_idle_old();
 		return;
 	}
@@ -452,7 +454,7 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 		}
 		else if (ramp_dir > 0 && nr_running_ax() > 1) {
 			// ramp up logic:
-			if (use_ideal_freq && old_freq < this_smartass->ideal_speed)
+			if (old_freq < this_smartass->ideal_speed)
 				new_freq = this_smartass->ideal_speed;
 			else if (ramp_up_step) {
 				new_freq = old_freq + ramp_up_step;
@@ -467,7 +469,7 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 		}
 		else if (ramp_dir < 0) {
 			// ramp down logic:
-			if (use_ideal_freq && old_freq > this_smartass->ideal_speed) {
+			if (old_freq > this_smartass->ideal_speed) {
 				new_freq = this_smartass->ideal_speed;
 				relation = CPUFREQ_RELATION_H;
 			}
@@ -709,21 +711,6 @@ static ssize_t store_min_cpu_load(struct kobject *kobj, struct attribute *attr, 
 	return res;
 }
 
-static ssize_t show_use_ideal_freq(struct kobject *kobj, struct attribute *attr, char *buf)
-{
-	return sprintf(buf, "%u\n", use_ideal_freq);
-}
-
-static ssize_t store_use_ideal_freq(struct kobject *kobj, struct attribute *attr, const char *buf, size_t count)
-{
-	ssize_t res;
-	unsigned long input;
-	res = strict_strtoul(buf, 0, &input);
-	if (res >= 0 && input >= 0)
-		use_ideal_freq = (input !=0 );
-	return res;
-}
-
 #define define_global_rw_attr(_name)		\
 static struct global_attr _name##_attr =	\
 	__ATTR(_name, 0644, show_##_name, store_##_name)
@@ -741,7 +728,6 @@ define_global_rw_attr(max_cpu_load);
 define_global_rw_attr(min_cpu_load);
 define_global_rw_attr(sleep_max_freq);
 define_global_rw_attr(sleep_rate_jiffies);
-define_global_rw_attr(use_ideal_freq);
 
 static struct attribute * smartass_attributes[] = {
 	&debug_mask_attr.attr,
@@ -757,7 +743,6 @@ static struct attribute * smartass_attributes[] = {
 	&min_cpu_load_attr.attr,
         &sleep_max_freq_attr.attr,
 	&sleep_rate_jiffies_attr.attr,
-	&use_ideal_freq_attr.attr,
 	NULL,
 };
 
@@ -901,9 +886,60 @@ static struct early_suspend smartass_power_suspend = {
 #endif
 };
 
+/* DUMMY MCDE DEVICE */
+
+static int __devinit dummy_panel_probe(struct mcde_display_device *ddev) {
+	return -EINVAL;
+}
+
+static struct mcde_display_driver panel_driver = {
+	.probe = dummy_panel_probe,
+	.driver = {
+	.name = "AAALLDJSKJDJKJDKDKHJKHJKHJHJKHKJHJKKJH",
+	},
+};
+
+/* HIJACKING DISPLAY PM */
+typedef int (*panel_set_power_mode_type)(struct mcde_display_device *ddev, enum mcde_display_power_mode power_mode);
+static panel_set_power_mode_type panel_set_power_mode_ax;
+
+/* this method is called instead of original one */
+static int panel_set_power_mode_hijacked(struct mcde_display_device *ddev,
+	enum mcde_display_power_mode power_mode)
+{
+	int ret = panel_set_power_mode_ax(ddev, power_mode);
+
+	if (!ret && ddev && suspended) {
+		//check cpu freq
+		struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
+		if(this_smartass->enable) {
+			struct cpufreq_policy *policy = this_smartass->cur_policy;
+			if(policy->cur > sleep_max_freq) {
+				if (!timer_pending(&this_smartass->timer))
+					reset_timer(smp_processor_id(), this_smartass);			
+			}
+		}
+	}
+
+	return ret;
+}
+
+// our display device matcher
+int axperiau_device_match(struct device * dev, void* data)
+{
+	DBG(if (dev->driver && dev->driver->name) { printk(KERN_INFO"%s: Device name '%s''.\n", __func__, dev->driver->name);})
+
+	if (dev->driver && dev->driver->name && strcmp(dev->driver->name, MCDE_DISPLAY_PANEL_NAME) == 0 )
+	{
+		return 1;
+	}
+	return 0;
+}
+
 static int __init cpufreq_smartass_init(void)
 {
 	unsigned int i;
+	int hijacked = 0;
 	struct smartass_info_s *this_smartass;
 	debug_mask = 0;
 	up_rate_us = DEFAULT_UP_RATE_US;
@@ -926,9 +962,38 @@ static int __init cpufreq_smartass_init(void)
 	kallsyms_lookup_name_ax = (void*) lookup_address;
 	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
+	panel_set_power_mode_ax = (void*) kallsyms_lookup_name_ax("panel_set_power_mode");
 
-	if(!nr_running_ax || !default_idle_ax)
+	if(!nr_running_ax || !default_idle_ax || !panel_set_power_mode_ax)
 		return -1;
+
+	DBG(printk(KERN_INFO"%s: Hijacking 'display device'.\n", __func__);)
+	//we use this only for having bus type
+	
+	mcde_display_driver_register(&panel_driver);
+	struct bus_type * mcde_bus_type = panel_driver.driver.bus;
+
+	DBG(if(mcde_bus_type) {printk(KERN_INFO"%s: bus found: %s'.\n", __func__, mcde_bus_type->name); } )
+
+	mcde_display_driver_unregister(&panel_driver);
+
+	//find device
+	struct device * display_device = bus_find_device(mcde_bus_type, NULL, NULL, &axperiau_device_match);
+	if(display_device) {
+		DBG(printk(KERN_INFO"%s: Device found'.\n", __func__);)
+
+		struct mcde_display_device * ddev = to_mcde_display_device(display_device);
+		if( ddev->set_power_mode == panel_set_power_mode_ax ) {
+			//ddev->set_power_mode = panel_set_power_mode_hijacked;
+			DBG(printk(KERN_INFO"%s: Device hijacked'.\n", __func__);)
+			hijacked = 1;
+		} else {
+			DBG(printk(KERN_INFO"%s: Something strange happened'.\n", __func__);)
+		}
+	}
+
+	if(!hijacked)
+		return -ENOMEM;
 
 	/* Initalize per-cpu data: */
 	for_each_possible_cpu(i) {
@@ -976,7 +1041,7 @@ static void __exit cpufreq_smartass_exit(void)
 	destroy_workqueue(down_wq);
 }
 
-module_exit(cpufreq_smartass_exit);
+//module_exit(cpufreq_smartass_exit);
 
 MODULE_AUTHOR ("Erasmux");
 MODULE_DESCRIPTION ("'cpufreq_smartass2' - A smart cpufreq governor");
@@ -985,4 +1050,5 @@ MODULE_AUTHOR ("AnDyX - some improvement");
 MODULE_DESCRIPTION ("A smartassV2 cpufreq governor. Now optimized for the " DEVICE_NAME);
 
 MODULE_LICENSE ("GPL");
+
 
