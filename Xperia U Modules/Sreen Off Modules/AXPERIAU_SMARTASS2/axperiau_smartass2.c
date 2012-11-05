@@ -154,6 +154,7 @@ static unsigned int sleep_max_freq;
 static void (*pm_idle_old)(void);
 
 static atomic_t active_count = ATOMIC_INIT(0);
+static atomic_t timer_count = ATOMIC_INIT(0);
 
 struct smartass_info_s {
 	struct cpufreq_policy *cur_policy;
@@ -312,7 +313,7 @@ inline static int target_freq(struct cpufreq_policy *policy, struct smartass_inf
 	return target;
 }
 
-static void cpufreq_smartass_timer(unsigned long cpu)
+static void cpufreq_smartass_timer_per_cpu(unsigned long cpu)
 {
 	u64 delta_idle;
 	u64 delta_time;
@@ -320,7 +321,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	int old_freq;
 	u64 update_time;
 	u64 now_idle;
-	int queued_work = 0;
+
 	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, cpu);
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
 
@@ -364,8 +365,6 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 				old_freq,cpu_load,delta_idle);
 			this_smartass->ramp_dir = 1;
 			work_cpumask_set(cpu);
-			queue_work(up_wq, &freq_scale_work);
-			queued_work = 1;
 		}
 		else this_smartass->ramp_dir = 0;
 	}
@@ -379,18 +378,60 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 			old_freq,cpu_load,delta_idle);
 		this_smartass->ramp_dir = -1;
 		work_cpumask_set(cpu);
-		queue_work(down_wq, &freq_scale_work);
-		queued_work = 1;
 	}
 	else this_smartass->ramp_dir = 0;
+
+
+}
+
+static void cpufreq_smartass_timer(unsigned long cpu__) {
+	int queued_work = 0, cpu;
+
+	// check both cpus 
+
+	if (atomic_inc_return(&timer_count) < 2) {
+		for_each_possible_cpu(cpu) {
+			struct smartass_info_s * this_smartass = &per_cpu(smartass_info, cpu);
+			if(this_smartass->enable) {
+				cpufreq_smartass_timer_per_cpu(cpu);
+			}
+		}
+
+		//if we ramp up clear ramp down target
+
+		struct smartass_info_s * this_smartass0 = &per_cpu(smartass_info, 0);
+		struct smartass_info_s * this_smartass1 = &per_cpu(smartass_info, 1);
+
+		int ramp_up = (this_smartass0->enable && this_smartass0->ramp_dir == 1) || (this_smartass1->enable && this_smartass1->ramp_dir == 1);
+
+		if(ramp_up) {
+			if(this_smartass0->enable && this_smartass0->ramp_dir == -1) {
+				this_smartass0->ramp_dir = 0;
+			}	
+			if(this_smartass1->enable && this_smartass1->ramp_dir == -1) {
+				this_smartass1->ramp_dir = 0;
+			}
+
+			queue_work(up_wq, &freq_scale_work);
+			queued_work = 1;
+		} else if ((this_smartass0->enable && this_smartass0->ramp_dir == -1) || (this_smartass1->enable && this_smartass1->ramp_dir == -1)) {
+			queue_work(down_wq, &freq_scale_work);
+			queued_work = 1;
+		}
+	}
+
+	atomic_dec(&timer_count);
+
+	struct smartass_info_s *this_smartass = &per_cpu(smartass_info, cpu__);
+	struct cpufreq_policy *policy = this_smartass->cur_policy;
 
 	// To avoid unnecessary load when the CPU is already at high load, we don't
 	// reset ourselves if we are at max speed. If and when there are idle cycles,
 	// the idle loop will activate the timer.
 	// Additionally, if we queued some work, the work task will reset the timer
 	// after it has done its adjustments.
-	if (!queued_work && old_freq < policy->max)
-		reset_timer(cpu,this_smartass);
+	if (!queued_work && policy->cur < policy->max)
+		reset_timer(cpu__,this_smartass);
 }
 
 static void execute_pm_idle_old(void)
