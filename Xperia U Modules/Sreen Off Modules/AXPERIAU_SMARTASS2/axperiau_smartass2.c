@@ -35,17 +35,12 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
-#include <linux/device.h>
-#include <video/mcde_dss.h>
-#include <video/mcde_display.h>
-#include <video/mcde_display-panel_dsi.h>
-
 #ifndef DBG
 #define DBG(x) 
 #endif
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v004 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v005 ("__DATE__" "__TIME__")"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -886,60 +881,9 @@ static struct early_suspend smartass_power_suspend = {
 #endif
 };
 
-/* DUMMY MCDE DEVICE */
-
-static int __devinit dummy_panel_probe(struct mcde_display_device *ddev) {
-	return -EINVAL;
-}
-
-static struct mcde_display_driver panel_driver = {
-	.probe = dummy_panel_probe,
-	.driver = {
-	.name = "AAALLDJSKJDJKJDKDKHJKHJKHJHJKHKJHJKKJH",
-	},
-};
-
-/* HIJACKING DISPLAY PM */
-typedef int (*panel_set_power_mode_type)(struct mcde_display_device *ddev, enum mcde_display_power_mode power_mode);
-static panel_set_power_mode_type panel_set_power_mode_ax;
-
-/* this method is called instead of original one */
-static int panel_set_power_mode_hijacked(struct mcde_display_device *ddev,
-	enum mcde_display_power_mode power_mode)
-{
-	int ret = panel_set_power_mode_ax(ddev, power_mode);
-
-	if (!ret && ddev && suspended) {
-		//check cpu freq
-		struct smartass_info_s *this_smartass = &per_cpu(smartass_info, smp_processor_id());
-		if(this_smartass->enable) {
-			struct cpufreq_policy *policy = this_smartass->cur_policy;
-			if(policy->cur > sleep_max_freq) {
-				if (!timer_pending(&this_smartass->timer))
-					reset_timer(smp_processor_id(), this_smartass);			
-			}
-		}
-	}
-
-	return ret;
-}
-
-// our display device matcher
-int axperiau_device_match(struct device * dev, void* data)
-{
-	DBG(if (dev->driver && dev->driver->name) { printk(KERN_INFO"%s: Device name '%s''.\n", __func__, dev->driver->name);})
-
-	if (dev->driver && dev->driver->name && strcmp(dev->driver->name, MCDE_DISPLAY_PANEL_NAME) == 0 )
-	{
-		return 1;
-	}
-	return 0;
-}
-
 static int __init cpufreq_smartass_init(void)
 {
-	unsigned int i;
-	int hijacked = 0;
+	unsigned int i;	
 	struct smartass_info_s *this_smartass;
 	debug_mask = 0;
 	up_rate_us = DEFAULT_UP_RATE_US;
@@ -962,39 +906,10 @@ static int __init cpufreq_smartass_init(void)
 	kallsyms_lookup_name_ax = (void*) lookup_address;
 	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
-	panel_set_power_mode_ax = (void*) kallsyms_lookup_name_ax("panel_set_power_mode");
 
-	if(!nr_running_ax || !default_idle_ax || !panel_set_power_mode_ax)
+	if(!nr_running_ax || !default_idle_ax )
 		return -1;
-/*
-	DBG(printk(KERN_INFO"%s: Hijacking 'display device'.\n", __func__);)
-	//we use this only for having bus type
-	
-	mcde_display_driver_register(&panel_driver);
-	struct bus_type * mcde_bus_type = panel_driver.driver.bus;
 
-	DBG(if(mcde_bus_type) {printk(KERN_INFO"%s: bus found: %s'.\n", __func__, mcde_bus_type->name); } )
-
-	mcde_display_driver_unregister(&panel_driver);
-
-	//find device
-	struct device * display_device = bus_find_device(mcde_bus_type, NULL, NULL, &axperiau_device_match);
-	if(display_device) {
-		DBG(printk(KERN_INFO"%s: Device found'.\n", __func__);)
-
-		struct mcde_display_device * ddev = to_mcde_display_device(display_device);
-		if( ddev->set_power_mode == panel_set_power_mode_ax ) {
-			ddev->set_power_mode = panel_set_power_mode_hijacked;
-			DBG(printk(KERN_INFO"%s: Device hijacked'.\n", __func__);)
-			hijacked = 1;
-		} else {
-			DBG(printk(KERN_INFO"%s: Something strange happened'.\n", __func__);)
-		}
-	}
-
-	if(!hijacked)
-		return -ENOMEM;
-*/
 	/* Initalize per-cpu data: */
 	for_each_possible_cpu(i) {
 		this_smartass = &per_cpu(smartass_info, i);
