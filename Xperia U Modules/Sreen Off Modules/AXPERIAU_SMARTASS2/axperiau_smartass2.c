@@ -460,9 +460,14 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 
 		// do actual ramp up (returns 0, if frequency change failed):
 		new_freq = target_freq(policy,this_smartass,new_freq,old_freq,relation);
-		if (new_freq)
-			this_smartass->freq_change_time_in_idle =
-				get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
+		if (new_freq){
+			int cpu__;
+			for_each_possible_cpu(cpu__) {
+				struct smartass_info_s * this_smartass__ = &per_cpu(smartass_info, cpu__);
+				this_smartass__->freq_change_time_in_idle =
+					get_cpu_idle_time_us(cpu__,&this_smartass__->freq_change_time);
+			}
+		}
 
 		// reset timer:
 		if (new_freq < policy->max)
