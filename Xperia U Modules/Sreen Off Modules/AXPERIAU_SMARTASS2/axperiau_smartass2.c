@@ -150,7 +150,7 @@ struct smartass_info_s {
 	int old_freq;
 	int ramp_dir;
 	unsigned int enable;
-	int max_speed;
+	int stored_max_speed;
 	int timer_rate;
 };
 static DEFINE_PER_CPU(struct smartass_info_s, smartass_info);
@@ -194,13 +194,13 @@ struct cpufreq_governor cpufreq_gov_smartass2 = {
 };
 
 inline static void smartass_update_min_max(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy, int suspend) {
-	if (suspend) {
-		this_smartass->max_speed = sleep_max_freq >= policy->min ? sleep_max_freq : policy->max;
-		this_smartass->timer_rate = sleep_rate_jiffies;
-	} else {
-		this_smartass->max_speed = policy->max;
-		this_smartass->timer_rate = sample_rate_jiffies;
-	}
+	//if (suspend) {
+	//	this_smartass->max_speed = sleep_max_freq >= policy->min ? sleep_max_freq : policy->max;
+	//	this_smartass->timer_rate = sleep_rate_jiffies;
+	//} else {
+	//	this_smartass->max_speed = policy->max;
+	//	this_smartass->timer_rate = sample_rate_jiffies;
+	//}
 }
 
 inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy, int freq) {
@@ -214,12 +214,8 @@ inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, 
 }
 
 inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass) {
-	struct cpufreq_policy *policy = this_smartass->cur_policy;
-	int delay = (policy->cur <= this_smartass->max_speed) ? this_smartass->timer_rate : 1;
-
 	this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
-
-	mod_timer(&this_smartass->timer, jiffies + delay);
+	mod_timer(&this_smartass->timer, jiffies + this_smartass->timer_rate);
 }
 
 inline static void work_cpumask_set(unsigned long cpu) {
@@ -331,7 +327,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// for at least up_rate_us:
 	if (cpu_load > max_cpu_load || delta_idle == 0)
 	{
-		if (old_freq < this_smartass->max_speed &&
+		if (old_freq < policy->max &&
 			 (
 //				delta_idle == 0 ||
 			  	cputime64_sub(update_time, this_smartass->freq_change_time) >= up_rate_us))
@@ -347,7 +343,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	}
 	// Similarly for scale down: load should be below min and if we are at or below ideal
 	// frequency we require that we have been at this frequency for at least down_rate_us:
-	else if ( ((cpu_load < min_cpu_load && old_freq > policy->min) || policy->cur > this_smartass->max_speed) &&
+	else if ( cpu_load < min_cpu_load && old_freq > policy->min &&
 		 (suspended ||
 		  cputime64_sub(update_time, this_smartass->freq_change_time) >= down_rate_us))
 	{
@@ -771,8 +767,14 @@ static void smartass_suspend(int cpu, int suspend)
 		return;
 
 	smartass_update_min_max(this_smartass,policy,suspend);
+
 	if (!suspend) { // resume at max speed:
+		
+		cpufreq_update_freq(cpu, policy->min, this_smartass->stored_max_speed);
+
 		new_freq = validate_freq(this_smartass,policy,sleep_wakeup_freq);
+
+		this_smartass->timer_rate = sample_rate_jiffies;
 
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: awaking at %d\n",new_freq);
 
@@ -783,8 +785,15 @@ static void smartass_suspend(int cpu, int suspend)
 		// to allow some time to settle down. Instead we just reset our statistics (and reset the timer).
 		// Eventually, the timer will adjust the frequency if necessary.
 
+		this_smartass->stored_max_speed = policy->max;
+
+		this_smartass->timer_rate = sleep_rate_jiffies;
+
 		this_smartass->freq_change_time_in_idle =
-			get_cpu_idle_time_us(cpu,&this_smartass->freq_change_time);
+			get_cpu_idle_time_us(cpu, &this_smartass->freq_change_time);
+
+		if(policy->min <= sleep_max_freq)
+			cpufreq_update_freq(cpu, policy->min, sleep_max_freq);
 
 		dprintk(SMARTASS_DEBUG_JUMPS,"SmartassS: suspending at %d\n",policy->cur);
 	}
@@ -856,6 +865,7 @@ static int __init cpufreq_smartass_init(void)
 		this_smartass->freq_change_time = 0;
 		this_smartass->freq_change_time_in_idle = 0;
 		this_smartass->cur_cpu_load = 0;
+		this_smartass->stored_max_speed = 1000000; 
 		// intialize timer:
 		init_timer_deferrable(&this_smartass->timer);
 		this_smartass->timer.function = cpufreq_smartass_timer;
