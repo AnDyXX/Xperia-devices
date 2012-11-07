@@ -150,6 +150,8 @@ struct smartass_info_s {
 	int old_freq;
 	int ramp_dir;
 	unsigned int enable;
+	int max_speed;
+	int timer_rate;
 };
 static DEFINE_PER_CPU(struct smartass_info_s, smartass_info);
 
@@ -192,14 +194,12 @@ struct cpufreq_governor cpufreq_gov_smartass2 = {
 };
 
 inline static void smartass_update_min_max(struct smartass_info_s *this_smartass, struct cpufreq_policy *policy, int suspend) {
-}
-
-inline static void smartass_update_min_max_allcpus(void) {
-	unsigned int i;
-	for_each_online_cpu(i) {
-		struct smartass_info_s *this_smartass = &per_cpu(smartass_info, i);
-		if (this_smartass->enable)
-			smartass_update_min_max(this_smartass,this_smartass->cur_policy,suspended);
+	if (suspend) {
+		this_smartass->max_speed = sleep_max_freq >= policy->min ? sleep_max_freq : policy->max;
+		this_smartass->timer_rate = sleep_rate_jiffies;
+	} else {
+		this_smartass->max_speed = policy->max;
+		this_smartass->timer_rate = sample_rate_jiffies;
 	}
 }
 
@@ -215,9 +215,9 @@ inline static unsigned int validate_freq(struct smartass_info_s *this_smartass, 
 
 inline static void reset_timer(unsigned long cpu, struct smartass_info_s *this_smartass) {
 	struct cpufreq_policy *policy = this_smartass->cur_policy;
-	this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
+	int delay = (policy->cur <= this_smartass->max_speed) ? this_smartass->timer_rate : 1;
 
-	int delay = !suspended ? sample_rate_jiffies : (policy->cur <= sleep_max_freq) ? sleep_rate_jiffies : 1;
+	this_smartass->time_in_idle = get_cpu_idle_time_us(cpu, &this_smartass->idle_exit_time);
 
 	mod_timer(&this_smartass->timer, jiffies + delay);
 }
@@ -331,7 +331,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	// for at least up_rate_us:
 	if (cpu_load > max_cpu_load || delta_idle == 0)
 	{
-		if (old_freq < policy->max &&
+		if (old_freq < this_smartass->max_speed &&
 			 (
 //				delta_idle == 0 ||
 			  	cputime64_sub(update_time, this_smartass->freq_change_time) >= up_rate_us))
@@ -347,7 +347,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	}
 	// Similarly for scale down: load should be below min and if we are at or below ideal
 	// frequency we require that we have been at this frequency for at least down_rate_us:
-	else if (cpu_load < min_cpu_load && old_freq > policy->min &&
+	else if ( ((cpu_load < min_cpu_load && old_freq > policy->min) || policy->cur > this_smartass->max_speed) &&
 		 (suspended ||
 		  cputime64_sub(update_time, this_smartass->freq_change_time) >= down_rate_us))
 	{
