@@ -82,6 +82,11 @@ static unsigned int min_sampling_rate;
 static unsigned int sleep_max_freq = DEFAULT_SLEEP_MAX_FREQ;
 static unsigned int stored_max_speed = 1000000;
 
+/*
+ * Sampling rate when screen is off. Current value forces governor to behave like conservative governor.
+ */
+#define DEFAULT_SLEEP_RATE_US (500 * 1000)
+
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				unsigned int event);
@@ -138,6 +143,8 @@ static struct dbs_tuners {
 	unsigned int sampling_down_factor;
 	unsigned int powersave_bias;
 	unsigned int io_is_busy;
+	unsigned int awake_sampling_rate;
+	unsigned int sleep_sampling_rate;
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
@@ -155,6 +162,7 @@ static void ondemand_suspend(int suspend)
         if (dbs_enable==0) return;
         if (!suspend) { // resume at max speed:
                 suspended = 0;
+		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.awake_sampling_rate;
 		cpufreq_update_freq(0, dbs_info->cur_policy->min, stored_max_speed);
                 __cpufreq_driver_target(dbs_info->cur_policy, dbs_info->cur_policy->max,
 CPUFREQ_RELATION_L);
@@ -163,6 +171,7 @@ CPUFREQ_RELATION_L);
         } else {
                 suspended = 1;
 		// let's give it a little breathing room
+		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.sleep_sampling_rate;
 		stored_max_speed = dbs_info->cur_policy->max;
 		cpufreq_update_freq(0, dbs_info->cur_policy->min, sleep_max_freq);
                 __cpufreq_driver_target(dbs_info->cur_policy, sleep_max_freq, CPUFREQ_RELATION_H);
@@ -317,7 +326,7 @@ static ssize_t show_##file_name						\
 {									\
 	return sprintf(buf, "%u\n", dbs_tuners_ins.object);		\
 }
-show_one(sampling_rate, sampling_rate);
+show_one(sampling_rate, awake_sampling_rate);
 show_one(io_is_busy, io_is_busy);
 show_one(up_threshold, up_threshold);
 show_one(sampling_down_factor, sampling_down_factor);
@@ -332,7 +341,7 @@ static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 	ret = sscanf(buf, "%u", &input);
 	if (ret != 1)
 		return -EINVAL;
-	dbs_tuners_ins.sampling_rate = max(input, min_sampling_rate);
+	dbs_tuners_ins.awake_sampling_rate = max(input, min_sampling_rate);
 	return count;
 }
 
@@ -869,6 +878,10 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				    latency * LATENCY_MULTIPLIER);
 			dbs_tuners_ins.io_is_busy = should_io_be_busy();
 
+
+			dbs_tuners_ins.awake_sampling_rate = dbs_tuners_ins.sampling_rate ;
+			dbs_tuners_ins.sleep_sampling_rate = DEFAULT_SLEEP_RATE_US;
+
 			pm_idle_old = pm_idle;
 			pm_idle = cpufreq_idle;
 
@@ -968,6 +981,7 @@ static int __init cpufreq_gov_dbs_init(void)
 		min_sampling_rate =
 			MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
 	}
+
 
 	return cpufreq_register_governor(&cpufreq_gov_ondemand);
 }
