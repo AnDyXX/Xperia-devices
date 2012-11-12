@@ -40,7 +40,7 @@
 #endif
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v005 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v006 ("__DATE__" "__TIME__")"
 
 #define DEVICE_NAME "Xperia U"
 
@@ -93,14 +93,14 @@ static unsigned long min_cpu_load;
  * The minimum amount of time to spend at a frequency before we can ramp up.
  * Notice we ignore this when we are below the ideal frequency.
  */
-#define DEFAULT_UP_RATE_US 19000;
+#define DEFAULT_UP_RATE_US 29000;
 static unsigned long up_rate_us;
 
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  * Notice we ignore this when we are above the ideal frequency.
  */
-#define DEFAULT_DOWN_RATE_US 28000;
+#define DEFAULT_DOWN_RATE_US 48000;
 static unsigned long down_rate_us;
 
 /*
