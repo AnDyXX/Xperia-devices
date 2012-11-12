@@ -25,7 +25,7 @@
 #include <linux/sched.h>
 #include <linux/earlysuspend.h>
 
-#define AX_MODULE_NAME "axperiau_ondemandx"
+#define AX_MODULE_NAME "axperiau_ondemandax"
 #define AX_MODULE_VER "v003 ("__DATE__" "__TIME__")"
 
 #define OFS_KALLSYMS_LOOKUP_NAME 0xC00DB534 // kallsyms_lookup_name
@@ -85,7 +85,7 @@ static unsigned int stored_max_speed = 1000000;
 /*
  * Sampling rate when screen is off. Current value forces governor to behave like conservative governor.
  */
-#define DEFAULT_SLEEP_RATE_US (500 * 1000)
+#define DEFAULT_SLEEP_RATE_US (1000 * 1000)
 
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
@@ -95,7 +95,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 static
 #endif
 struct cpufreq_governor cpufreq_gov_ondemand = {
-       .name                   = "ondemandX",
+       .name                   = "ondemandAX",
        .governor               = cpufreq_governor_dbs,
        .max_transition_latency = TRANSITION_LATENCY_LIMIT,
        .owner                  = THIS_MODULE,
@@ -156,6 +156,8 @@ static struct dbs_tuners {
 // used for imoseyon's mods
 static unsigned int suspended = 0;
 
+static inline void dbs_timer_init_per_cpu(struct work_struct *dummy);
+
 static void ondemand_suspend(int suspend)
 {
         struct cpu_dbs_info_s *dbs_info = &per_cpu(od_cpu_dbs_info, smp_processor_id());
@@ -163,6 +165,10 @@ static void ondemand_suspend(int suspend)
         if (!suspend) { // resume at max speed:
                 suspended = 0;
 		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.awake_sampling_rate;
+
+		if (dbs_enable==2) 
+			schedule_on_each_cpu_ax(dbs_timer_init_per_cpu);
+
 		cpufreq_update_freq(0, dbs_info->cur_policy->min, stored_max_speed);
                 __cpufreq_driver_target(dbs_info->cur_policy, dbs_info->cur_policy->max,
 CPUFREQ_RELATION_L);
@@ -464,7 +470,7 @@ static struct attribute *dbs_attributes[] = {
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "ondemandX",
+	.name = "ondemandAX",
 };
 
 /************************** sysfs end ************************/
@@ -709,6 +715,12 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info, int cpu)
 	dbs_info->sample_type = DBS_NORMAL_SAMPLE;
 	cancel_delayed_work_sync(&per_cpu(ondemand_work, cpu));
 	schedule_delayed_work_on(cpu, &per_cpu(ondemand_work, cpu), delay);
+}
+
+static inline void dbs_timer_init_per_cpu(struct work_struct *dummy)
+{
+	struct cpu_dbs_info_s *dbs_info = &per_cpu(od_cpu_dbs_info, smp_processor_id());
+	dbs_timer_init(dbs_info,smp_processor_id());
 }
 
 static inline void dbs_timer_exit(int cpu)
