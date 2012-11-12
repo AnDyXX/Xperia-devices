@@ -27,6 +27,7 @@
 
 #define AX_MODULE_NAME "axperiau_ondemandax"
 #define AX_MODULE_VER "v003 ("__DATE__" "__TIME__")"
+#define DEVICE_NAME "Xperia U"
 
 #define OFS_KALLSYMS_LOOKUP_NAME 0xC00DB534 // kallsyms_lookup_name
 
@@ -994,6 +995,7 @@ static int __init cpufreq_gov_dbs_init(void)
 			MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
 	}
 
+	printk(KERN_INFO AX_MODULE_NAME ": module " AX_MODULE_VER " for device " DEVICE_NAME " loaded\n");
 
 	return cpufreq_register_governor(&cpufreq_gov_ondemand);
 }
@@ -1008,6 +1010,8 @@ MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
 MODULE_DESCRIPTION("'cpufreq_ondemand' - A dynamic cpufreq governor for "
 	"Low Latency Frequency Transition capable processors");
+MODULE_AUTHOR ("AnDyX - gigantic improvement for saving battery");
+MODULE_DESCRIPTION ("A ondemand cpufreq governor with screen-of feature and lot of opt. Now optimized for the " DEVICE_NAME);
 MODULE_LICENSE("GPL");
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
