@@ -25,8 +25,12 @@
 #include <linux/sched.h>
 #include <linux/earlysuspend.h>
 
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+#include <linux/fs.h>
+
 #define AX_MODULE_NAME "axperiau_ondemandax"
-#define AX_MODULE_VER "v003 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v004 ("__DATE__" "__TIME__")"
 #define DEVICE_NAME "Xperia U"
 
 #define OFS_KALLSYMS_LOOKUP_NAME 0xC00DB534 // kallsyms_lookup_name
@@ -962,14 +966,119 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	return 0;
 }
 
+
+//finding name in proc
+static const struct file_operations dummy_ondemandx_operations = {
+         .open = NULL,
+         .read = seq_read,
+         .llseek = seq_lseek,
+         .release = seq_release_private,
+};
+
+#define PROC_FILE "kallsyms"
+#define FILE_BUFFOR 100
+#define TEXT_OFFSET 50
+#define NAME_TO_FIND " T kallsyms_lookup_name"
+
+static int file_open(struct file * file) {
+	//create dummy proc	
+	struct proc_dir_entry * dummy_entry = proc_create("dummy_ondemandx", 0444, NULL, &dummy_ondemandx_operations);
+	if(dummy_entry == NULL)
+		return -1;
+
+	struct proc_dir_entry * parent = dummy_entry->parent;
+
+	if(parent == NULL){
+		return -1;
+	}
+
+	remove_proc_entry("dummy_ondemandx", NULL);
+
+	struct proc_dir_entry * temp;
+
+	for(temp = parent->subdir; temp != NULL ; temp = temp->next) {
+		//loop thru files to find kallsyms
+
+		if (strcmp(temp->name, PROC_FILE) == 0) {
+			// if we have it - open it for us
+			struct file_operations *proc_fops = temp->proc_fops;
+			return proc_fops->open(NULL, file);
+		}
+	} 
+
+	return -1;
+}
+
+static long findout_kallsyms_lookup_name(){
+	long address = 0 ;
+	long long position = 0;
+	char buf[FILE_BUFFOR + 1];
+
+	
+	//prepare buffor
+	memset(buf, FILE_BUFFOR, ' ');
+	buf[FILE_BUFFOR] = 0;
+
+	struct file file;
+	memset(&file, 0, sizeof(struct file));
+
+	//find kallsyms file in proc
+	if(!file_open(&file)) {
+		
+		struct seq_file *p = file.private_data;
+		if(p){
+			struct seq_operations * kallsyms_op = p->op;
+			if(kallsyms_op) {
+				p->buf = buf;
+				p->size = FILE_BUFFOR;
+				
+				//loop over data to find our func				
+				void * data;
+				for(data = kallsyms_op->start(p, &position); data; data = kallsyms_op->next(p, data, &position)) {
+					p->count = 0;
+					kallsyms_op->show(p, data);
+					buf[p->count] = 0;
+					
+					if(strstr(buf, NAME_TO_FIND)){
+						//find end of address
+						printk("Found: %s\n", buf);				
+						char * lastChar = buf;
+						while(*lastChar != ' ' && *lastChar != 0 ){
+							lastChar++;
+						}
+						lastChar[0] = 0;
+						
+
+						//convert it
+						int ret;
+						ret = sscanf(buf, "%lx", &address);
+						break;
+					}
+				} 
+			}
+		}
+	}
+
+	return address;
+}
+
 static int __init cpufreq_gov_dbs_init(void)
 {
 	cputime64_t wall;
 	u64 idle_time;
 	int cpu = get_cpu();
 
-	kallsyms_lookup_name_ax = (void*) lookup_address;
+	preempt_enable();
+	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
+	preempt_disable();
 	
+	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
+	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
+
+	if(kallsyms_lookup_name_ax == 0){
+		return -1;
+	}
+
 	schedule_on_each_cpu_ax = (void*) kallsyms_lookup_name_ax("schedule_on_each_cpu");
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
 
