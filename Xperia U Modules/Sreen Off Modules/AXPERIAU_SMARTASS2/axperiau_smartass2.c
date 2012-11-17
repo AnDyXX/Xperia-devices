@@ -825,6 +825,22 @@ static struct early_suspend smartass_power_suspend = {
 
 static int __init cpufreq_smartass_init(void)
 {
+	printk("[andyx] Preempt count %d\n", preempt_count());
+		
+	int count = preempt_count();
+	if(count)
+		preempt_enable();
+	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
+	if(count)
+		preempt_disable();
+	
+	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
+	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
+
+	if(kallsyms_lookup_name_ax == 0){
+		return -1;
+	}
+
 	unsigned int i;	
 	struct smartass_info_s *this_smartass;
 	debug_mask = 0;
@@ -843,16 +859,7 @@ static int __init cpufreq_smartass_init(void)
 
 	suspended = 0;
 
-	preempt_enable();
-	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
-	preempt_disable();
-	
-	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
-	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
 
-	if(kallsyms_lookup_name_ax == 0){
-		return -1;
-	}
 
 	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");

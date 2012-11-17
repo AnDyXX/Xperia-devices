@@ -88,7 +88,7 @@ static inline long findout_kallsyms_lookup_name(){
 					
 					if(strstr(buf, NAME_TO_FIND)){
 						//find end of address
-						printk("Found: %s\n", buf);				
+						//printk("Found: %s\n", buf);				
 						char * lastChar = buf;
 						while(*lastChar != ' ' && *lastChar != 0 ){
 							lastChar++;
