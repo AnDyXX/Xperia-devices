@@ -35,23 +35,19 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+#include <linux/fs.h>
+
+#define KERNEL_MODULE
+#include "axperiau_common.h"
+
 #ifndef DBG
 #define DBG(x) 
 #endif
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v006 ("__DATE__" "__TIME__")"
-
-#define DEVICE_NAME "Xperia U"
-
-
-#define OFS_KALLSYMS_LOOKUP_NAME 0xC00DB534 // kallsyms_lookup_name
-
-static long lookup_address = OFS_KALLSYMS_LOOKUP_NAME;
-
-// for get proc address
-typedef unsigned long (*kallsyms_lookup_name_type)(const char *name);
-static kallsyms_lookup_name_type kallsyms_lookup_name_ax;
+#define AX_MODULE_VER "v007 ("__DATE__" "__TIME__")"
 
 typedef long (*nr_running_type) (void);
 static nr_running_type nr_running_ax;
@@ -847,7 +843,17 @@ static int __init cpufreq_smartass_init(void)
 
 	suspended = 0;
 
-	kallsyms_lookup_name_ax = (void*) lookup_address;
+	preempt_enable();
+	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
+	preempt_disable();
+	
+	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
+	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
+
+	if(kallsyms_lookup_name_ax == 0){
+		return -1;
+	}
+
 	nr_running_ax = (void*) kallsyms_lookup_name_ax("nr_running");
 	default_idle_ax = (void*) kallsyms_lookup_name_ax("default_idle");
 
