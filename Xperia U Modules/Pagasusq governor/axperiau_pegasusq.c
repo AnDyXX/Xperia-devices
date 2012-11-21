@@ -1324,7 +1324,7 @@ static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 	prev_freq_step = dbs_tuners_ins.freq_step;
 	prev_sampling_rate = dbs_tuners_ins.sampling_rate;
 	dbs_tuners_ins.freq_step = 20;
-	dbs_tuners_ins.sampling_rate *= 4;
+	dbs_tuners_ins.sampling_rate *= 10;
 	stored_max_speed = dbs_info->cur_policy->max;
 	cpufreq_update_freq(0, dbs_info->cur_policy->min, sleep_max_freq);
         __cpufreq_driver_target(dbs_info->cur_policy, sleep_max_freq, CPUFREQ_RELATION_H);
