@@ -44,7 +44,7 @@
 #include "axperiau_common.h"
 
 #define AX_MODULE_NAME "axperiau_pegasusq"
-#define AX_MODULE_VER "v001 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v002 ("__DATE__" "__TIME__")"
 
 typedef long (*nr_running_type) (void);
 static nr_running_type nr_running_ax;
@@ -184,7 +184,7 @@ static unsigned int get_nr_run_avg(void)
 #define DEF_FREQ_STEP				(37)
 #define DEF_START_DELAY				(0)
 
-#define UP_THRESHOLD_AT_MIN_FREQ		(40)
+#define UP_THRESHOLD_AT_MIN_FREQ		(60)
 #define FREQ_FOR_RESPONSIVENESS			(400000)
 
 #define HOTPLUG_DOWN_INDEX			(0)
@@ -1346,8 +1346,13 @@ static struct notifier_block reboot_notifier = {
 static struct early_suspend early_suspend;
 unsigned int prev_freq_step;
 unsigned int prev_sampling_rate;
+unsigned int stored_max_speed = 1000000;
+unsigned int sleep_max_freq = 200000;
 static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 {
+	struct cpu_dbs_info_s *dbs_info;
+	dbs_info = &per_cpu(od_cpu_dbs_info, 0); /* from CPU0 */
+
 #if EARLYSUSPEND_HOTPLUGLOCK
 	dbs_tuners_ins.early_suspend =
 		atomic_read(&g_hotplug_lock);
@@ -1356,6 +1361,10 @@ static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 	prev_sampling_rate = dbs_tuners_ins.sampling_rate;
 	dbs_tuners_ins.freq_step = 20;
 	dbs_tuners_ins.sampling_rate *= 4;
+	stored_max_speed = dbs_info->cur_policy->max;
+	cpufreq_update_freq(0, dbs_info->cur_policy->min, sleep_max_freq);
+        __cpufreq_driver_target(dbs_info->cur_policy, sleep_max_freq, CPUFREQ_RELATION_H);
+
 #if EARLYSUSPEND_HOTPLUGLOCK
 	atomic_set(&g_hotplug_lock,
 	    (dbs_tuners_ins.min_cpu_lock) ? dbs_tuners_ins.min_cpu_lock : 1);
@@ -1365,12 +1374,18 @@ static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 }
 static void cpufreq_pegasusq_late_resume(struct early_suspend *h)
 {
+	struct cpu_dbs_info_s *dbs_info;
+	dbs_info = &per_cpu(od_cpu_dbs_info, 0); /* from CPU0 */
+
 #if EARLYSUSPEND_HOTPLUGLOCK
 	atomic_set(&g_hotplug_lock, dbs_tuners_ins.early_suspend);
 #endif
 	dbs_tuners_ins.early_suspend = -1;
 	dbs_tuners_ins.freq_step = prev_freq_step;
 	dbs_tuners_ins.sampling_rate = prev_sampling_rate;
+	cpufreq_update_freq(0, dbs_info->cur_policy->min, stored_max_speed);
+        __cpufreq_driver_target(dbs_info->cur_policy, dbs_info->cur_policy->max,
+CPUFREQ_RELATION_L);
 #if EARLYSUSPEND_HOTPLUGLOCK
 	apply_hotplug_lock();
 	start_rq_work();
@@ -1569,6 +1584,9 @@ static void __exit cpufreq_gov_dbs_exit(void)
 MODULE_AUTHOR("ByungChang Cha <bc.cha@samsung.com>");
 MODULE_DESCRIPTION("'cpufreq_pegasusq' - A dynamic cpufreq/cpuhotplug governor");
 MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR ("AnDyX - some improvement");
+MODULE_DESCRIPTION ("A pegasusq cpufreq governor. Now optimized for the " DEVICE_NAME);
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 fs_initcall(cpufreq_gov_dbs_init);
