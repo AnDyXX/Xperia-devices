@@ -39,7 +39,7 @@
 #define DEVICE_NAME "Xperia U"
 
 #define AX_MODULE_NAME "axperiau_lulzactiveq"
-#define AX_MODULE_VER "v001 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v002 ("__DATE__" "__TIME__")"
 
 //a hack to make comparisons easier while having different structs in pegasusq and lulzactiveq
 #define hotplug_history hotplug_lulzq_history
@@ -1981,12 +1981,29 @@ static struct notifier_block cpufreq_lulzactive_idle_nb = {
 	.notifier_call = cpufreq_lulzactive_idle_notifier,
 };
 
+unsigned int stored_max_speed = 1000000;
+unsigned int sleep_max_freq = 200000;
+
+
 static void lulzactive_early_suspend(struct early_suspend *handler) {
+    	struct cpufreq_lulzactive_cpuinfo *dbs_info;
+
+	/* do turn_on/off cpus */
+    	dbs_info = &per_cpu(cpuinfo, 0); /* from CPU0 */
 	early_suspended = 1;
+	stored_max_speed = dbs_info->policy->max;
+	cpufreq_update_freq(0, dbs_info->policy->min, sleep_max_freq);
+        __cpufreq_driver_target(dbs_info->policy, sleep_max_freq, CPUFREQ_RELATION_H);
 }
 
 static void lulzactive_late_resume(struct early_suspend *handler) {
+    struct cpufreq_lulzactive_cpuinfo *dbs_info;
+
+	/* do turn_on/off cpus */
+    	dbs_info = &per_cpu(cpuinfo, 0); /* from CPU0 */
 	early_suspended = 0;
+	cpufreq_update_freq(0, dbs_info->policy->min, stored_max_speed);
+        __cpufreq_driver_target(dbs_info->policy, dbs_info->policy->max, CPUFREQ_RELATION_L);
 }
 
 static struct early_suspend lulzactive_power_suspend = {
