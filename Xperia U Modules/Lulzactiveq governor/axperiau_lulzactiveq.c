@@ -36,19 +36,12 @@
 #include <linux/suspend.h>
 #include <linux/slab.h>
 
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-#include <linux/fs.h>
-
-#define KERNEL_MODULE
-#include "axperiau_common.h"
-
-#ifndef DBG
-#define DBG(x) 
-#endif
-
 #define AX_MODULE_NAME "axperiau_lulzactiveq"
 #define AX_MODULE_VER "v003 ("__DATE__" "__TIME__")"
+#define DEVICE_NAME "Xperia U"
+
+//we have only 2 cores
+#define CONFIG_CPU_EXYNOS4210
 
 //a hack to make comparisons easier while having different structs in pegasusq and lulzactiveq
 #define hotplug_history hotplug_lulzq_history
@@ -404,12 +397,12 @@ static inline void fix_screen_off_min_step(struct cpufreq_lulzactive_cpuinfo *pc
 	
 	if (DEFAULT_SCREEN_OFF_MIN_STEP == screen_off_min_step) 
 		for(screen_off_min_step=0;
-		pcpu->lulzfreq_table[screen_off_min_step].frequency != 500000;
+		pcpu->lulzfreq_table[screen_off_min_step].frequency != 200000;
 		screen_off_min_step++);
 	
 	if (screen_off_min_step >= pcpu->lulzfreq_table_size)
 		for(screen_off_min_step=0;
-		pcpu->lulzfreq_table[screen_off_min_step].frequency != 500000;
+		pcpu->lulzfreq_table[screen_off_min_step].frequency != 200000;
 		screen_off_min_step++);
 }
 
@@ -575,9 +568,10 @@ static void cpufreq_lulzactive_timer(unsigned long data)
 				}
 			
 				// apply pump_up_step by tegrak
-				index -= pump_up_step;
-				if (index < 0)
-					index = 0;
+				index += pump_up_step;
+				if (index >= pcpu->lulzfreq_table_size) {
+					index = pcpu->lulzfreq_table_size - 1;
+			}
 			
 				new_freq = pcpu->lulzfreq_table[index].frequency;
 			}
@@ -609,10 +603,9 @@ static void cpufreq_lulzactive_timer(unsigned long data)
 			}
 			
 			// apply pump_down_step by tegrak
-			index += pump_down_step;
-			if (index >= pcpu->lulzfreq_table_size) {
-				index = pcpu->lulzfreq_table_size - 1;
-			}
+			index -= pump_down_step;
+			if (index < 0)
+				index = 0;		
 			
 			new_freq = (pcpu->policy->cur > pcpu->policy->min) ? 
 				(pcpu->lulzfreq_table[index].frequency) :
@@ -2060,12 +2053,21 @@ static struct notifier_block cpufreq_lulzactive_idle_nb = {
 	.notifier_call = cpufreq_lulzactive_idle_notifier,
 };
 
+unsigned int stored_max_speed = 1000000;
+unsigned int sleep_max_freq = 200000;
+
 static void lulzactive_early_suspend(struct early_suspend *handler) {
 	early_suspended = 1;
+	struct cpufreq_lulzactive_cpuinfo *dbs_info = &per_cpu(cpuinfo, 0);
+	stored_max_speed = dbs_info->policy->max;
+	cpufreq_update_freq(0, dbs_info->policy->min, sleep_max_freq);
+        __cpufreq_driver_target(dbs_info->policy, sleep_max_freq, CPUFREQ_RELATION_H);
 }
 
 static void lulzactive_late_resume(struct early_suspend *handler) {
 	early_suspended = 0;
+	struct cpufreq_lulzactive_cpuinfo *dbs_info = &per_cpu(cpuinfo, 0);
+	cpufreq_update_freq(0, dbs_info->policy->min, stored_max_speed);
 }
 
 static struct early_suspend lulzactive_power_suspend = {
@@ -2127,22 +2129,6 @@ void stop_lulzactiveq(void)
 
 static int __init cpufreq_lulzactive_init(void)
 {
-	printk("[andyx] Preempt count %d\n", preempt_count());
-		
-	int count = preempt_count();
-	if(count)
-		preempt_enable();
-	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
-	if(count)
-		preempt_disable();
-	
-	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
-	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
-
-	if(kallsyms_lookup_name_ax == 0){
-		return -1;
-	}
-
     unsigned int i; int ret;
     struct cpufreq_lulzactive_cpuinfo *pcpu;
 	up_sample_time = DEFAULT_UP_SAMPLE_TIME;
@@ -2158,12 +2144,12 @@ static int __init cpufreq_lulzactive_init(void)
 	if(ret) return ret;
 
 #ifdef MODULE
-	gm_cpu_up = (int (*)(unsigned int cpu))kallsyms_lookup_name_ax("cpu_up");
-	gm_nr_running = (unsigned long (*)(void))kallsyms_lookup_name_ax("nr_running");
+	gm_cpu_up = (int (*)(unsigned int cpu))kallsyms_lookup_name("cpu_up");
+	gm_nr_running = (unsigned long (*)(void))kallsyms_lookup_name("nr_running");
 	gm_sched_setscheduler_nocheck = (int (*)(struct task_struct *, int,
-    	const struct sched_param *))kallsyms_lookup_name_ax("sched_setscheduler_nocheck");
-	gm___put_task_struct = (void (*)(struct task_struct *))kallsyms_lookup_name_ax("__put_task_struct");
-	gm_wake_up_process = (int (*)(struct task_struct *))kallsyms_lookup_name_ax("wake_up_process");
+    	const struct sched_param *))kallsyms_lookup_name("sched_setscheduler_nocheck");
+	gm___put_task_struct = (void (*)(struct task_struct *))kallsyms_lookup_name("__put_task_struct");
+	gm_wake_up_process = (int (*)(struct task_struct *))kallsyms_lookup_name("wake_up_process");
 #endif
 	hotplug_history = kzalloc(sizeof(struct cpu_usage_history), GFP_KERNEL);
 	if (!hotplug_history) {
@@ -2236,6 +2222,6 @@ MODULE_AUTHOR("Tegrak <luciferanna@gmail.com>");
 MODULE_DESCRIPTION("'lulzactiveQ' - improved lulzactive governor with hotplug logic");
 
 MODULE_AUTHOR ("AnDyX - some improvement");
-MODULE_DESCRIPTION ("A 'lulzactiveQ' cpufreq governor. Now optimized for the " DEVICE_NAME);
+MODULE_DESCRIPTION ("A lulzactiveQ cpufreq governor. Now optimized for the " DEVICE_NAME);
 
 MODULE_LICENSE("GPL");
