@@ -321,14 +321,14 @@ static int hotplug_freq[4][2] = {
 };
 #else
 static int hotplug_rq[4][2] = {
-	{0, 100}, {100, 200}, {200, 300}, {300, 0}
+	{0, 350}, {290, 350}, {290, 400}, {350, 0}
 };
 
 static int hotplug_freq[4][2] = {
-	{0, 500000},
-	{200000, 500000},
-	{200000, 500000},
-	{200000, 0}
+	{0, 600000},
+	{400000, 700000},
+	{500000, 800000},
+	{600000, 0}
 };
 #endif
 
@@ -409,8 +409,10 @@ static inline void fix_screen_off_min_step(struct cpufreq_lulzactive_cpuinfo *pc
 static inline unsigned int adjust_screen_off_freq(
 	struct cpufreq_lulzactive_cpuinfo *pcpu, unsigned int freq) {
 	
-	if (early_suspended && freq > pcpu->lulzfreq_table[screen_off_min_step].frequency) {		
-		freq = pcpu->lulzfreq_table[screen_off_min_step].frequency;
+//	if (early_suspended && freq > pcpu->lulzfreq_table[screen_off_min_step].frequency) {		
+//		freq = pcpu->lulzfreq_table[screen_off_min_step].frequency;
+	if (early_suspended && freq > 200000) {		
+		freq = 200000;
 		pcpu->target_freq = pcpu->policy->cur;
 		
 		if (freq > pcpu->policy->max)
@@ -2062,6 +2064,7 @@ static void lulzactive_early_suspend(struct early_suspend *handler) {
 	stored_max_speed = dbs_info->policy->max;
 	cpufreq_update_freq(0, dbs_info->policy->min, sleep_max_freq);
         __cpufreq_driver_target(dbs_info->policy, sleep_max_freq, CPUFREQ_RELATION_H);
+	stop_rq_work();
 }
 
 static void lulzactive_late_resume(struct early_suspend *handler) {
@@ -2070,6 +2073,7 @@ static void lulzactive_late_resume(struct early_suspend *handler) {
 	cpufreq_update_freq(0, dbs_info->policy->min, stored_max_speed);
         __cpufreq_driver_target(dbs_info->policy, dbs_info->policy->max,
 CPUFREQ_RELATION_L);
+	start_rq_work();
 }
 
 static struct early_suspend lulzactive_power_suspend = {
