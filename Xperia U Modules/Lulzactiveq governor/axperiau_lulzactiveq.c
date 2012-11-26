@@ -2068,6 +2068,8 @@ static void lulzactive_late_resume(struct early_suspend *handler) {
 	early_suspended = 0;
 	struct cpufreq_lulzactive_cpuinfo *dbs_info = &per_cpu(cpuinfo, 0);
 	cpufreq_update_freq(0, dbs_info->policy->min, stored_max_speed);
+        __cpufreq_driver_target(dbs_info->policy, dbs_info->policy->max,
+CPUFREQ_RELATION_L);
 }
 
 static struct early_suspend lulzactive_power_suspend = {
