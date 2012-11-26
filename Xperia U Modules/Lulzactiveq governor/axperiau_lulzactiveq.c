@@ -1989,8 +1989,7 @@ static struct notifier_block cpufreq_lulzactive_idle_nb = {
 };
 
 unsigned int stored_max_speed = 1000000;
-
-
+unsigned int prev_sampling_rate = DEFAULT_TIMER_RATE;
 
 static void lulzactive_early_suspend(struct early_suspend *handler) {
     	struct cpufreq_lulzactive_cpuinfo *dbs_info;
@@ -1999,9 +1998,12 @@ static void lulzactive_early_suspend(struct early_suspend *handler) {
     	dbs_info = &per_cpu(cpuinfo, 0); /* from CPU0 */
 	if (!early_suspended) {
 		early_suspended = 1;
+		prev_sampling_rate = timer_rate;
 		stored_max_speed = dbs_info->policy->max;
+		timer_rate = 500 * USEC_PER_MSEC;
 		cpufreq_update_freq(0, dbs_info->policy->min, sleep_max_freq);
         	__cpufreq_driver_target(dbs_info->policy, sleep_max_freq, CPUFREQ_RELATION_H);
+		stop_rq_work();
 	}
 }
 
@@ -2013,7 +2015,9 @@ static void lulzactive_late_resume(struct early_suspend *handler) {
 	if(early_suspended) {
 		early_suspended = 0;
 		cpufreq_update_freq(0, dbs_info->policy->min, stored_max_speed);
+		timer_rate = prev_sampling_rate;
         	__cpufreq_driver_target(dbs_info->policy, dbs_info->policy->max, CPUFREQ_RELATION_L);
+		start_rq_work();
 	}
 }
 
