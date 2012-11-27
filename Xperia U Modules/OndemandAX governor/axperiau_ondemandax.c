@@ -33,7 +33,7 @@
 #include "axperiau_common.h"
 
 #define AX_MODULE_NAME "axperiau_ondemandax"
-#define AX_MODULE_VER "v004 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v005 ("__DATE__" "__TIME__")"
 
 
 typedef int (*schedule_on_each_cpu_type)(work_func_t func);
@@ -968,18 +968,6 @@ static int __init cpufreq_gov_dbs_init(void)
 	cputime64_t wall;
 	u64 idle_time;
 	int cpu = get_cpu();
-
-	printk("[andyx] Preempt count %d\n", preempt_count());
-		
-	int count = preempt_count();
-	if(count)
-		preempt_enable();
-	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
-	if(count)
-		preempt_disable();
-	
-	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
-	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
 
 	if(kallsyms_lookup_name_ax == 0){
 		return -1;

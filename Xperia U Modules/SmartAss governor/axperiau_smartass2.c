@@ -47,7 +47,7 @@
 #endif
 
 #define AX_MODULE_NAME "axperiau_smartass2"
-#define AX_MODULE_VER "v007 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v008 ("__DATE__" "__TIME__")"
 
 typedef long (*nr_running_type) (void);
 static nr_running_type nr_running_ax;
@@ -825,18 +825,6 @@ static struct early_suspend smartass_power_suspend = {
 
 static int __init cpufreq_smartass_init(void)
 {
-	printk("[andyx] Preempt count %d\n", preempt_count());
-		
-	int count = preempt_count();
-	if(count)
-		preempt_enable();
-	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
-	if(count)
-		preempt_disable();
-	
-	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
-	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
-
 	if(kallsyms_lookup_name_ax == 0){
 		return -1;
 	}

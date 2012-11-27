@@ -44,7 +44,8 @@
 #include "axperiau_common.h"
 
 #define AX_MODULE_NAME "axperiau_pegasusq"
-#define AX_MODULE_VER "v002 ("__DATE__" "__TIME__")"
+#define AX_MODULE_VER "v003 ("__DATE__" "__TIME__")"
+
 
 typedef long (*nr_running_type) (void);
 static nr_running_type nr_running_ax;
@@ -60,7 +61,7 @@ static cpu_down_type cpu_down_ax;
  * runqueue average
  */
 
-#define RQ_AVG_TIMER_RATE	10
+#define RQ_AVG_TIMER_RATE	20
 
 struct runqueue_data {
 	unsigned int nr_run_avg;
@@ -205,10 +206,10 @@ static int hotplug_rq[4][2] = {
 };
 
 static int hotplug_freq[4][2] = {
-	{0, 500000},
-	{200000, 500000},
-	{200000, 500000},
-	{200000, 0}
+	{0, 600000},
+	{400000, 700000},
+	{500000, 800000},
+	{600000, 0}
 };
 #endif
 
@@ -1471,18 +1472,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 static int __init cpufreq_gov_dbs_init(void)
 {
-	printk("[andyx] Preempt count %d\n", preempt_count());
-		
-	int count = preempt_count();
-	if(count)
-		preempt_enable();
-	kallsyms_lookup_name_ax = (void*) findout_kallsyms_lookup_name();	
-	if(count)
-		preempt_disable();
-	
-	printk("[andyx] Found function 'kallsyms_lookup_name' at address %x\n", kallsyms_lookup_name_ax);
-	printk("[andyx] Stock address: %x\n", OFS_KALLSYMS_LOOKUP_NAME);
-
 	if(kallsyms_lookup_name_ax == 0){
 		return -1;
 	}
