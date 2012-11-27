@@ -179,7 +179,7 @@ static unsigned int get_nr_run_avg(void)
 #define DEF_MIN_CPU_LOCK			(0)
 #define DEF_UP_NR_CPUS				(1)
 #define DEF_CPU_UP_RATE				(10)
-#define DEF_CPU_DOWN_RATE			(20)
+#define DEF_CPU_DOWN_RATE			(5)
 #define DEF_FREQ_STEP				(37)
 #define DEF_START_DELAY				(0)
 
@@ -894,7 +894,7 @@ static void cpu_up_work(struct work_struct *work)
 		nr_up = max(nr_up, min_cpu_lock - online);
 
 	if (online == 1) {
-		printk(KERN_ERR "CPU_UP 3\n");
+		printk(KERN_ERR "CPU_UP %d\n", num_possible_cpus() - 1);
 		cpu_up_ax(num_possible_cpus() - 1);
 		nr_up -= 1;
 	}
@@ -1340,10 +1340,50 @@ static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 
 static void cpufreq_pegasusq_idle_start(void)
 {
+	struct cpu_dbs_info_s *dbs_info;
+	dbs_info = &per_cpu(od_cpu_dbs_info, smp_processor_id());
+
+	if (dbs_tuners_ins.early_suspend == -1 || dbs_enable < 2)
+		return;
+
+	smp_wmb();
+
+	if (dbs_info->cur_policy->cur == dbs_info->cur_policy->min && delayed_work_pending(&dbs_info->work)){
+		if (!mutex_trylock(&dbs_info->timer_mutex)) 
+			return;
+
+		cancel_delayed_work_sync(&dbs_info->work);
+		mutex_unlock(&dbs_info->timer_mutex);
+	}
 }
 
 static void cpufreq_pegasusq_idle_end(void)
 {
+	struct cpu_dbs_info_s *dbs_info;
+	dbs_info = &per_cpu(od_cpu_dbs_info, smp_processor_id());
+
+	int delay;
+
+	if (dbs_enable < 2)
+		return;
+	
+	smp_wmb();
+
+	if(!delayed_work_pending(&dbs_info->work)) {
+
+		if (!mutex_trylock(&dbs_info->timer_mutex)) 
+			return;
+
+		delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate
+				 * dbs_info->rate_mult);
+
+		if (num_online_cpus() > 1)
+			delay -= jiffies % delay;
+
+		queue_delayed_work_on(smp_processor_id(), dvfs_workqueue, &dbs_info->work, delay);
+		
+		mutex_unlock(&dbs_info->timer_mutex);
+	}
 }
 
 static int cpufreq_pegasusq_idle_notifier(struct notifier_block *nb,
