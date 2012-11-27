@@ -1337,6 +1337,35 @@ static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 	stop_rq_work();
 #endif
 }
+
+static void cpufreq_pegasusq_idle_start(void)
+{
+}
+
+static void cpufreq_pegasusq_idle_end(void)
+{
+}
+
+static int cpufreq_pegasusq_idle_notifier(struct notifier_block *nb,
+					     unsigned long val,
+					     void *data)
+{
+	switch (val) {
+	case IDLE_START:
+		cpufreq_pegasusq_idle_start();
+		break;
+	case IDLE_END:
+		cpufreq_pegasusq_idle_end();
+		break;
+	}
+
+	return 0;
+}
+
+static struct notifier_block cpufreq_pegasusq_idle_nb = {
+	.notifier_call = cpufreq_pegasusq_idle_notifier,
+};
+
 static void cpufreq_pegasusq_late_resume(struct early_suspend *h)
 {
 	struct cpu_dbs_info_s *dbs_info;
@@ -1422,6 +1451,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		register_pm_notifier(&pm_notifier);
 #endif
 #ifdef CONFIG_HAS_EARLYSUSPEND
+		idle_notifier_register(&cpufreq_pegasusq_idle_nb);
 		register_early_suspend(&early_suspend);
 #endif
 		break;
@@ -1429,6 +1459,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	case CPUFREQ_GOV_STOP:
 #ifdef CONFIG_HAS_EARLYSUSPEND
 		unregister_early_suspend(&early_suspend);
+		idle_notifier_unregister(&cpufreq_pegasusq_idle_nb);
 #endif
 #if !EARLYSUSPEND_HOTPLUGLOCK
 		unregister_pm_notifier(&pm_notifier);
