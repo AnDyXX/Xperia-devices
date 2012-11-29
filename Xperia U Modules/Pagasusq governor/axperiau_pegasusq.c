@@ -40,12 +40,10 @@
 #include <linux/seq_file.h>
 #include <linux/fs.h>
 
-#define KERNEL_MODULE
 #include "axperiau_common.h"
 
 #define AX_MODULE_NAME "axperiau_pegasusq"
 #define AX_MODULE_VER "v003 ("__DATE__" "__TIME__")"
-
 
 typedef long (*nr_running_type) (void);
 static nr_running_type nr_running_ax;
@@ -189,20 +187,8 @@ static unsigned int get_nr_run_avg(void)
 #define HOTPLUG_DOWN_INDEX			(0)
 #define HOTPLUG_UP_INDEX			(1)
 
-#ifdef CONFIG_MACH_MIDAS
 static int hotplug_rq[4][2] = {
-	{0, 100}, {100, 200}, {200, 300}, {300, 0}
-};
-
-static int hotplug_freq[4][2] = {
-	{0, 500000},
-	{200000, 500000},
-	{200000, 500000},
-	{200000, 0}
-};
-#else
-static int hotplug_rq[4][2] = {
-	{0, 100}, {100, 200}, {200, 300}, {300, 0}
+	{0, 95}, {95, 200}, {200, 300}, {300, 0}
 };
 
 static int hotplug_freq[4][2] = {
@@ -211,7 +197,7 @@ static int hotplug_freq[4][2] = {
 	{500000, 800000},
 	{600000, 0}
 };
-#endif
+
 
 static unsigned int min_sampling_rate;
 
@@ -894,7 +880,7 @@ static void cpu_up_work(struct work_struct *work)
 		nr_up = max(nr_up, min_cpu_lock - online);
 
 	if (online == 1) {
-		printk(KERN_ERR "CPU_UP %d\n", num_possible_cpus() - 1);
+		printk(KERN_ERR "CPU_UP 3\n");
 		cpu_up_ax(num_possible_cpus() - 1);
 		nr_up -= 1;
 	}
@@ -1325,7 +1311,7 @@ static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 	prev_freq_step = dbs_tuners_ins.freq_step;
 	prev_sampling_rate = dbs_tuners_ins.sampling_rate;
 	dbs_tuners_ins.freq_step = 20;
-	dbs_tuners_ins.sampling_rate *= 10;
+	dbs_tuners_ins.sampling_rate *= 4;
 	stored_max_speed = dbs_info->cur_policy->max;
 	cpufreq_update_freq(0, dbs_info->cur_policy->min, sleep_max_freq);
         __cpufreq_driver_target(dbs_info->cur_policy, sleep_max_freq, CPUFREQ_RELATION_H);
@@ -1337,75 +1323,6 @@ static void cpufreq_pegasusq_early_suspend(struct early_suspend *h)
 	stop_rq_work();
 #endif
 }
-
-static void cpufreq_pegasusq_idle_start(void)
-{
-	struct cpu_dbs_info_s *dbs_info;
-	dbs_info = &per_cpu(od_cpu_dbs_info, smp_processor_id());
-
-	if (dbs_tuners_ins.early_suspend == -1 || dbs_enable < 2)
-		return;
-
-	smp_wmb();
-
-	if (dbs_info->cur_policy->cur == dbs_info->cur_policy->min && delayed_work_pending(&dbs_info->work)){
-		if (!mutex_trylock(&dbs_info->timer_mutex)) 
-			return;
-
-		cancel_delayed_work_sync(&dbs_info->work);
-		mutex_unlock(&dbs_info->timer_mutex);
-	}
-}
-
-static void cpufreq_pegasusq_idle_end(void)
-{
-	struct cpu_dbs_info_s *dbs_info;
-	dbs_info = &per_cpu(od_cpu_dbs_info, smp_processor_id());
-
-	int delay;
-
-	if (dbs_enable < 2)
-		return;
-	
-	smp_wmb();
-
-	if(!delayed_work_pending(&dbs_info->work)) {
-
-		if (!mutex_trylock(&dbs_info->timer_mutex)) 
-			return;
-
-		delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate
-				 * dbs_info->rate_mult);
-
-		if (num_online_cpus() > 1)
-			delay -= jiffies % delay;
-
-		queue_delayed_work_on(smp_processor_id(), dvfs_workqueue, &dbs_info->work, delay);
-		
-		mutex_unlock(&dbs_info->timer_mutex);
-	}
-}
-
-static int cpufreq_pegasusq_idle_notifier(struct notifier_block *nb,
-					     unsigned long val,
-					     void *data)
-{
-	switch (val) {
-	case IDLE_START:
-		cpufreq_pegasusq_idle_start();
-		break;
-	case IDLE_END:
-		cpufreq_pegasusq_idle_end();
-		break;
-	}
-
-	return 0;
-}
-
-static struct notifier_block cpufreq_pegasusq_idle_nb = {
-	.notifier_call = cpufreq_pegasusq_idle_notifier,
-};
-
 static void cpufreq_pegasusq_late_resume(struct early_suspend *h)
 {
 	struct cpu_dbs_info_s *dbs_info;
@@ -1491,7 +1408,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		register_pm_notifier(&pm_notifier);
 #endif
 #ifdef CONFIG_HAS_EARLYSUSPEND
-		idle_notifier_register(&cpufreq_pegasusq_idle_nb);
 		register_early_suspend(&early_suspend);
 #endif
 		break;
@@ -1499,7 +1415,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	case CPUFREQ_GOV_STOP:
 #ifdef CONFIG_HAS_EARLYSUSPEND
 		unregister_early_suspend(&early_suspend);
-		idle_notifier_unregister(&cpufreq_pegasusq_idle_nb);
 #endif
 #if !EARLYSUSPEND_HOTPLUGLOCK
 		unregister_pm_notifier(&pm_notifier);
