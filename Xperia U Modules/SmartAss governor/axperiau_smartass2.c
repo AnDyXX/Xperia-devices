@@ -352,12 +352,7 @@ static void cpufreq_smartass_timer(unsigned long cpu)
 	}
 	else this_smartass->ramp_dir = 0;
 
-	// To avoid unnecessary load when the CPU is already at high load, we don't
-	// reset ourselves if we are at max speed. If and when there are idle cycles,
-	// the idle loop will activate the timer.
-	// Additionally, if we queued some work, the work task will reset the timer
-	// after it has done its adjustments.
-	if (!queued_work && old_freq < policy->max)
+	if (!queued_work)
 		reset_timer(cpu,this_smartass);
 }
 
@@ -463,12 +458,8 @@ static void cpufreq_smartass_freq_change_time_work(struct work_struct *work)
 		}
 
 		// reset timer:
-		if (new_freq < policy->max)
-			reset_timer(cpu,this_smartass);
-		// if we are maxed out, it is pointless to use the timer
-		// (idle cycles wake up the timer when the timer comes)
-		else if (timer_pending(&this_smartass->timer))
-			del_timer(&this_smartass->timer);
+
+		reset_timer(cpu,this_smartass);
 	}
 }
 
