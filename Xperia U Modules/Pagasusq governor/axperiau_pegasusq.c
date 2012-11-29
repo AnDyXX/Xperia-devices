@@ -59,7 +59,7 @@ static cpu_down_type cpu_down_ax;
  * runqueue average
  */
 
-#define RQ_AVG_TIMER_RATE	20
+#define RQ_AVG_TIMER_RATE	10
 
 struct runqueue_data {
 	unsigned int nr_run_avg;
@@ -177,7 +177,7 @@ static unsigned int get_nr_run_avg(void)
 #define DEF_MIN_CPU_LOCK			(0)
 #define DEF_UP_NR_CPUS				(1)
 #define DEF_CPU_UP_RATE				(10)
-#define DEF_CPU_DOWN_RATE			(5)
+#define DEF_CPU_DOWN_RATE			(20)
 #define DEF_FREQ_STEP				(37)
 #define DEF_START_DELAY				(0)
 
@@ -187,17 +187,29 @@ static unsigned int get_nr_run_avg(void)
 #define HOTPLUG_DOWN_INDEX			(0)
 #define HOTPLUG_UP_INDEX			(1)
 
+#ifdef CONFIG_MACH_MIDAS
 static int hotplug_rq[4][2] = {
-	{0, 95}, {95, 200}, {200, 300}, {300, 0}
+	{0, 100}, {100, 200}, {200, 300}, {300, 0}
 };
 
 static int hotplug_freq[4][2] = {
-	{0, 600000},
-	{400000, 700000},
-	{500000, 800000},
-	{600000, 0}
+	{0, 500000},
+	{200000, 500000},
+	{200000, 500000},
+	{200000, 0}
+};
+#else
+static int hotplug_rq[4][2] = {
+	{0, 100}, {100, 200}, {200, 300}, {300, 0}
 };
 
+static int hotplug_freq[4][2] = {
+	{0, 500000},
+	{200000, 500000},
+	{200000, 500000},
+	{200000, 0}
+};
+#endif
 
 static unsigned int min_sampling_rate;
 
