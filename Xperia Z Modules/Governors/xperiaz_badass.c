@@ -27,6 +27,7 @@
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 
+#include "axperiaz.h"
 /*
  * bds is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler

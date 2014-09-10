@@ -33,6 +33,8 @@
 #include <linux/suspend.h>
 #include <linux/reboot.h>
 
+#include "axperiaz.h"
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif

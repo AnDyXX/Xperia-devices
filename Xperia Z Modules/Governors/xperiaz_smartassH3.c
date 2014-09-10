@@ -39,6 +39,7 @@
 #include <asm/cputime.h>
 #include <linux/earlysuspend.h>
 
+#include "axperiaz.h"
 
 /******************** Tunable parameters: ********************/
 

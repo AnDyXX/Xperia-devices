@@ -16,3 +16,4 @@ obj-m += xperiaz_HYPER.o
 #obj-m += xperiaz_pegasusq.o
 #obj-m += xperiaz_smartassH3.o
 #obj-m += xperiaz_wheatley.o
+xperiaz_wheatley.o
